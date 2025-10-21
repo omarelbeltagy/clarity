@@ -1,0 +1,20 @@
+#================================== Description ========================================
+# This is a configuration file that defines all models available in the clarity-models module.
+# It is used by the model service to dynamically load and serve the specified models.
+#
+# Each model entry includes:
+#   - name: The identifier for the model.
+#   - module: The Python module where the model loading function is located (<DIR>.<FILE>).
+#   - loader: The function used to load the model.
+#   - route: The API endpoint for accessing the model.
+#   - enabled: (optional) A boolean flag to indicate if the model should be loaded (default is true).
+#
+# Example entry:
+#   - name: roberta-base
+#     module: models.roberta_base
+#     loader: load_model
+#     route: /classify/roberta-base
+#     enabled: true
+#=======================================================================================
+
+models:
