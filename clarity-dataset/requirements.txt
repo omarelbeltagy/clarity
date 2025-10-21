@@ -1,0 +1,2 @@
+datasets==4.2.0
+loguru==0.7.3

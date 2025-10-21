@@ -1,0 +1,23 @@
+#================================== Description ========================================
+# Docker Compose file to build and run the clarity-dataset image which downloads and
+# prepares datasets for further use.
+#
+# To start the dataset service, you can use either of the following methods:
+#   1. From the command line, navigate to `src/main/resources/` and run
+#        `docker compose up -d`
+#   2. Use the IntelliJ Docker plugin to run this file as a Docker Compose configuration.
+#
+# To force a rebuild of the image, use:
+#        `docker compose build --no-cache`
+#=======================================================================================
+
+services:
+  dataset:
+    container_name: "clarity-dataset"
+    build:
+      context: .
+      dockerfile: "Dockerfile"
+    platform: "linux/amd64"
+    volumes:
+      - "../data:/data"
+    restart: "no"
