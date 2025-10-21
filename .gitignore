@@ -1,0 +1,27 @@
+### Miscellaneous ###
+**/.env
+**/*.class
+**/*.log
+**/logs/
+**/*.pyc
+**/*.swp
+**/target/
+**/.DS_Store
+**/.atom/
+**/.build/
+**/.buildlog/
+**/.history
+**/.svn/
+**/.swiftpm/
+**/migrate_working_dir/
+**/*.local
+**/.mvn/
+**/build/
+
+### IDE ###
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.idea/
+**/.vscode/
+**/venv/
