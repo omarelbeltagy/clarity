@@ -4,79 +4,55 @@ import random
 from datasets import load_dataset
 from loguru import logger
 
-# Load the dataset
-logger.info("Loading dataset...")
-logger.info("This may take a while depending on your internet connection.")
+DATA_DIR_FULL = "/data/full"
+DATA_DIR_SIMPLE = "/data/simple"
 
-ds_train = load_dataset("ailsntua/QEvasion", split="train")
-if ds_train is None:
-    logger.error("Failed to load the training dataset.")
-    raise ValueError("Training dataset is None.")
-logger.info("Training dataset loaded successfully.")
 
-ds_test = load_dataset("ailsntua/QEvasion", split="test")
-if ds_test is None:
-    logger.error("Failed to load the testing dataset.")
-    raise ValueError("Testing dataset is None.")
-logger.info("Testing dataset loaded successfully.")
+def save_json(data, path):
+    """Save data as JSON to the specified path."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-logger.info("Converting datasets to list of records for test/train/validation split...")
 
-# Split train into train and validation sets (80/20)
-records_train = [row for row in ds_train]
-random.shuffle(records_train)
-split_idx = int(0.8 * len(records_train))
-train_data = records_train[:split_idx]
-valid_data = records_train[split_idx:]
+def reduce_dataset(data, include_label=True):
+    """Reduce dataset to essential fields."""
+    return [
+        {
+            "question": item["question"],
+            "answer": item["interview_answer"],
+            **({"clarity_label": item["clarity_label"]} if include_label else {})
+        }
+        for item in data
+    ]
 
-test_data = [row for row in ds_test]
 
-# Save full datasets
-logger.info("Saving full datasets to /data/full/...")
-os.makedirs("/data/full", exist_ok=True)
-with open("/data/full/train.json", "w", encoding="utf-8") as f:
-    json.dump(train_data, f, ensure_ascii=False, indent=2)
+def main():
+    """Main function to load, process, and save datasets."""
+    logger.info("Loading datasets...")
+    ds_train = load_dataset("ailsntua/QEvasion", split="train")
+    ds_test = load_dataset("ailsntua/QEvasion", split="test")
 
-with open("/data/full/valid.json", "w", encoding="utf-8") as f:
-    json.dump(valid_data, f, ensure_ascii=False, indent=2)
+    if ds_train is None or ds_test is None:
+        raise ValueError("Failed to load dataset(s).")
 
-with open("/data/full/test.json", "w", encoding="utf-8") as f:
-    json.dump(test_data, f, ensure_ascii=False, indent=2)
+    logger.info("Splitting train into train/valid...")
+    records_train = [row for row in ds_train]
+    random.shuffle(records_train)
+    split_idx = int(0.8 * len(records_train))
+    train_data, valid_data = records_train[:split_idx], records_train[split_idx:]
+    test_data = [row for row in ds_test]
 
-# Reduce datasets to essential fields
-logger.info("Reducing datasets to essential fields...")
-reduced_train = []
-for item in train_data:
-    reduced_train.append({
-        "question": item["question"],
-        "answer": item["interview_answer"],
-        "clarity_label": item["clarity_label"]
-    })
+    logger.info("Saving full datasets...")
+    save_json(train_data, f"{DATA_DIR_FULL}/train.json")
+    save_json(valid_data, f"{DATA_DIR_FULL}/valid.json")
+    save_json(test_data, f"{DATA_DIR_FULL}/test.json")
 
-reduced_valid = []
-for item in valid_data:
-    reduced_valid.append({
-        "question": item["question"],
-        "answer": item["interview_answer"],
-        "clarity_label": item["clarity_label"]
-    })
+    logger.info("Saving reduced datasets...")
+    save_json(reduce_dataset(train_data), f"{DATA_DIR_SIMPLE}/train.json")
+    save_json(reduce_dataset(valid_data), f"{DATA_DIR_SIMPLE}/valid.json")
+    save_json(reduce_dataset(test_data, include_label=False), f"{DATA_DIR_SIMPLE}/test.json")
 
-reduced_test = []
-for item in test_data:
-    reduced_test.append({
-        "question": item["question"],
-        "answer": item["interview_answer"]
-    })
 
-# Save reduced datasets
-logger.info("Saving reduced datasets to /data/reduced/...")
-os.makedirs("/data/simple", exist_ok=True)
-with open("/data/simple/train.json", "w") as f:
-    json.dump(reduced_train, f, ensure_ascii=False, indent=2)
-
-with open("/data/simple/valid.json", "w") as f:
-    json.dump(reduced_valid, f, ensure_ascii=False, indent=2)
-
-with open("/data/simple/test.json", "w") as f:
-    json.dump(reduced_test, f, ensure_ascii=False, indent=2)
-
+if __name__ == "__main__":
+    main()
