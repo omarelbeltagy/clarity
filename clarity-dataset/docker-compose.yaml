@@ -3,7 +3,7 @@
 # prepares datasets for further use.
 #
 # To start the dataset service, you can use either of the following methods:
-#   1. From the command line, navigate to `src/main/resources/` and run
+#   1. From the command line, navigate to `clarity-dataset/` and run
 #        `docker compose up -d`
 #   2. Use the IntelliJ Docker plugin to run this file as a Docker Compose configuration.
 #

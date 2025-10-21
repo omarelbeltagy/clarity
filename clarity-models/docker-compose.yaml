@@ -1,0 +1,32 @@
+#================================== Description ========================================
+# Docker Compose file to build the clarity-models image
+#
+# To start the models service, you can use either of the following methods:
+#   1. From the command line, navigate to `clarity-models/` and run
+#        `docker compose up -d`
+#   2. Use the IntelliJ Docker plugin to run this file as a Docker Compose configuration.
+#
+# To force a rebuild of the image, use:
+#        `docker compose build --no-cache`
+#=======================================================================================
+
+services:
+  models:
+    container_name: "clarity-models"
+    ports:
+      - "8078:8000"
+    build:
+      context: .
+      dockerfile: "Dockerfile"
+    platform: "linux/amd64"
+    volumes:
+      - "./.model:/app/.model"
+      - "./models:/app/models"
+      - "./app.py:/app/app.py"
+      - "./logging.yaml:/app/logging.yaml"
+      - "./models.yaml:/app/models.yaml"
+      - "../data/simple/train.json:/app/data/simple/train.json"
+      - "../data/simple/valid.json:/app/data/simple/valid.json"
+    environment:
+      - "HF_HOME=/app/cache"
+    restart: "unless-stopped"
