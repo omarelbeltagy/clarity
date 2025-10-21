@@ -20,4 +20,5 @@ services:
     platform: "linux/amd64"
     volumes:
       - "../data:/data"
+      - "./app.py:/app/app.py"
     restart: "no"
