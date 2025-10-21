@@ -21,4 +21,5 @@ services:
     volumes:
       - "../data:/data"
       - "./app.py:/app/app.py"
+      - "./logging.yaml:/app/logging.yaml"
     restart: "no"

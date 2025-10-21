@@ -1,0 +1,9 @@
+#================================== Description ========================================
+# Configuration file for the loguru python logging library.
+#=======================================================================================
+
+handlers:
+  - sink: "sys.stdout"
+    level: "DEBUG"
+    format: "{time:YYYY-MM-DD HH:mm:ss} | <level>{level: <8}</level> | {message}"
+    colorize: true

@@ -1,6 +1,8 @@
 import json
 import os
 import random
+import sys
+import yaml
 from datasets import load_dataset
 from loguru import logger
 
@@ -29,6 +31,14 @@ def reduce_dataset(data, include_label=True):
 
 def main():
     """Main function to load, process, and save datasets."""
+    # Load logging configuration from YAML
+    with open("logging.yaml", "r") as f:
+        log_config = yaml.safe_load(f)
+        for handler in log_config.get("handlers", []):
+            if handler.get("sink") == "sys.stdout":
+                handler["sink"] = sys.stdout
+    logger.configure(**log_config)
+
     logger.info("Loading datasets...")
     ds_train = load_dataset("ailsntua/QEvasion", split="train")
     ds_test = load_dataset("ailsntua/QEvasion", split="test")

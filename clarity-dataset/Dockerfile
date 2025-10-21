@@ -17,7 +17,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the contents to the container at /app
-COPY . .
+COPY app.py .
+COPY logging.yaml .
 
 # Run the script when the container launches
 CMD ["python",  "app.py"]
