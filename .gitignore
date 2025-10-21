@@ -25,3 +25,6 @@
 **/.idea/
 **/.vscode/
 **/venv/
+
+### Models ###
+*models/.model/

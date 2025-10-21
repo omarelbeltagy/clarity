@@ -29,4 +29,5 @@ services:
       - "../data/simple/valid.json:/app/data/simple/valid.json"
     environment:
       - "HF_HOME=/app/cache"
+      - "PYTHONUNBUFFERED=1"
     restart: "unless-stopped"

@@ -13,8 +13,13 @@
 #   - name: roberta-base
 #     module: models.roberta_base
 #     loader: load_model
-#     route: /classify/roberta-base
+#     route: /classify/roberta
 #     enabled: true
 #=======================================================================================
 
 models:
+  - name: roberta-base
+    module: models.roberta_base
+    loader: load_model
+    route: /classify/roberta-base
+    enabled: true
