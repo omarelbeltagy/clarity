@@ -21,7 +21,7 @@ def reduce_dataset(data, include_label=True):
     """Reduce dataset to essential fields."""
     return [
         {
-            "question": item["question"],
+            "question": item["interview_question"],
             "answer": item["interview_answer"],
             **({"clarity_label": item["clarity_label"]} if include_label else {})
         }
