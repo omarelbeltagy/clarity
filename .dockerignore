@@ -27,4 +27,4 @@
 **/venv/
 
 ### Models ###
-**/.model/
+clarity-models/.artifacts/

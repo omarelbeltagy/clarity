@@ -20,7 +20,7 @@ services:
       dockerfile: "clarity-models/Dockerfile"
     platform: "linux/amd64"
     volumes:
-      - "./.model:/app/.model"
+      - "./.artifacts:/app/.artifacts"
       - "./models:/app/models"
       - "./app.py:/app/app.py"
       - "./logging.yaml:/app/logging.yaml"

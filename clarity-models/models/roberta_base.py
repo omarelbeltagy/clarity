@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from datasets import Dataset, DatasetDict
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
 
-MODEL_DIR = "./.model/roberta-base"
+MODEL_DIR = "./.artifacts/roberta-base"
 DATA_TRAIN_FILES = [
     "/app/data/simple/train.json",
     "/app/data/simple/train.json",
