@@ -30,4 +30,5 @@ services:
     environment:
       - "HF_HOME=/app/cache"
       - "PYTHONUNBUFFERED=1"
+      - "TOKENIZERS_PARALLELISM=false"
     restart: "unless-stopped"
