@@ -16,8 +16,8 @@ services:
     ports:
       - "8078:8000"
     build:
-      context: .
-      dockerfile: "Dockerfile"
+      context: ..
+      dockerfile: "clarity-models/Dockerfile"
     platform: "linux/amd64"
     volumes:
       - "./.model:/app/.model"
