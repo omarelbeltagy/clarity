@@ -1,6 +1,7 @@
 #a rough attempt to clean the dataset
 from __future__ import annotations
 import re
+from logging import fatal
 from typing import Dict, Optional, Tuple, List
 
 #filler words and phrases
@@ -15,7 +16,7 @@ def _normalize(text: str) -> str:
     text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"([!?.,:;])\1+", r"\1", text)
 
-    # tidy spaces before punctuation like "word ,"
+    # tidy spaces before punctuation like "word,"
     text = re.sub(r"\s+([,;:!?])", r"\1", text)
 
     # drop leading punctuation left behind after deletions
@@ -89,7 +90,7 @@ if __name__ == "__main__":
         "It works well.",
         "Look, this is the key.",
         "Please look at the figure.",
-        "Um... I mean, it's kind of tricky.",
+        "Ummm... I mean, it's kind of tricky.",
         "Actually, we can, right?",
     ]
     for s in samples:
@@ -98,3 +99,102 @@ if __name__ == "__main__":
         print("---")
 
 #remove names of interviewee
+#direct address
+_DIRECT_ADDRESS = re.compile(r"(?i)(^|(?<=\W))(?:sir|ma'am|madam)\b\s*(?:[.,;:!?—–-])?\s*")
+
+#honoured title: Mr./Mister/Ms./Mrs./Madam + President
+_HONOURED_TITLE = re.compile(r"(?i)(^|(?<=\W))(?:mr|mister|ms|mrs|madam)\.?\s+president\b\s*(?:[.,;:!?—–-])?\s*")
+
+def _name_token(tok: str) -> str:
+    tok = tok.strip()
+    if not tok:
+        return ""
+    if re.fullmatch(r"[A-Za-z]\.?", tok):
+        return re.escape(tok[0]) + r"\.?"
+
+    esc = re.escape(tok)
+    return esc
+
+def _core_fullname(name: str) -> str:
+    tokens = re.split(r"[\s\u00A0]+", name.strip())
+    parts = [_name_token(t) for t in tokens if t]
+    return r"(?:%s)" % ("".join(parts)) if parts else ""
+
+#maching by name list
+def _compile_president_name(names: List[str], aggressive_lastname: bool = False):
+    cores = [_core_fullname(n) for n in names or [] if n and n.strip()]
+    lastnames: List[str] = []
+    for n in names or []:
+        parts = [p for p in re.split(r"[\s\u00A0]+", n.strip()) if p]
+        if parts:
+            lastnames.append(parts[-1])
+
+    rx_full_alt = r"(?:" + "|".join(cores) + r")" if cores else None
+    rx_last_alt = (r"(?:" + "|".join(sorted(set(map(re.escape, lastnames)), key=len, reverse=True)) + r")"
+                   if lastnames else None)
+
+    patterns = []
+
+    if rx_full_alt:
+        patterns.append(re.compile(
+                r"(?i)(^|(?<=\W))president\s+" + rx_full_alt +
+                r"(?:\s*(?:'s|’s))?\s*(?:[.,;:!?—–-])?\s*"))
+
+        patterns.append(re.compile(r"(?i)(^|(?<=\W))" + rx_full_alt +
+                r"(?:\s*(?:'s|’s))?\s*(?:[.,;:!?—–-])?\s*"))
+
+    if rx_last_alt:
+        patterns.append(re.compile(r"(?i)(^|(?<=\W))president\s+" + rx_last_alt +
+                r"(?:\s*(?:'s|’s))?\s*(?:[.,;:!?—–-])?\s*"))
+
+        patterns.append(re.compile(r"(?i)(^|(?<=\W))(?:mr|mister|ms|mrs)\.?\s+" + rx_last_alt +
+                r"(?:\s*(?:'s|’s))?\s*(?:[.,;:!?—–-])?\s*"))
+
+        if aggressive_lastname:
+            patterns.append( re.compile(
+                    r"(?i)(^|(?<=\W))" + rx_last_alt +
+                    r"(?:\s*(?:'s|’s))?\s*(?:[.,;:!?—–-])?\s*"))
+
+    return patterns
+
+def remove_presidential_mentions(text: str, president_names: List[str], aggressive_lastname: bool = False, ) -> str:
+    if not text:
+        return text
+
+    out = _DIRECT_ADDRESS.sub(r"\1", text)
+    out = _HONOURED_TITLE.sub(r"\1", out)
+
+    for rx in _compile_president_name(president_names, aggressive_lastname):
+        out = rx.sub(r"\1", out)
+
+    out = re.sub(r"\s+([,;:!?])", r"\1", out)
+    out = re.sub(r"(?m)^[,;:]\s*", "", out)
+    out = re.sub(r"[ \t\r\f\v]+", " ", out).strip()
+    return out
+
+def remove_names(text: str, president_names: List[str], aggressive_lastname=False) -> str:
+    text = remove_presidential_mentions(text, president_names, aggressive_lastname = aggressive_lastname)
+    return text
+
+if __name__ == "__main__":
+    names = [
+        "Joe Biden", "Joseph R. Biden", "Donald Trump", "Donald J. Trump",
+        "Barack Obama", "Bill Clinton", "George W. Bush", "George H. W. Bush",
+        "Ronald Reagan", "Jimmy Carter"
+    ]
+
+    samples = [
+        "Q. And on TikTok, sir, if you don't—if you don't mind: Do you expect the TikTok deal after the election?",
+        "Mr. President, do you expect the TikTok deal after the election?",
+        "President Biden, do you expect the TikTok deal after the election?",
+        "Do you expect the TikTok deal, Mr Biden?",
+        "We asked President Trump about this yesterday.",
+        "As President Obama said, it could go quickly.",
+        "It was Mr. Clinton's view.",
+        "Ford is a car brand, not a person.",  # Bush / Ford 等如担心误删，可保持 aggressive_lastname=False
+    ]
+
+    for s in samples:
+        print("IN :", s)
+        print("OUT:", remove_names(s, names, aggressive_lastname=False))
+        print("---")
