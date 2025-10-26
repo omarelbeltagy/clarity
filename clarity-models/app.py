@@ -124,5 +124,26 @@ for name, api in loaded_models.items():
 
         return endpoint
 
+
     app.post(route)(make_endpoint(api))
     logger.info(f"Endpoint available at {route}")
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information."""
+    return {
+        "service": "Clarity Models API",
+        "models": list(loaded_models.keys()),
+        "endpoints": [
+            next((m["route"] for m in config["models"] if m["name"] == name),
+                 f"/classify/{name}")
+            for name in loaded_models.keys()
+        ]
+    }
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "healthy", "models_loaded": len(loaded_models)}
