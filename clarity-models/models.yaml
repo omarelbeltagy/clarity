@@ -4,17 +4,58 @@
 #
 # Each model entry includes:
 #   - name: The identifier for the model.
-#   - module: The Python module where the model loading function is located (<DIR>.<FILE>).
-#   - loader: The function used to load the model.
+#   - type: The type of model, e.g., "lora" for LoRA models. If not specified, it is assumed to be a classic model.
 #   - route: The API endpoint for accessing the model.
 #   - enabled: (optional) A boolean flag to indicate if the model should be loaded (default is true).
 #
-# Example entry:
+# Example entry for classic models:
 #   - name: roberta-base
-#     module: models.roberta_base
-#     loader: load_model
 #     route: /classify/roberta
 #     enabled: true
+#     module: models.roberta_base # Specifies the module where the model is defined
+#     loader: load_model # Specifies the function to load the model
+#
+# Example entry for LoRA models:
+# All the configurations for LoRA models are defined under the model entry but are optional.
+# If not provided, default values will be used.
+#   - name: "opt-350m"
+#     type: "lora"
+#     enabled: true
+#     route: "/classify/opt-350m"
+#
+#     model_config:
+#       model_name: "facebook/opt-350m"
+#       use_8bit: true
+#
+#     training_config:
+#       max_length: 256
+#       batch_size: 2
+#       gradient_accumulation_steps: 8
+#       learning_rate: 3e-4
+#       num_epochs: 5
+#       warmup_ratio: 0.1
+#       weight_decay: 0.01
+#       eval_steps: 50
+#       save_steps: 50
+#       save_total_limit: 3
+#       logging_steps: 5
+#       metric_for_best_model: "eval_loss"
+#       greater_is_better: false
+#
+#     data_config:
+#       train_files:
+#         - "/app/data/simple/train.json"
+#         - "./data/simple/train.json"
+#       valid_files:
+#         - "/app/data/simple/valid.json"
+#         - "./data/simple/valid.json"
+#       train_sample_size: 600
+#       valid_sample_size: 200
+#
+#     tensorboard_config:
+#       auto_start: true
+#       port: 6006
+#       host: "0.0.0.0"
 #=======================================================================================
 
 models:
@@ -22,4 +63,37 @@ models:
     module: models.roberta_base
     loader: load_model
     route: /classify/roberta-base
+    enabled: false
+
+  - name: "opt-1.3b"
+    type: "lora"
     enabled: true
+    route: "/classify/opt-1-3b"
+
+    model_config:
+      model_name: "facebook/opt-1.3b"
+      use_8bit: true
+
+    training_config:
+      max_length: 256
+      batch_size: 2
+      gradient_accumulation_steps: 8
+      learning_rate: 3e-4
+      num_epochs: 5
+      warmup_ratio: 0.1
+      weight_decay: 0.01
+      eval_steps: 50
+      save_steps: 50
+      save_total_limit: 3
+      logging_steps: 5
+      metric_for_best_model: "eval_loss"
+      greater_is_better: false
+
+    data_config:
+      train_sample_size: 600
+      valid_sample_size: 200
+
+    tensorboard_config:
+      auto_start: true
+      port: 6006
+      host: "0.0.0.0"

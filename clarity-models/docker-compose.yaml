@@ -12,8 +12,10 @@
 
 services:
   models:
+    image: "clarity-models-models:latest"
     container_name: "clarity-models"
     ports:
+      - "6006:6006"
       - "8078:8000"
     build:
       context: ..
@@ -22,6 +24,7 @@ services:
     volumes:
       - "./.artifacts:/app/.artifacts"
       - "./models:/app/models"
+      - "./utils:/app/utils"
       - "./app.py:/app/app.py"
       - "./logging.yaml:/app/logging.yaml"
       - "./models.yaml:/app/models.yaml"
