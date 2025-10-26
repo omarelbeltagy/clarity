@@ -10,6 +10,14 @@ import sys
 import time
 import torch
 from dataclasses import dataclass, field
+from models.config.lora_config import (
+    LoRAConfig,
+    LoRATrainingConfig,
+    LoRADataConfig,
+    LoRAModelConfig,
+)
+from models.config.tensorboard_config import TensorboardConfig
+from models.tensorboard_manager import TensorboardManager
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from peft.utils import TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING
 from torch.utils.data import Dataset
@@ -29,145 +37,6 @@ from utils.general_utils import (
     as_str
 )
 from utils.logger import logger
-
-# =======================================================================================
-# Configuration Classes
-# =======================================================================================
-
-OUTPUT_BASE_DIR = "./.artifacts"
-
-
-@dataclass
-class LoRAConfig:
-    """LoRA-specific configuration."""
-    r: int = 8
-    alpha: int = 16
-    dropout: float = 0.05
-    bias: str = "none"
-    task_type: str = "CAUSAL_LM"
-    target_modules: Optional[List[str]] = None
-
-    @classmethod
-    def from_dict(cls, cfg: Dict) -> "LoRAConfig":
-        """Create LoRAConfig from dictionary."""
-        return cls(
-            r=as_int(cfg.get("r", 8), 8),
-            alpha=as_int(cfg.get("alpha", 16), 16),
-            dropout=as_float(cfg.get("dropout", 0.05), 0.05),
-            task_type=as_str(cfg.get("task_type", "CAUSAL_LM"), "CAUSAL_LM"),
-            target_modules=cfg.get("target_modules"),
-            bias=as_str(cfg.get("bias", "none"), "none"),
-        )
-
-
-@dataclass
-class TrainingConfig:
-    """Training hyperparameters."""
-    max_length: int = 256
-    batch_size: int = 2
-    gradient_accumulation_steps: int = 8
-    learning_rate: float = 3e-4
-    num_epochs: int = 5
-    warmup_ratio: float = 0.1
-    weight_decay: float = 0.01
-    eval_steps: int = 50
-    save_steps: int = 50
-    save_total_limit: int = 3
-    logging_steps: int = 5
-    metric_for_best_model: str = "eval_loss"
-    greater_is_better: bool = False
-
-    @classmethod
-    def from_dict(cls, cfg: Dict) -> "TrainingConfig":
-        """Create TrainingConfig from dictionary."""
-        return cls(
-            max_length=as_int(cfg.get("max_length", 256), 256),
-            batch_size=as_int(cfg.get("batch_size", 2), 2),
-            gradient_accumulation_steps=as_int(cfg.get("gradient_accumulation_steps", 8), 8),
-            learning_rate=as_float(cfg.get("learning_rate", 3e-4), 3e-4),
-            num_epochs=as_int(cfg.get("num_epochs", 5), 5),
-            warmup_ratio=as_float(cfg.get("warmup_ratio", 0.1), 0.1),
-            weight_decay=as_float(cfg.get("weight_decay", 0.01), 0.01),
-            eval_steps=as_int(cfg.get("eval_steps", 50), 50),
-            save_steps=as_int(cfg.get("save_steps", 50), 50),
-            save_total_limit=as_int(cfg.get("save_total_limit", 3), 3),
-            logging_steps=as_int(cfg.get("logging_steps", 5), 5),
-            metric_for_best_model=as_str(cfg.get("metric_for_best_model", "eval_loss"), "eval_loss"),
-            greater_is_better=as_bool(cfg.get("greater_is_better", False), False),
-        )
-
-
-class DataConfig:
-    """Data configuration."""
-    train_files: List[str] = [
-        "/app/data/simple/train.json",
-        "./data/simple/train.json",
-        "../data/simple/train.json",
-        "../../data/simple/train.json"
-    ]
-    valid_files: List[str] = [
-        "/app/data/simple/valid.json",
-        "./data/simple/valid.json",
-        "../data/simple/valid.json",
-        "../../data/simple/valid.json"
-    ]
-    train_sample_size: Optional[int] = None
-    valid_sample_size: Optional[int] = None
-
-    @classmethod
-    def from_dict(cls, cfg: Dict) -> "DataConfig":
-        """Create DataConfig from dictionary."""
-        instance = cls()
-        if "train_files" in cfg:
-            instance.train_files = cfg["train_files"]
-        if "valid_files" in cfg:
-            instance.valid_files = cfg["valid_files"]
-        if "train_sample_size" in cfg:
-            instance.train_sample_size = as_int(cfg["train_sample_size"], None)
-        if "valid_sample_size" in cfg:
-            instance.valid_sample_size = as_int(cfg["valid_sample_size"], None)
-        return instance
-
-
-class ModelConfig:
-    """Model configuration."""
-
-    def __init__(self):
-        self.output_dir: str = f"{OUTPUT_BASE_DIR}/{self.model_name}"
-
-    model_name: str = "facebook/opt-1.3b"
-    use_8bit: bool = True
-    trust_remote_code: bool = True
-
-    @classmethod
-    def from_dict(cls, cfg: Dict) -> "ModelConfig":
-        """Create ModelConfig from dictionary."""
-        instance = cls()
-        instance.model_name = as_str(cfg.get("model_name", instance.model_name), instance.model_name)
-        instance.use_8bit = as_bool(cfg.get("use_8bit", instance.use_8bit), instance.use_8bit)
-        instance.trust_remote_code = as_bool(
-            cfg.get("trust_remote_code", instance.trust_remote_code),
-            instance.trust_remote_code
-        )
-        instance.output_dir = f"{OUTPUT_BASE_DIR}/{instance.model_name}"
-        return instance
-
-
-@dataclass
-class TensorboardConfig:
-    """Tensorboard configuration."""
-    auto_start: bool = True
-    port: int = 6006
-    host: str = "0.0.0.0"
-
-    @classmethod
-    def from_dict(cls, cfg: Dict) -> "TensorboardConfig":
-        """Create TensorboardConfig from dictionary."""
-        return cls(
-            auto_start=as_bool(cfg.get("auto_start", True), True),
-            port=as_int(cfg.get("port", 6006), 6006),
-            host=as_str(cfg.get("host", "0.0.0.0"), "0.0.0.0"),
-        )
 
 
 # =======================================================================================
@@ -198,70 +67,6 @@ def _default_format_clarity_prompt(item: dict) -> str:
 class PromptConfig:
     """Prompt template configuration."""
     format_function: Optional[Callable] = _default_format_clarity_prompt
-
-
-# =======================================================================================
-# Tensorboard Manager
-# =======================================================================================
-
-class TensorboardManager:
-    """Manages Tensorboard process."""
-
-    def __init__(self, config: TensorboardConfig):
-        self.config = config
-        self.logdir = None
-        self.process = None
-
-    def start(self, logdir: str):
-        """Start Tensorboard server."""
-        if not self.config.auto_start:
-            return False
-
-        self.logdir = logdir
-
-        try:
-            logger.info(f"Starting Tensorboard on port {self.config.port}...")
-
-            self.process = subprocess.Popen(
-                [
-                    "tensorboard",
-                    "--logdir", self.logdir,
-                    "--port", str(self.config.port),
-                    "--host", self.config.host
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-
-            time.sleep(3)
-
-            if self.process.poll() is None:
-                url = f"http://localhost:{self.config.port}"
-                logger.info(f"Tensorboard started successfully at {url}")
-                return True
-            else:
-                logger.error("Tensorboard failed to start")
-                return False
-
-        except FileNotFoundError:
-            logger.error("Tensorboard not found.")
-            return False
-        except Exception as e:
-            logger.error(f"Error starting Tensorboard: {e}")
-            return False
-
-    def stop(self):
-        """Stop Tensorboard server."""
-        if self.process and self.process.poll() is None:
-            logger.info("Stopping Tensorboard...")
-            self.process.terminate()
-            self.process.wait()
-            logger.info("Tensorboard stopped")
-
-    def __del__(self):
-        """Cleanup on deletion."""
-        self.stop()
 
 
 # =======================================================================================
@@ -342,10 +147,10 @@ class LoRATrainer:
 
     def __init__(
             self,
-            model_config: ModelConfig,
+            model_config: LoRAModelConfig,
             lora_config: LoRAConfig = LoRAConfig(),
-            training_config: TrainingConfig = TrainingConfig(),
-            data_config: DataConfig = DataConfig(),
+            training_config: LoRATrainingConfig = LoRATrainingConfig(),
+            data_config: LoRADataConfig = LoRADataConfig(),
             prompt_config: PromptConfig = PromptConfig(),
             tensorboard_config: TensorboardConfig = TensorboardConfig()
     ):

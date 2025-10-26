@@ -5,13 +5,25 @@ from fastapi import FastAPI
 from loguru import logger
 from pydantic import BaseModel
 
+from models.config.encoder_config import (
+    EncoderModelConfig,
+    EncoderTrainingConfig,
+    EncoderDataConfig,
+    LabelConfig,
+)
+from models.config.lora_config import (
+    LoRAConfig,
+    LoRATrainingConfig,
+    LoRADataConfig,
+    LoRAModelConfig,
+)
+from models.config.tensorboard_config import TensorboardConfig
+from models.encoder import (
+    EncoderTrainer,
+    load_model as load_encoder_model
+)
 from models.lora import (
     LoRATrainer,
-    LoRAConfig,
-    TrainingConfig,
-    DataConfig,
-    ModelConfig,
-    TensorboardConfig,
     load_model as load_lora_model
 )
 from utils.general_utils import (
@@ -45,10 +57,10 @@ def load_lora_model_from_config(model_def: dict):
 
     # Create trainer
     trainer = LoRATrainer(
-        model_config=ModelConfig.from_dict(model_def.get("model_config", {})),
+        model_config=LoRAModelConfig.from_dict(model_def.get("model_config", {})),
         lora_config=LoRAConfig.from_dict(model_def.get("lora_config", {})),
-        training_config=TrainingConfig.from_dict(model_def.get("training_config", {})),
-        data_config=DataConfig.from_dict(model_def.get("data_config", {})),
+        training_config=LoRATrainingConfig.from_dict(model_def.get("training_config", {})),
+        data_config=LoRADataConfig.from_dict(model_def.get("data_config", {})),
         tensorboard_config=TensorboardConfig.from_dict(model_def.get("tensorboard_config", {})),
     )
 
@@ -56,6 +68,25 @@ def load_lora_model_from_config(model_def: dict):
     lora_api = load_lora_model(trainer)
 
     return lora_api
+
+
+def load_encoder_model_from_config(model_def: dict):
+    """Load an encoder model from YAML configuration."""
+    logger.info(f"Loading encoder model '{model_def['name']}'")
+
+    # Create trainer
+    trainer = EncoderTrainer(
+        model_config=EncoderModelConfig.from_dict(model_def.get("model_config", {})),
+        training_config=EncoderTrainingConfig.from_dict(model_def.get("training_config", {})),
+        data_config=EncoderDataConfig.from_dict(model_def.get("data_config", {})),
+        label_config=LabelConfig.from_dict(model_def.get("label_config", {})),
+        tensorboard_config=TensorboardConfig.from_dict(model_def.get("tensorboard_config", {})),
+    )
+
+    # Load model and train it if needed
+    encoder_api = load_encoder_model(trainer)
+
+    return encoder_api
 
 
 def load_classic_model_from_config(model_def: dict):
@@ -90,6 +121,9 @@ for m in config.get("models", []):
         if model_type == "lora":
             # Load LoRA model
             loaded_models[m["name"]] = load_lora_model_from_config(m)
+        elif model_type == "encoder":
+            # Load encoder model
+            loaded_models[m["name"]] = load_encoder_model_from_config(m)
         elif model_type == "classic":
             # Load classic model
             if "module" not in m or "loader" not in m:
