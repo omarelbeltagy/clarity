@@ -173,8 +173,9 @@ models:
       model_name: "roberta-large"
 
     training_config:
-      max_length: 512
-      batch_size: 16
+      max_length: 256
+      batch_size: 8
+      gradient_accumulation_steps: 2
       num_epochs: 5
       learning_rate: 1e-5
       eval_strategy: "epoch"
