@@ -24,8 +24,8 @@ def reduce_dataset(data, include_label=True):
         {
             "question": item["interview_question"],
             "answer": item["interview_answer"],
-            "question_clean": clean_single_text(item["interview_question"]),
-            "answer_clean":clean_single_text(item["interview_answer"]),
+            "question_clean": clean_single_text(item["interview_question"], item["president"]),
+            "answer_clean":clean_single_text(item["interview_answer"], item["president"]),
             **({"clarity_label": item["clarity_label"]} if include_label else {})
         }
         for item in data

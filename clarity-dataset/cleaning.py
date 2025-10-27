@@ -7,13 +7,14 @@ from typing import Dict, Optional, Tuple, List
 from datasets import load_dataset
 
 #filler words and phrases
-FILLER_TOKENS = ["um", "uh", "ah", "eh","hm","mm",]
-FILLER_PHRASES = ["you know", "i mean", "kind of", "sort of",]
+FILLER_TOKENS = ["um", "uh", "ah", "eh","hm","mm", "oh"]
+FILLER_PHRASES = ["you know", "i mean", "kind of", "sort of", "as i say", "all right", "as you know"]
 BOUNDARY_FILLERS = ["well", "so", "anyway", "anyways", "okay", "ok", "right", "look", "like", "basically", "actually", "literally",]
 
 def _normalize(text: str) -> str:
     if not text:
         return text
+
     text = re.sub(r"[ \t\r\f\v]+", " ", text)
     text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"([!?.,:;])\1+", r"\1", text)
@@ -25,6 +26,7 @@ def _normalize(text: str) -> str:
     text = re.sub(r"(?m)^[,;:]\s*", "", text)
     return text.strip()
 
+# token stretching: "ummm", "uhhh"...
 def _elongate_token(tok):
     parts = []
     for ch in tok:
@@ -32,22 +34,27 @@ def _elongate_token(tok):
     return "".join(parts)
 
 def _compile_basic_patterns():
-    # tokens：\b(?:u+m+|u+h+|h+m+m+|...)\b
-    token_patterns = ["".join(re.escape(ch) + "+" for ch in t) for t in FILLER_TOKENS]
-    RX_TOKENS = re.compile(r"\b" + "|".join(token_patterns) + r"\b", re.IGNORECASE)
+    token_patterns = [_elongate_token(t) for t in FILLER_TOKENS]
+    #seperate token,only those before/after punctuation will be removed
+    RX_TOKENS = re.compile(r"(?<!\w)(?:" + "|".join(token_patterns) + r")(?!\w)(?=[\s.,;:!?\-—–] | $)", re.IGNORECASE)
 
-    # phrases like: \bi\s+mean\b | \bkind\s+of\b  (robust to 1+ spaces)
+    # phrases like: "you konw", "i mean"...
     phrase_patterns = []
     for p in FILLER_PHRASES:
-        parts = [re.escape(w) for w in p.split()]  # <-- key change
+        parts = [re.escape(w) for w in p.split()]
         phrase_patterns.append(r"\b" + r"\s+".join(parts) + r"\b")
-    RX_PHRASES = re.compile("|".join(phrase_patterns), re.IGNORECASE)
+    RX_PHRASES = re.compile("(?:" + "|".join(phrase_patterns) + ")", re.IGNORECASE)
 
+    # fillers at the beginning of sentences with punctuation
     token_alt = "(?:" + "|".join(token_patterns) + ")"
+    phrase_alt = "(?:" + "|".join(phrase_patterns) + ")"
     RX_LEADING_TOKENS = re.compile(
-        r"(?im)^\s*" + token_alt + r"(?:\s*(?:\.\.\.|\.{2,}|…|[.,;:!?—–-]))*\s*"
+        r"(?im)^\s*" + token_alt + r"(?:\s*(?:\.\.\.|\.{2,}|…|[.,;:!?\-—–]))*\s*"
     )
-    return RX_TOKENS, RX_PHRASES, RX_LEADING_TOKENS
+    RX_LEADING_PHRASES = re.compile(
+        r"(?!m)^\s*" + phrase_alt + r"(?:\s*(?:\.\.|\.{2,}|…|[.,;:!?\-—–]))*\s*"
+    )
+    return RX_TOKENS, RX_PHRASES, RX_LEADING_TOKENS, RX_LEADING_PHRASES
 
 def _compile_boundary_patterns():
     r"""
@@ -65,8 +72,15 @@ def _compile_boundary_patterns():
     )
     return RX_START, RX_AFTER
 
-_RX_TOKENS, _RX_PHRASES, _RX_LEADING_TOKENS = _compile_basic_patterns()
+_RX_TOKENS, _RX_PHRASES, _RX_LEADING_TOKENS, _RX_LEADING_PHRASES = _compile_basic_patterns()
 _RX_BOUNDARY_START, _RX_BOUNDARY_AFTER = _compile_boundary_patterns()
+
+# the content in []
+_RX_BRACKETS = re.compile(r"\[[^]]*]")
+def remove_brackets(text: str) -> str:
+    if not text:
+        return text
+    return  _RX_BRACKETS.sub("", text)
 
 def remove_fillers(text: str) -> str:
     """
@@ -77,12 +91,14 @@ def remove_fillers(text: str) -> str:
         return text
 
     text = _RX_LEADING_TOKENS.sub("", text)
+    text = _RX_LEADING_PHRASES.sub("", text)
 
     text = _RX_PHRASES.sub(" ", text)
     text = _RX_TOKENS.sub(" ", text)
 
     text = _RX_BOUNDARY_START.sub("", text)
     text = _RX_BOUNDARY_AFTER.sub(r"\1", text)
+
     return _normalize(text)
 
 
@@ -164,11 +180,54 @@ def remove_names(text: str, president_names: List[str], aggressive_lastname=Fals
     text = remove_presidential_mentions(text, president_names, aggressive_lastname = aggressive_lastname)
     return text
 
+# president name list
+def get_president_name_list():
+    ds_train = load_dataset("ailsntua/QEvasion", split="train")
+    ds_test = load_dataset("ailsntua/QEvasion", split="test")
+
+    train_presidents = [p.strip() for p in ds_train["president"] if p is not None]
+    test_presidents = [p.strip() for p in ds_test["president"] if p is not None]
+    unique_presidents = list(set(train_presidents + test_presidents))
+    return unique_presidents
+
+
+# main method to clean the dataset
+def clean_single_text(text:str, president_name : Optional[str]) -> str:
+    if text is None:
+        return ""
+
+    name = [president_name] if president_name else []
+
+    text = remove_names(text, name, aggressive_lastname=False)
+    text = remove_brackets(text)
+    text = remove_fillers(text)
+    text = _normalize(text)
+    return text
+
+def apply_clean_batch(batch):
+    qs_list = batch["interview_question"]
+    ans_list = batch["interview_answer"]
+    pres_list = batch["president"]
+
+    qs_clean = []
+    ans_clean = []
+
+    for q, a, p in zip(qs_list, ans_list, pres_list):
+        qs_clean.append(clean_single_text(q, p))
+        ans_clean.append(clean_single_text(a, p))
+
+    return {
+        "interview_question_clean": qs_clean,
+        "interview_answer_clean": ans_clean,
+    }
+
+
+
 #tests for fillers, names and name list
 if __name__ == "__main__":
     samples = [
-        "Well, we can start now.",
-        "It works well.",
+        "Well, we can start now.[NY News]",
+        "All right, it works well.",
         "Look, this is the key.",
         "Please look at the figure.",
         "Ummm... I mean, it's kind of tricky.",
@@ -177,6 +236,7 @@ if __name__ == "__main__":
     for s in samples:
         print(u"IN : " + s)
         print(u"OUT: " + remove_fillers(s))
+        print(u"OUT: " + clean_single_text(s,None))
         print("---")
 
     names = [
@@ -201,41 +261,4 @@ if __name__ == "__main__":
         print("OUT:", remove_names(s, names, aggressive_lastname=False))
         print("---")
 
-    ds_train = load_dataset("ailsntua/QEvasion", split="train")
-    ds_test = load_dataset("ailsntua/QEvasion", split="test")
-    train_presidents = ds_train["president"]
-    test_presidents = ds_test["president"]
-    train_presidents = [p for p in train_presidents if p is not None]
-    test_presidents = [p for p in test_presidents if p is not None]
-    all_presidents = list(train_presidents + test_presidents)
-    print(all_presidents)
-
-
-#main method to clean the dataset
-#president name list
-ds_train = load_dataset("ailsntua/QEvasion", split="train")
-ds_test = load_dataset("ailsntua/QEvasion", split="test")
-train_presidents = ds_train["president"]
-test_presidents = ds_test["president"]
-train_presidents = [p for p in train_presidents if p is not None]
-test_presidents = [p for p in test_presidents if p is not None]
-all_presidents = list(train_presidents + test_presidents)
-
-def clean_single_text(text:str) -> str:
-    if text is None:
-        return ""
-
-    text = remove_fillers(text)
-    text = remove_names(text, all_presidents, aggressive_lastname=False)
-    text = _normalize(text)
-    return text
-
-def apply_clean_batch(batch):
-    qs = batch["interview_question"]
-    ans = batch["interview_answer"]
-    qs_clean = [clean_single_text(q) for q in qs]
-    ans_clean = [clean_single_text(ans) for ans in ans]
-    return {
-        "interview_question_clean": qs_clean,
-        "interview_answer_clean": ans_clean,
-    }
+    print(get_president_name_list())
