@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the contents to the container at /app
 COPY app.py .
+COPY cleaning.py .
 COPY logging.yaml .
 
 # Run the script when the container launches

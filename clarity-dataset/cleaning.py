@@ -4,8 +4,10 @@ import re
 from logging import fatal
 from typing import Dict, Optional, Tuple, List
 
+from datasets import load_dataset
+
 #filler words and phrases
-FILLER_TOKENS = ["um", "uh", "er","ah", "eh","hm","mm",]
+FILLER_TOKENS = ["um", "uh", "ah", "eh","hm","mm",]
 FILLER_PHRASES = ["you know", "i mean", "kind of", "sort of",]
 BOUNDARY_FILLERS = ["well", "so", "anyway", "anyways", "okay", "ok", "right", "look", "like", "basically", "actually", "literally",]
 
@@ -83,20 +85,6 @@ def remove_fillers(text: str) -> str:
     text = _RX_BOUNDARY_AFTER.sub(r"\1", text)
     return _normalize(text)
 
-
-if __name__ == "__main__":
-    samples = [
-        "Well, we can start now.",
-        "It works well.",
-        "Look, this is the key.",
-        "Please look at the figure.",
-        "Ummm... I mean, it's kind of tricky.",
-        "Actually, we can, right?",
-    ]
-    for s in samples:
-        print(u"IN : " + s)
-        print(u"OUT: " + remove_fillers(s))
-        print("---")
 
 #remove names of interviewee
 #direct address
@@ -176,7 +164,21 @@ def remove_names(text: str, president_names: List[str], aggressive_lastname=Fals
     text = remove_presidential_mentions(text, president_names, aggressive_lastname = aggressive_lastname)
     return text
 
+#tests for fillers, names and name list
 if __name__ == "__main__":
+    samples = [
+        "Well, we can start now.",
+        "It works well.",
+        "Look, this is the key.",
+        "Please look at the figure.",
+        "Ummm... I mean, it's kind of tricky.",
+        "Actually, we can, right?",
+    ]
+    for s in samples:
+        print(u"IN : " + s)
+        print(u"OUT: " + remove_fillers(s))
+        print("---")
+
     names = [
         "Joe Biden", "Joseph R. Biden", "Donald Trump", "Donald J. Trump",
         "Barack Obama", "Bill Clinton", "George W. Bush", "George H. W. Bush",
@@ -191,10 +193,49 @@ if __name__ == "__main__":
         "We asked President Trump about this yesterday.",
         "As President Obama said, it could go quickly.",
         "It was Mr. Clinton's view.",
-        "Ford is a car brand, not a person.",  # Bush / Ford 等如担心误删，可保持 aggressive_lastname=False
+        "Ford is a car brand, not a person.",
     ]
 
     for s in samples:
         print("IN :", s)
         print("OUT:", remove_names(s, names, aggressive_lastname=False))
         print("---")
+
+    ds_train = load_dataset("ailsntua/QEvasion", split="train")
+    ds_test = load_dataset("ailsntua/QEvasion", split="test")
+    train_presidents = ds_train["president"]
+    test_presidents = ds_test["president"]
+    train_presidents = [p for p in train_presidents if p is not None]
+    test_presidents = [p for p in test_presidents if p is not None]
+    all_presidents = list(train_presidents + test_presidents)
+    print(all_presidents)
+
+
+#main method to clean the dataset
+#president name list
+ds_train = load_dataset("ailsntua/QEvasion", split="train")
+ds_test = load_dataset("ailsntua/QEvasion", split="test")
+train_presidents = ds_train["president"]
+test_presidents = ds_test["president"]
+train_presidents = [p for p in train_presidents if p is not None]
+test_presidents = [p for p in test_presidents if p is not None]
+all_presidents = list(train_presidents + test_presidents)
+
+def clean_single_text(text:str) -> str:
+    if text is None:
+        return ""
+
+    text = remove_fillers(text)
+    text = remove_names(text, all_presidents, aggressive_lastname=False)
+    text = _normalize(text)
+    return text
+
+def apply_clean_batch(batch):
+    qs = batch["interview_question"]
+    ans = batch["interview_answer"]
+    qs_clean = [clean_single_text(q) for q in qs]
+    ans_clean = [clean_single_text(ans) for ans in ans]
+    return {
+        "interview_question_clean": qs_clean,
+        "interview_answer_clean": ans_clean,
+    }

@@ -5,6 +5,7 @@ import sys
 import yaml
 from datasets import load_dataset
 from loguru import logger
+from cleaning import clean_single_text
 
 DATA_DIR_FULL = "/data/full"
 DATA_DIR_SIMPLE = "/data/simple"
@@ -23,6 +24,8 @@ def reduce_dataset(data, include_label=True):
         {
             "question": item["interview_question"],
             "answer": item["interview_answer"],
+            "question_clean": clean_single_text(item["interview_question"]),
+            "answer_clean":clean_single_text(item["interview_answer"]),
             **({"clarity_label": item["clarity_label"]} if include_label else {})
         }
         for item in data
