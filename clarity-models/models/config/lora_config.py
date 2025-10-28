@@ -68,22 +68,33 @@ class LoRATrainingConfig:
         )
 
 
+@dataclass
 class LoRADataConfig:
     """Data configuration."""
-    train_files: List[str] = [
-        "/app/data/simple/train.json",
-        "./data/simple/train.json",
-        "../data/simple/train.json",
-        "../../data/simple/train.json"
-    ]
-    valid_files: List[str] = [
-        "/app/data/simple/valid.json",
-        "./data/simple/valid.json",
-        "../data/simple/valid.json",
-        "../../data/simple/valid.json"
-    ]
+    train_files: List[str] = None
+    valid_files: List[str] = None
     train_sample_size: Optional[int] = None
     valid_sample_size: Optional[int] = None
+    # New dynamic field configuration
+    label_field: str = "clarity_label"
+    text_field_1: str = "question"
+    text_field_2: str = "answer"
+
+    def __post_init__(self):
+        if self.train_files is None:
+            self.train_files = [
+                "/app/data/simple/train.json",
+                "./data/simple/train.json",
+                "../data/simple/train.json",
+                "../../data/simple/train.json"
+            ]
+        if self.valid_files is None:
+            self.valid_files = [
+                "/app/data/simple/valid.json",
+                "./data/simple/valid.json",
+                "../data/simple/valid.json",
+                "../../data/simple/valid.json"
+            ]
 
     @classmethod
     def from_dict(cls, cfg: Dict) -> "LoRADataConfig":
@@ -97,6 +108,12 @@ class LoRADataConfig:
             instance.train_sample_size = as_int(cfg["train_sample_size"], None)
         if "valid_sample_size" in cfg:
             instance.valid_sample_size = as_int(cfg["valid_sample_size"], None)
+        if "label_field" in cfg:
+            instance.label_field = as_str(cfg["label_field"], "clarity_label")
+        if "text_field_1" in cfg:
+            instance.text_field_1 = as_str(cfg["text_field_1"], "question")
+        if "text_field_2" in cfg:
+            instance.text_field_2 = as_str(cfg["text_field_2"], "answer")
         return instance
 
 
@@ -121,4 +138,23 @@ class LoRAModelConfig:
             use_8bit=as_bool(cfg.get("use_8bit", True), True),
             trust_remote_code=as_bool(cfg.get("trust_remote_code", True), True),
             output_dir=cfg.get("output_dir")
+        )
+
+
+@dataclass
+class LabelConfig:
+    """Label mapping configuration for LoRA models."""
+    labels: List[str] = None
+
+    def __post_init__(self):
+        if self.labels is None:
+            self.labels = ["Clear Reply", "Clear Non-Reply", "Ambivalent"]
+
+    @classmethod
+    def from_dict(cls, cfg: Dict) -> "LabelConfig":
+        """Create LabelConfig from dictionary."""
+        labels = cfg.get("labels", ["Clear Reply", "Clear Non-Reply", "Ambivalent"])
+
+        return cls(
+            labels=labels,
         )

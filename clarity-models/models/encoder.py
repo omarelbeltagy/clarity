@@ -124,8 +124,8 @@ class EncoderTrainer:
     def _preprocess_function(self, batch):
         """Tokenization function"""
         enc = self.tokenizer(
-            batch[self.data_config.question_field],
-            batch[self.data_config.answer_field],
+            batch[self.data_config.text_field_1],
+            batch[self.data_config.text_field_2],
             truncation=True,
             padding="max_length",
             max_length=self.training_config.max_length,

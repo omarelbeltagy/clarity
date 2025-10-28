@@ -69,8 +69,8 @@
 #       train_sample_size: null      # Limit training samples (null = use all)
 #       valid_sample_size: null      # Limit validation samples (null = use all)
 #       label_field: "clarity_label" # Field name for labels in data
-#       question_field: "question"   # Question text field (e.g. 'question')
-#       answer_field: "answer"       # Answer text field (e.g. 'answer')
+#       text_field_1: "question"   # Question text field (e.g. 'question')
+#       text_field_2: "answer"       # Answer text field (e.g. 'answer')
 #
 #     label_config:
 #       labels:                      # List of label names
@@ -122,6 +122,15 @@
 #         - "./data/simple/valid.json"
 #       train_sample_size: 600
 #       valid_sample_size: 200
+#       label_field: "clarity_label"
+#       text_field_1: "question"
+#       text_field_2: "answer"
+#
+#     label_config:
+#       labels:                      # List of label names
+#         - "Clear Reply"
+#         - "Clear Non-Reply"
+#         - "Ambivalent"
 #
 #     tensorboard_config:
 #       auto_start: true
@@ -133,7 +142,7 @@ models:
 
   - name: "opt-1.3b"
     type: "lora"
-    enabled: false
+    enabled: true
     route: "/classify/opt-1-3b"
 
     model_config:
@@ -155,9 +164,11 @@ models:
       metric_for_best_model: "eval_loss"
       greater_is_better: false
 
-    data_config:
-      train_sample_size: 600
-      valid_sample_size: 200
+    label_config:
+      labels:
+        - "Clear Reply"
+        - "Clear Non-Reply"
+        - "Ambivalent"
 
     tensorboard_config:
       auto_start: true
@@ -166,7 +177,7 @@ models:
 
   - name: "roberta-large"
     type: "encoder"
-    enabled: true
+    enabled: false
     route: "/classify/roberta-large"
 
     model_config:

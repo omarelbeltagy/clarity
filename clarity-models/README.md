@@ -147,7 +147,7 @@ For training the models it is recommended to run natively with GPU support.
 python3 -m venv venv # Create virtual environment
 source venv/bin/activate # Activate virtual environment
 pip install -r requirements.txt # Install dependencies
-uvicorn app:app --host # Start uvicorn server
+uvicorn app:app # Start uvicorn server
 ```
 
 ### Accessing the Service
@@ -208,6 +208,6 @@ Custom field names can be set in `data_config`:
 ```yaml
 data_config:
   label_field: "sentiment"
-  question_field: "text"
-  answer_field: "context"
+  text_field_1: "text"
+  text_field_2: "context"
 ```

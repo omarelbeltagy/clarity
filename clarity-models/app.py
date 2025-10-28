@@ -55,12 +55,26 @@ def load_lora_model_from_config(model_def: dict):
     """Load a LoRA model from YAML configuration."""
     logger.info(f"Loading LoRA model '{model_def['name']}'")
 
+    # Load configs
+    data_config = LoRADataConfig.from_dict(model_def.get("data_config", {}))
+    label_config = LabelConfig.from_dict(model_def.get("label_config", {}))
+
+    # Create default format function with dynamic fields
+    from models.lora import create_default_format_function
+    format_fn = create_default_format_function(data_config)
+
+    # Create prompt config with dynamic format function
+    from models.lora import PromptConfig
+    prompt_config = PromptConfig(format_function=format_fn)
+
     # Create trainer
     trainer = LoRATrainer(
         model_config=LoRAModelConfig.from_dict(model_def.get("model_config", {})),
         lora_config=LoRAConfig.from_dict(model_def.get("lora_config", {})),
         training_config=LoRATrainingConfig.from_dict(model_def.get("training_config", {})),
         data_config=LoRADataConfig.from_dict(model_def.get("data_config", {})),
+        label_config=label_config,
+        prompt_config=prompt_config,
         tensorboard_config=TensorboardConfig.from_dict(model_def.get("tensorboard_config", {})),
     )
 

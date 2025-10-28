@@ -15,6 +15,7 @@ from models.config.lora_config import (
     LoRATrainingConfig,
     LoRADataConfig,
     LoRAModelConfig,
+    LabelConfig
 )
 from models.config.tensorboard_config import TensorboardConfig
 from models.tensorboard_manager import TensorboardManager
@@ -43,30 +44,37 @@ from utils.logger import logger
 # Default Prompt Formatting Function
 # =======================================================================================
 
-def _default_format_clarity_prompt(item: dict) -> str:
-    template = """Based on a part of the interview where the interviewer asks a set of questions, classify the type of answer the interviewee provided for the following question.
+def create_default_format_function(data_config):
+    """Factory function to create format function with dynamic field names."""
+
+    def format_fn(item: dict) -> str:
+        template = """Based on a part of the interview where the interviewer asks a set of questions, classify the type of answer the interviewee provided for the following question.
 
 ### Question ###
-{question}
+{field_1}
 ### Answer ###
-{answer}
+{field_2}
 
 ### Label ###
 {label}"""
-    # if label is missing, use a placeholder
-    if 'clarity_label' not in item:
-        item['clarity_label'] = ""
-    return template.format(
-        question=item['question'],
-        answer=item['answer'],
-        label=item['clarity_label']
-    )
+        # Use configurable field names
+        field_1 = item.get(data_config.text_field_1, "")
+        field_2 = item.get(data_config.text_field_2, "")
+        label = item.get(data_config.label_field, "")
+
+        return template.format(
+            field_1=field_1,
+            field_2=field_2,
+            label=label
+        )
+
+    return format_fn
 
 
 @dataclass
 class PromptConfig:
     """Prompt template configuration."""
-    format_function: Optional[Callable] = _default_format_clarity_prompt
+    format_function: Optional[Callable] = None
 
 
 # =======================================================================================
@@ -151,6 +159,7 @@ class LoRATrainer:
             lora_config: LoRAConfig = LoRAConfig(),
             training_config: LoRATrainingConfig = LoRATrainingConfig(),
             data_config: LoRADataConfig = LoRADataConfig(),
+            label_config: LabelConfig = LabelConfig(),
             prompt_config: PromptConfig = PromptConfig(),
             tensorboard_config: TensorboardConfig = TensorboardConfig()
     ):
@@ -158,6 +167,7 @@ class LoRATrainer:
         self.lora_config = lora_config
         self.training_config = training_config
         self.data_config = data_config
+        self.label_config = label_config  # Add this
         self.prompt_config = prompt_config
         self.tensorboard_config = tensorboard_config
 
@@ -417,15 +427,13 @@ def _extract_classification_label(text: str, valid_labels: List[str]) -> str:
     return valid_labels[0]
 
 
-def _extract_clarity_label(text: str) -> str:
-    """
-    Specific extraction function for clarity classification.
-    Example of a task-specific extractor.
-    """
-    return _extract_classification_label(
-        text,
-        valid_labels=["Clear Reply", "Clear Non-Reply", "Ambivalent"]
-    )
+def create_extraction_function(label_config: LabelConfig):
+    """Factory function to create extraction function with dynamic labels."""
+
+    def extract_fn(text: str) -> str:
+        return _extract_classification_label(text, valid_labels=label_config.labels)
+
+    return extract_fn
 
 
 # =======================================================================================
@@ -439,8 +447,8 @@ class InferenceAPI:
             self,
             model_dir: str,
             model_base: str,
-            format_function: Optional[Callable] = _default_format_clarity_prompt,
-            extract_function: Optional[Callable[[str], str]] = _extract_clarity_label
+            format_function: Optional[Callable],
+            extract_function: Optional[Callable[[str], str]]
     ):
         self.model_dir = model_dir
         self.model_base = model_base
@@ -588,12 +596,15 @@ def load_model(lora_trainer: LoRATrainer) -> InferenceAPI:
     else:
         logger.info(f"Found trained model at {lora_trainer.model_config.output_dir}")
 
+    extract_function = create_extraction_function(
+        lora_trainer.label_config)
+
     # Load and return API
     api = InferenceAPI(
         model_dir=lora_trainer.model_config.output_dir,
         model_base=lora_trainer.model_config.model_name,
         format_function=lora_trainer.prompt_config.format_function,
-        extract_function=_extract_clarity_label
+        extract_function=extract_function
     )
     api.load_model()
     return api
