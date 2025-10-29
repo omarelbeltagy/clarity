@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
+
 from utils.general_utils import (
     as_int,
     as_float,
@@ -38,12 +39,14 @@ class LoRATrainingConfig:
     batch_size: int = 2
     gradient_accumulation_steps: int = 8
     learning_rate: float = 3e-4
-    num_epochs: int = 5
+    num_epochs: int = 3
     warmup_ratio: float = 0.1
     weight_decay: float = 0.01
-    eval_steps: int = 50
-    save_steps: int = 50
-    save_total_limit: int = 3
+    eval_strategy: str = "epoch"
+    save_strategy: str = "epoch"
+    eval_steps: Optional[int] = None
+    save_steps: Optional[int] = None
+    save_total_limit: int = 5
     logging_steps: int = 5
     metric_for_best_model: str = "eval_loss"
     greater_is_better: bool = False
@@ -59,8 +62,10 @@ class LoRATrainingConfig:
             num_epochs=as_int(cfg.get("num_epochs", 5), 5),
             warmup_ratio=as_float(cfg.get("warmup_ratio", 0.1), 0.1),
             weight_decay=as_float(cfg.get("weight_decay", 0.01), 0.01),
-            eval_steps=as_int(cfg.get("eval_steps", 50), 50),
-            save_steps=as_int(cfg.get("save_steps", 50), 50),
+            eval_strategy=as_str(cfg.get("eval_strategy", "epoch"), "epoch"),
+            save_strategy=as_str(cfg.get("save_strategy", "epoch"), "epoch"),
+            eval_steps=as_int(cfg.get("eval_steps"), None),
+            save_steps=as_int(cfg.get("save_steps"), None),
             save_total_limit=as_int(cfg.get("save_total_limit", 3), 3),
             logging_steps=as_int(cfg.get("logging_steps", 5), 5),
             metric_for_best_model=as_str(cfg.get("metric_for_best_model", "eval_loss"), "eval_loss"),

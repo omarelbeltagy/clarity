@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
+
 from utils.general_utils import (
     as_int,
     as_float,
@@ -46,8 +47,8 @@ class EncoderTrainingConfig:
     save_strategy: str = "epoch"
     eval_steps: Optional[int] = None
     save_steps: Optional[int] = None
-    save_total_limit: int = 3
-    logging_steps: int = 10
+    save_total_limit: int = 5
+    logging_steps: int = 5
     metric_for_best_model: str = "eval_loss"
     greater_is_better: bool = False
     load_best_model_at_end: bool = True
