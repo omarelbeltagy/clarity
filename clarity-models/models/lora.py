@@ -5,11 +5,10 @@ LoRA Fine-tuning Framework
 import atexit
 import json
 import os
-import subprocess
-import sys
-import time
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Callable
+
 import torch
-from dataclasses import dataclass, field
 from models.config.lora_config import (
     LoRAConfig,
     LoRATrainingConfig,
@@ -29,7 +28,6 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
-from typing import Dict, List, Optional, Callable
 from utils.general_utils import (
     is_running_in_docker,
     as_int,
@@ -325,7 +323,7 @@ class LoRATrainer:
         logger.info(f"Device: {self.device}")
 
         if is_running_in_docker():
-            logger.warn(
+            logger.warning(
                 "⚠️ Detected running inside a Docker container. This will work slowly unless GPU access is properly configured.")
 
         try:
