@@ -26,6 +26,7 @@
 - **TensorBoard integration**: Automatic startup and process management
 - **Device detection**: Automatic choice between CUDA, MPS (Apple Silicon), or CPU
 - **API**: Models are served via FastAPI with REST endpoints
+- **Command Line Interface**: For training and evaluation
 
 ### Project Structure
 
@@ -34,6 +35,7 @@ clarity-models/
 ├── Dockerfile
 ├── docker-compose.yaml
 ├── logging.yaml
+├── models-training.ipynb   # Jupyter notebook for model training experiments on Google Colab
 ├── models.yaml
 ├── app.py                  # FastAPI app loading models from models.yaml
 ├── models/
@@ -139,7 +141,7 @@ docker compose up -d
 docker compose build --no-cache
 ```
 
-### Native (recommended for training)
+### Native
 
 For training the models it is recommended to run natively with GPU support.
 
@@ -150,19 +152,40 @@ pip install -r requirements.txt # Install dependencies
 uvicorn app:app # Start uvicorn server
 ```
 
-### Accessing the Service
+### Command Line Interface
+
+In addition to serving models via FastAPI, you can now run training and inference directly from the command line.
+
+```bash
+# List available models from models.yaml
+python app.py list
+# Train a specific model with optional custom config
+python app.py train --config custom-config.yaml --model roberta-base train
+# Run inference on a QA pair
+python app.py test --question "Question?" --answer "Answer."
+```
+
+This is useful for quick experiments or running jobs in environments where an API server is not needed.
+
+### Google Colab / Jupyter Support
+
+A Jupyter notebook is included for interactive training and evaluation, optimized for Google Colab.
+
+File: [`models-training.ipynb`](models-training.ipynb)
+
+### Accessing the FastAPI Service
 
 Exposed ports:
 
 * `8000`: FastAPI service
 * `6006`: TensorBoard (if enabled)
 
-Models defined in `models.yaml` are exposed via REST. Example:
+Models defined in [`models.yaml`](models.yaml) are exposed via REST. Example:
 
 ```bash
-curl -X POST "http://localhost:8000/classify/roberta-large" \
+curl -X POST "http://localhost:8000/classify/opt-1-3b" \
   -H "Content-Type: application/json" \
-  -d '{ "question": "What is your favorite color?", "answer": "Blue." }'
+  -d '{ "question": "What is the current state of the world?", "answer": "I love cheeseburger." }'
 ```
 
 Response:
