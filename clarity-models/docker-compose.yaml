@@ -12,16 +12,19 @@
 
 services:
   models:
+    image: "clarity-models-models:latest"
     container_name: "clarity-models"
     ports:
-      - "8078:8000"
+      - "6006:6006"
+      - "8000:8000"
     build:
-      context: .
-      dockerfile: "Dockerfile"
+      context: ..
+      dockerfile: "clarity-models/Dockerfile"
     platform: "linux/amd64"
     volumes:
-      - "./.model:/app/.model"
+      - "./.artifacts:/app/.artifacts"
       - "./models:/app/models"
+      - "./utils:/app/utils"
       - "./app.py:/app/app.py"
       - "./logging.yaml:/app/logging.yaml"
       - "./models.yaml:/app/models.yaml"
@@ -30,4 +33,5 @@ services:
     environment:
       - "HF_HOME=/app/cache"
       - "PYTHONUNBUFFERED=1"
+      - "TOKENIZERS_PARALLELISM=false"
     restart: "unless-stopped"

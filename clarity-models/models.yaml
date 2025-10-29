@@ -2,24 +2,199 @@
 # This is a configuration file that defines all models available in the clarity-models module.
 # It is used by the model service to dynamically load and serve the specified models.
 #
-# Each model entry includes:
-#   - name: The identifier for the model.
-#   - module: The Python module where the model loading function is located (<DIR>.<FILE>).
-#   - loader: The function used to load the model.
-#   - route: The API endpoint for accessing the model.
-#   - enabled: (optional) A boolean flag to indicate if the model should be loaded (default is true).
+# Supported model types:
+#   - classic: Legacy models with custom module/loader pattern
+#   - encoder: Transformer encoder models (BERT, RoBERTa, DistilBERT, etc.)
+#   - lora: Large language models with LoRA fine-tuning
 #
-# Example entry:
+# Each model entry includes:
+#   - name: The identifier for the model
+#   - type: The type of model ("classic", "encoder", or "lora")
+#   - route: The API endpoint for accessing the model
+#   - enabled: (optional) A boolean flag to indicate if the model should be loaded (default is true)
+#
+# =======================================================================================
+# CLASSIC MODEL CONFIGURATION
+# =======================================================================================
+# Example entry for classic models:
 #   - name: roberta-base
-#     module: models.roberta_base
-#     loader: load_model
+#     type: classic
 #     route: /classify/roberta
 #     enabled: true
+#     module: models.roberta_base # Specifies the module where the model is defined
+#     loader: load_model # Specifies the function to load the model
+#
+# =======================================================================================
+# ENCODER MODEL CONFIGURATION
+# =======================================================================================
+# Example entry for encoder models
+#   - name: "roberta-base"
+#     type: "encoder"
+#     enabled: true
+#     route: "/classify/roberta-base"
+#
+#     model_config:
+#       model_name: "roberta-base"   # HuggingFace model identifier
+#       num_labels: 3                # Number of classification labels (auto-detected from labels)
+#       trust_remote_code: true      # Allow custom model code
+#       output_dir: null             # Custom output directory (default: ./.artifacts/{model_name})
+#
+#     training_config:
+#       max_length: 128              # Maximum sequence length
+#       batch_size: 16               # Training batch size
+#       gradient_accumulation_steps: 1  # Gradient accumulation steps
+#       learning_rate: 2e-5          # Learning rate
+#       num_epochs: 3                # Number of training epochs
+#       warmup_ratio: 0.1            # Warmup ratio
+#       weight_decay: 0.01           # Weight decay
+#       eval_strategy: "epoch"       # Evaluation strategy ("epoch" or "steps")
+#       save_strategy: "epoch"       # Save strategy ("epoch" or "steps")
+#       eval_steps: null             # Evaluation steps (if eval_strategy is "steps")
+#       save_steps: null             # Save steps (if save_strategy is "steps")
+#       save_total_limit: 3          # Maximum number of checkpoints to keep
+#       logging_steps: 10            # Logging frequency
+#       metric_for_best_model: "eval_loss"  # Metric to determine best model
+#       greater_is_better: false     # Whether higher metric is better
+#       load_best_model_at_end: true # Load best model at end of training
+#       early_stopping_patience: null  # Early stopping patience (null = disabled)
+#       early_stopping_threshold: 0.0  # Early stopping threshold
+#
+#     data_config:
+#       train_files:                 # List of possible training file paths
+#         - "/app/data/simple/train.json"
+#         - "./data/simple/train.json"
+#       valid_files:                 # List of possible validation file paths
+#         - "/app/data/simple/valid.json"
+#         - "./data/simple/valid.json"
+#       train_sample_size: null      # Limit training samples (null = use all)
+#       valid_sample_size: null      # Limit validation samples (null = use all)
+#       label_field: "clarity_label" # Field name for labels in data
+#       text_field_1: "question"   # Question text field (e.g. 'question')
+#       text_field_2: "answer"       # Answer text field (e.g. 'answer')
+#
+#     label_config:
+#       labels:                      # List of label names
+#         - "Clear Reply"
+#         - "Clear Non-Reply"
+#         - "Ambivalent"
+#       label2id: null               # Custom label to ID mapping (auto-generated if null)
+#       id2label: null               # Custom ID to label mapping (auto-generated if null)
+#
+#     tensorboard_config:
+#       auto_start: true             # Automatically start TensorBoard
+#       port: 6006                   # TensorBoard port
+#       host: "0.0.0.0"              # TensorBoard host
+#
+# =======================================================================================
+# LORA MODEL CONFIGURATION
+# =======================================================================================
+# Example entry for LoRA models:
+#   - name: "opt-350m"
+#     type: "lora"
+#     enabled: true
+#     route: "/classify/opt-350m"
+#
+#     model_config:
+#       model_name: "facebook/opt-350m"
+#       use_8bit: true
+#
+#     training_config:
+#       max_length: 256
+#       batch_size: 2
+#       gradient_accumulation_steps: 8
+#       learning_rate: 3e-4
+#       num_epochs: 5
+#       warmup_ratio: 0.1
+#       weight_decay: 0.01
+#       eval_steps: 50
+#       save_steps: 50
+#       save_total_limit: 3
+#       logging_steps: 5
+#       metric_for_best_model: "eval_loss"
+#       greater_is_better: false
+#
+#     data_config:
+#       train_files:
+#         - "/app/data/simple/train.json"
+#         - "./data/simple/train.json"
+#       valid_files:
+#         - "/app/data/simple/valid.json"
+#         - "./data/simple/valid.json"
+#       train_sample_size: 600
+#       valid_sample_size: 200
+#       label_field: "clarity_label"
+#       text_field_1: "question"
+#       text_field_2: "answer"
+#
+#     label_config:
+#       labels:                      # List of label names
+#         - "Clear Reply"
+#         - "Clear Non-Reply"
+#         - "Ambivalent"
+#
+#     tensorboard_config:
+#       auto_start: true
+#       port: 6006
+#       host: "0.0.0.0"
 #=======================================================================================
 
 models:
-  - name: roberta-base
-    module: models.roberta_base
-    loader: load_model
-    route: /classify/roberta-base
+
+  - name: "opt-1.3b"
+    type: "lora"
     enabled: true
+    route: "/classify/opt-1-3b"
+
+    model_config:
+      model_name: "facebook/opt-1.3b"
+      use_8bit: true
+
+    training_config:
+      max_length: 256
+      batch_size: 2
+      gradient_accumulation_steps: 8
+      learning_rate: 3e-4
+      num_epochs: 5
+      warmup_ratio: 0.1
+      weight_decay: 0.01
+      eval_steps: 50
+      save_steps: 50
+      save_total_limit: 3
+      logging_steps: 5
+      metric_for_best_model: "eval_loss"
+      greater_is_better: false
+
+    label_config:
+      labels:
+        - "Clear Reply"
+        - "Clear Non-Reply"
+        - "Ambivalent"
+
+    tensorboard_config:
+      auto_start: true
+      port: 6006
+      host: "0.0.0.0"
+
+  - name: "roberta-large"
+    type: "encoder"
+    enabled: false
+    route: "/classify/roberta-large"
+
+    model_config:
+      model_name: "roberta-large"
+
+    training_config:
+      max_length: 256
+      batch_size: 8
+      gradient_accumulation_steps: 2
+      num_epochs: 5
+      learning_rate: 1e-5
+      eval_strategy: "epoch"
+      save_strategy: "epoch"
+      early_stopping_patience: 2
+
+    label_config:
+      labels:
+        - "Clear Reply"
+        - "Clear Non-Reply"
+        - "Ambivalent"

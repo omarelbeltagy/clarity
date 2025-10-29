@@ -1,41 +1,122 @@
 # Clarity Models
 
-> This module provides a dockerized service for running different classification models through a **FastAPI**
-> interface.  
-> It loads multiple models defined in a configuration file and expose them as REST endpoints.
+> This module provides a configurable framework for training and serving classification models.
+> Supports both transformer encoders and large language models with LoRA fine-tuning, all exposed through a FastAPI
+> service.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Usage](#usage)
 - [Configuration](#configuration)
+- [Usage](#usage)
+- [Data Format](#data-format)
 
 ---
 
 ## Overview
 
-### Project structure:
-
-``` yaml
-├── Dockerfile # Dockerfile to build the service container
-├── app.py # Entrypoint defining FastAPI app and loading models
-├── docker-compose.yaml # Docker Compose configuration
-├── logging.yaml # Loguru logging configuration
-├── models # Directory containing model implementations
-│ └── roberta_base.py
-│ └── ...
-├── models.yaml # Configuration file defining which models to load
-└── requirements.txt # Python dependencies
-```
-
 ### Features
 
-- **Multiple model deployment**  
-  Models are defined in [models.yaml](models.yaml) and loaded automatically at startup.
-- **Endpoints**  
-  Each model is exposed as an HTTP endpoint for inference.
+- **Multiple model types**: Encoder (BERT-like), LoRA (OPT/GPT-like), and Classic loaders
+- **Configuration-driven**: All aspects controlled via `models.yaml`
+- **Multi-model serving**: Serve multiple models in parallel under different endpoints
+- **Flexible data processing**: Customizable field names, label mappings, sample sizes
+- **TensorBoard integration**: Automatic startup and process management
+- **Device detection**: Automatic choice between CUDA, MPS (Apple Silicon), or CPU
+- **API**: Models are served via FastAPI with REST endpoints
+- **Command Line Interface**: For training and evaluation
+
+### Project Structure
+
+``` yaml
+clarity-models/
+├── Dockerfile
+├── docker-compose.yaml
+├── logging.yaml
+├── models-training.ipynb   # Jupyter notebook for model training experiments on Google Colab
+├── models.yaml
+├── app.py                  # FastAPI app loading models from models.yaml
+├── models/
+│   ├── encoder.py          # Encoder training & inference
+│   ├── lora.py             # LoRA training & inference
+│   ├── tensorboard_manager.py
+│   └── config/             # Config classes for each model type
+├── utils/
+│   ├── general_utils.py
+│   └── logger.py
+└── requirements.txt
+```
+
+---
+
+## Configuration
+
+All models are defined in [`models.yaml`](models.yaml).
+
+Supported types:
+
+- `classic`: Custom loader function
+- `encoder`: Transformer encoder fine-tuning
+- `lora`: LLMs with LoRA adapters
+
+### Examples
+
+#### Encoder model
+
+```yaml
+- name: "roberta-large"
+  type: "encoder"
+  enabled: true
+  route: "/classify/roberta-large"
+
+  model_config:
+    model_name: "roberta-large"
+    num_labels: 3
+
+  training_config:
+    max_length: 256
+    batch_size: 8
+    learning_rate: 1e-5
+    num_epochs: 5
+    eval_strategy: "epoch"
+    save_strategy: "epoch"
+    early_stopping_patience: 2
+
+  label_config:
+    labels:
+      - "Clear Reply"
+      - "Clear Non-Reply"
+      - "Ambivalent"
+```
+
+#### LoRA model
+
+```yaml
+- name: "opt-1.3b"
+  type: "lora"
+  enabled: false
+  route: "/classify/opt-1-3b"
+
+  model_config:
+    model_name: "facebook/opt-1.3b"
+    use_8bit: true
+
+  training_config:
+    batch_size: 2
+    gradient_accumulation_steps: 8
+    learning_rate: 3e-4
+    num_epochs: 5
+
+  data_config:
+    train_sample_size: 600
+    valid_sample_size: 200
+
+  tensorboard_config:
+    auto_start: true
+    port: 6006
+```
 
 ---
 
@@ -43,9 +124,10 @@
 
 ### Prerequisites
 
-* [Docker](https://www.docker.com/get-started/)
+* [Docker](https://www.docker.com/get-started/) (for containerized execution)
+* [Python 3.8+](https://www.python.org/downloads/) (for native execution)
 
-### Build and Run
+### Build and Run (Docker)
 
 From inside the `clarity-models/` directory:
 
@@ -59,37 +141,96 @@ docker compose up -d
 docker compose build --no-cache
 ```
 
-### Accessing the Service
+### Native
 
-The service will be available at: http://localhost:8078
+For training the models it is recommended to run natively with GPU support.
 
-#### Usage Example Endpoint
-
-The default roberta-base model is available at: `POST /classify/roberta-base`
-
-``` bash
-curl -X POST "http://localhost:8078/classify/roberta-base" \
--H "Content-Type: application/json" \
--d '{ "question": "Do you like taxes?", "answer": "We must think about our economy." }'
+```bash
+python3 -m venv venv # Create virtual environment
+source venv/bin/activate # Activate virtual environment
+pip install -r requirements.txt # Install dependencies
+uvicorn app:app # Start uvicorn server
 ```
 
-The expected response is similar to:
+### Command Line Interface
+
+In addition to serving models via FastAPI, you can now run training and inference directly from the command line.
+
+```bash
+# List available models from models.yaml
+python app.py list
+# Train a specific model with optional custom config
+python app.py train --config custom-config.yaml --model roberta-base train
+# Run inference on a QA pair
+python app.py test --question "Question?" --answer "Answer."
+```
+
+This is useful for quick experiments or running jobs in environments where an API server is not needed.
+
+### Google Colab / Jupyter Support
+
+A Jupyter notebook is included for interactive training and evaluation, optimized for Google Colab.
+
+File: [`models-training.ipynb`](models-training.ipynb)
+
+### Accessing the FastAPI Service
+
+Exposed ports:
+
+* `8000`: FastAPI service
+* `6006`: TensorBoard (if enabled)
+
+Models defined in [`models.yaml`](models.yaml) are exposed via REST. Example:
+
+```bash
+curl -X POST "http://localhost:8000/classify/opt-1-3b" \
+  -H "Content-Type: application/json" \
+  -d '{ "question": "What is the current state of the world?", "answer": "I love cheeseburger." }'
+```
+
+Response:
 
 ```json
 {
-  "clarity_label": "Ambivalent",
-  "confidence": 0.69,
+  "clarity_label": "Clear Reply",
+  "confidence": 0.89,
   "scores": {
-    "Clear Reply": 0.05,
-    "Clear Non-Reply": 0.26,
-    "Ambivalent": 0.69
+    "Clear Reply": 0.89,
+    "Clear Non-Reply": 0.08,
+    "Ambivalent": 0.03
   }
 }
 ```
 
+### Logging
+
+Logging configured via [`logging.yaml`](logging.yaml). Default format:
+
+```
+2025-10-26 12:00:00 | INFO     | Training started
+```
+
 ---
 
-## Configuration
+## Data Format
 
-* [models.yaml](models.yaml) Defines which models are loaded and their routes
-* [logging.yaml](logging.yaml) Configures logging output
+Default QA-pair structure:
+
+```json
+[
+  {
+    "question": "Will you invite them to the White House?",
+    "answer": "We are ready if they are serious.",
+    "clarity_label": "Clear Reply"
+  }
+]
+```
+
+Custom field names can be set in `data_config`:
+
+```yaml
+data_config:
+  label_field: "sentiment"
+  text_field_1: "text"
+  text_field_2: "context"
+```
