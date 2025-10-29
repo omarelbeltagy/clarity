@@ -1,6 +1,16 @@
 import os
-import pathlib
+import shutil
+
 from utils.logger import logger
+
+
+def cleanup_checkpoints(output_dir: str):
+    """Delete all checkpoint directories in the output_dir."""
+    for item in os.listdir(output_dir):
+        path = os.path.join(output_dir, item)
+        if os.path.isdir(path) and item.startswith("checkpoint-"):
+            logger.info(f"Deleting checkpoint directory: {path}")
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def is_running_in_docker() -> bool:

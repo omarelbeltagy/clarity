@@ -29,6 +29,7 @@ from transformers import (
     TrainingArguments,
 )
 from utils.general_utils import (
+    cleanup_checkpoints,
     is_running_in_docker,
     as_int,
     as_float,
@@ -368,6 +369,9 @@ class LoRATrainer:
             logger.info(f"Saving model to {self.model_config.output_dir}")
             trainer.save_model(self.model_config.output_dir)
             self.tokenizer.save_pretrained(self.model_config.output_dir)
+
+            # Cleanup old checkpoints
+            cleanup_checkpoints(output_dir=self.model_config.output_dir)
 
             logger.info("Training complete!")
             self._print_summary(train_dataset, valid_dataset)

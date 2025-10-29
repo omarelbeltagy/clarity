@@ -6,12 +6,10 @@ Supports BERT, RoBERTa, DistilBERT, ALBERT, and other encoder-based models
 import atexit
 import json
 import os
-import subprocess
-import sys
-import time
+from typing import Dict, List, Optional
+
 import torch
 import torch.nn.functional as F
-from dataclasses import dataclass
 from datasets import Dataset, DatasetDict
 from models.config.encoder_config import (
     EncoderModelConfig,
@@ -28,8 +26,8 @@ from transformers import (
     TrainingArguments,
     EarlyStoppingCallback
 )
-from typing import Dict, List, Optional
 from utils.general_utils import (
+    cleanup_checkpoints,
     is_running_in_docker,
     as_int,
     as_float,
@@ -270,6 +268,9 @@ class EncoderTrainer:
             logger.info(f"Saving model to {self.model_config.output_dir}")
             trainer.save_model(self.model_config.output_dir)
             self.tokenizer.save_pretrained(self.model_config.output_dir)
+
+            # Cleanup old checkpoints
+            cleanup_checkpoints(output_dir=self.model_config.output_dir)
 
             logger.info("Training complete!")
             self._print_summary(encoded_datasets)
