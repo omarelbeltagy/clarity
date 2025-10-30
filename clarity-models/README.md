@@ -162,7 +162,7 @@ python app.py list
 # Train a specific model with optional custom config
 python app.py train --config custom-config.yaml --model roberta-base train
 # Run inference on a QA pair
-python app.py test --question "Question?" --answer "Answer."
+python app.py test --question "Question?" --context "Context."
 ```
 
 This is useful for quick experiments or running jobs in environments where an API server is not needed.
@@ -185,7 +185,7 @@ Models defined in [`models.yaml`](models.yaml) are exposed via REST. Example:
 ```bash
 curl -X POST "http://localhost:8000/classify/opt-1-3b" \
   -H "Content-Type: application/json" \
-  -d '{ "question": "What is the current state of the world?", "answer": "I love cheeseburger." }'
+  -d '{ "question": "What is the current state of the world?", "context": "Mr. President, what is the current state of the world? - The world is facing numerous challenges including climate change, pandemics, and geopolitical tensions." }'
 ```
 
 Response:
@@ -220,7 +220,7 @@ Default QA-pair structure:
 [
   {
     "question": "Will you invite them to the White House?",
-    "answer": "We are ready if they are serious.",
+    "context": "Mr. President, I have a question regarding the recent events. Will you invite them to the White House? - Yes, I will.",
     "clarity_label": "Clear Reply"
   }
 ]
@@ -231,6 +231,6 @@ Custom field names can be set in `data_config`:
 ```yaml
 data_config:
   label_field: "sentiment"
-  text_field_1: "text"
-  text_field_2: "context"
+  question_field: "text"
+  context_field: "context"
 ```

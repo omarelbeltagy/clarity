@@ -88,8 +88,8 @@ class EncoderDataConfig:
     train_sample_size: Optional[int] = None
     valid_sample_size: Optional[int] = None
     label_field: str = "clarity_label"
-    text_field_1: str = "question"
-    text_field_2: str = "answer"
+    context_field: str = "context"
+    question_field: str = "question"
 
     def __post_init__(self):
         if self.train_files is None:
@@ -121,10 +121,10 @@ class EncoderDataConfig:
             instance.valid_sample_size = as_int(cfg["valid_sample_size"], None)
         if "label_field" in cfg:
             instance.label_field = as_str(cfg["label_field"], "clarity_label")
-        if "text_field_1" in cfg:
-            instance.text_field_1 = as_str(cfg["text_field_1"], "question")
-        if "text_field_2" in cfg:
-            instance.text_field_2 = as_str(cfg["text_field_2"], "answer")
+        if "context_field" in cfg:
+            instance.context_field = as_str(cfg["context_field"], "context")
+        if "question_field" in cfg:
+            instance.question_field = as_str(cfg["question_field"], "question")
         return instance
 
 

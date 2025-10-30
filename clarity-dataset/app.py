@@ -2,9 +2,11 @@ import json
 import os
 import random
 import sys
+
 import yaml
 from datasets import load_dataset
 from loguru import logger
+
 from cleaning import clean_single_text
 
 DATA_DIR_FULL = "/data/full"
@@ -22,10 +24,11 @@ def reduce_dataset(data, include_label=True):
     """Reduce dataset to essential fields."""
     return [
         {
-            "question": item["interview_question"],
-            "answer": item["interview_answer"],
-            "question_clean": clean_single_text(item["interview_question"], item["president"]),
-            "answer_clean":clean_single_text(item["interview_answer"], item["president"]),
+            "question": item["question"],
+            "context": item["interview_question"] + "\n" + item["interview_answer"],
+            "question_clean": clean_single_text(item["question"], item["president"]),
+            "context_clean": clean_single_text(item["interview_question"] + "\n" + item["interview_answer"],
+                                               item["president"]),
             **({"clarity_label": item["clarity_label"]} if include_label else {})
         }
         for item in data
@@ -51,7 +54,9 @@ def main():
 
     logger.info("Splitting train into train/valid...")
     records_train = [row for row in ds_train]
+    random.seed(42)
     random.shuffle(records_train)
+
     split_idx = int(0.8 * len(records_train))
     train_data, valid_data = records_train[:split_idx], records_train[split_idx:]
     test_data = [row for row in ds_test]

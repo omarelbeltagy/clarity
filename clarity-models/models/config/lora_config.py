@@ -82,8 +82,8 @@ class LoRADataConfig:
     valid_sample_size: Optional[int] = None
     # New dynamic field configuration
     label_field: str = "clarity_label"
-    text_field_1: str = "question"
-    text_field_2: str = "answer"
+    question_field: str = "question"
+    context_field: str = "context"
 
     def __post_init__(self):
         if self.train_files is None:
@@ -115,10 +115,10 @@ class LoRADataConfig:
             instance.valid_sample_size = as_int(cfg["valid_sample_size"], None)
         if "label_field" in cfg:
             instance.label_field = as_str(cfg["label_field"], "clarity_label")
-        if "text_field_1" in cfg:
-            instance.text_field_1 = as_str(cfg["text_field_1"], "question")
-        if "text_field_2" in cfg:
-            instance.text_field_2 = as_str(cfg["text_field_2"], "answer")
+        if "question_field" in cfg:
+            instance.text_field_1 = as_str(cfg["question_field"], "question")
+        if "context_field" in cfg:
+            instance.text_field_2 = as_str(cfg["context_field"], "context")
         return instance
 
 
@@ -162,4 +162,31 @@ class LabelConfig:
 
         return cls(
             labels=labels,
+        )
+
+
+DEFAULT_PROMPT_TEMPLATE = """
+Based on a part of the interview where the interviewer asks a set of questions, classify the type of answer the interviewee provided for the following question.
+
+### Interview Context ###
+{context}
+### Question ###
+{question}
+
+### Label ###
+{label}
+"""
+
+
+@dataclass
+class PromptConfig:
+    """Prompt configuration for LoRA models."""
+    template: str = DEFAULT_PROMPT_TEMPLATE
+
+    @classmethod
+    def from_dict(cls, cfg: Dict) -> "PromptConfig":
+        """Create PromptConfig from dictionary."""
+        return cls(
+            template=as_str(cfg.get("template", DEFAULT_PROMPT_TEMPLATE),
+                            DEFAULT_PROMPT_TEMPLATE)
         )

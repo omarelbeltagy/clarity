@@ -9,6 +9,9 @@ from fastapi import FastAPI
 from loguru import logger
 from pydantic import BaseModel
 
+from data.dto import (
+    ClassificationRequest,
+)
 from models.config.encoder_config import (
     EncoderModelConfig,
     EncoderTrainingConfig,
@@ -21,6 +24,7 @@ from models.config.lora_config import (
     LoRADataConfig,
     LoRAModelConfig,
     LabelConfig as LoRALabelConfig,
+    PromptConfig
 )
 from models.config.tensorboard_config import TensorboardConfig
 from models.encoder import (
@@ -30,8 +34,6 @@ from models.encoder import (
 from models.lora import (
     LoRATrainer,
     load_model as load_lora_model,
-    create_default_format_function,
-    PromptConfig
 )
 from utils.general_utils import (
     get_execution_environment,
@@ -44,11 +46,6 @@ CONFIG_PATH = "models.yaml"
 
 # FastAPI app instance
 app = FastAPI()
-
-
-class QAInput(BaseModel):
-    question: str
-    answer: str
 
 
 def load_config(config_path: str = None) -> dict:
@@ -68,26 +65,14 @@ def load_lora_model_from_config(model_def: dict):
     """Load a LoRA model from YAML configuration."""
     logger.info(f"Loading LoRA model '{model_def['name']}'")
 
-    # Load configs
-    data_config = LoRADataConfig.from_dict(model_def.get("data_config", {}))
-    label_config = LoRALabelConfig.from_dict(model_def.get("label_config", {}))
-
-    # Create default format function with dynamic fields
-    from models.lora import create_default_format_function
-    format_fn = create_default_format_function(data_config)
-
-    # Create prompt config with dynamic format function
-    from models.lora import PromptConfig
-    prompt_config = PromptConfig(format_function=format_fn)
-
     # Create trainer
     trainer = LoRATrainer(
         model_config=LoRAModelConfig.from_dict(model_def.get("model_config", {})),
         lora_config=LoRAConfig.from_dict(model_def.get("lora_config", {})),
         training_config=LoRATrainingConfig.from_dict(model_def.get("training_config", {})),
         data_config=LoRADataConfig.from_dict(model_def.get("data_config", {})),
-        label_config=label_config,
-        prompt_config=prompt_config,
+        label_config=LoRALabelConfig.from_dict(model_def.get("label_config", {})),
+        prompt_config=PromptConfig.from_dict(model_def.get("prompt_config", {})),
         tensorboard_config=TensorboardConfig.from_dict(model_def.get("tensorboard_config", {})),
     )
 
@@ -195,29 +180,27 @@ def cmd_train(args):
             logger.info("✓ Training completed successfully!")
 
         elif model_type == "lora":
-            # Train LoRA model
-            data_config = LoRADataConfig.from_dict(model_def.get("data_config", {}))
-            label_config = LoRALabelConfig.from_dict(model_def.get("label_config", {}))
-            format_fn = create_default_format_function(data_config)
 
             # Enable TensorBoard if requested
             tb_config = TensorboardConfig.from_dict(model_def.get("tensorboard_config", {}))
             if args.tensorboard:
                 tb_config.auto_start = True
+            else:
+                tb_config.auto_start = False
 
             trainer = LoRATrainer(
                 model_config=LoRAModelConfig.from_dict(model_def.get("model_config", {})),
                 lora_config=LoRAConfig.from_dict(model_def.get("lora_config", {})),
                 training_config=LoRATrainingConfig.from_dict(model_def.get("training_config", {})),
-                data_config=data_config,
-                label_config=label_config,
-                prompt_config=PromptConfig(format_function=format_fn),
+                data_config=LoRADataConfig.from_dict(model_def.get("data_config", {})),
+                label_config=LoRALabelConfig.from_dict(model_def.get("label_config", {})),
+                prompt_config=PromptConfig.from_dict(model_def.get("prompt_config", {})),
                 tensorboard_config=tb_config,
             )
 
             # Train
             trainer.train()
-            logger.info("✓ Training completed successfully!")
+            logger.info("Training completed successfully!")
 
         else:
             logger.error(f"Training not supported for model type: {model_type}")
@@ -262,16 +245,18 @@ def cmd_test(args):
             sys.exit(1)
 
         # Test with provided input or interactive mode
-        if args.question and args.answer:
+        if args.question and args.context:
             # Single prediction
             logger.info("\nInput:")
             logger.info(f"  Question: {args.question}")
-            logger.info(f"  Answer: {args.answer}")
+            logger.info(f"  Context: {args.context}")
 
-            result = api.classify(
+            classification_request = ClassificationRequest(
                 question=args.question,
-                answer=args.answer
+                context=args.context,
             )
+
+            result = api.classify(data=classification_request, )
 
             logger.info("\n" + "=" * 60)
             logger.info("PREDICTION RESULT")
@@ -302,15 +287,20 @@ def cmd_test(args):
                     if question.lower() in ['quit', 'exit', 'q']:
                         break
 
-                    answer = input("Answer: ").strip()
-                    if answer.lower() in ['quit', 'exit', 'q']:
+                    context = input("Context: ").strip()
+                    if context.lower() in ['quit', 'exit', 'q']:
                         break
 
-                    if not question or not answer:
-                        logger.warning("Both question and answer are required")
+                    if not question or not context:
+                        logger.warning("Both question and context are required")
                         continue
 
-                    result = api.classify(question=question, answer=answer)
+                    classification_request = ClassificationRequest(
+                        question=args.question,
+                        context=args.context,
+                    )
+
+                    result = api.classify(data=classification_request)
 
                     print("\n" + "-" * 60)
                     if "clarity_label" in result:
@@ -404,11 +394,8 @@ def initialize_api_server():
         )
 
         def make_endpoint(api):
-            async def endpoint(data: QAInput):
-                return api.classify(
-                    question=data.question,
-                    answer=data.answer
-                )
+            async def endpoint(data: ClassificationRequest):
+                return api.classify(data)
 
             return endpoint
 
@@ -463,8 +450,8 @@ Examples:
   python app.py test
   
   # Test a model (single prediction)
-  python app.py test --question "Question?" --answer "Answer."
-  python app.py test --model opt-1.3b --question "Question?" --answer "Answer."
+  python app.py test --question "Question?" --context "Context."
+  python app.py test --model opt-1.3b --question "Question?" --context "Context."
   
   # Run as API server
   uvicorn app:app --host 0.0.0.0 --port 8000
@@ -504,14 +491,14 @@ Examples:
         help="Model name to test (default: first enabled model)"
     )
     parser_test.add_argument(
+        "--context",
+        type=str,
+        help="Context text for prediction"
+    )
+    parser_test.add_argument(
         "--question",
         type=str,
         help="Question text for prediction"
-    )
-    parser_test.add_argument(
-        "--answer",
-        type=str,
-        help="Answer text for prediction"
     )
 
     args = parser.parse_args()

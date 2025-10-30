@@ -10,6 +10,9 @@ from typing import Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
+from data.dto import (
+    ClassificationRequest,
+)
 from datasets import Dataset, DatasetDict
 from models.config.encoder_config import (
     EncoderModelConfig,
@@ -122,8 +125,8 @@ class EncoderTrainer:
     def _preprocess_function(self, batch):
         """Tokenization function"""
         enc = self.tokenizer(
-            batch[self.data_config.text_field_1],
-            batch[self.data_config.text_field_2],
+            batch[self.data_config.context_field],
+            batch[self.data_config.question_field],
             truncation=True,
             padding="max_length",
             max_length=self.training_config.max_length,
@@ -343,15 +346,15 @@ class EncoderInferenceAPI:
 
         logger.info("Model loaded successfully")
 
-    def classify(self, question: str, answer: str) -> Dict:
-        """Classify a question-answer pair."""
+    def classify(self, data: ClassificationRequest) -> Dict:
+        """Classify a request."""
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
         # Tokenize
         inputs = self.tokenizer(
-            question,
-            answer,
+            data.context,
+            data.question,
             return_tensors="pt",
             truncation=True,
             padding=True,

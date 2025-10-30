@@ -5,16 +5,19 @@ LoRA Fine-tuning Framework
 import atexit
 import json
 import os
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional
 
 import torch
+from data.dto import (
+    ClassificationRequest,
+)
 from models.config.lora_config import (
     LoRAConfig,
     LoRATrainingConfig,
     LoRADataConfig,
     LoRAModelConfig,
-    LabelConfig
+    LabelConfig,
+    PromptConfig
 )
 from models.config.tensorboard_config import TensorboardConfig
 from models.tensorboard_manager import TensorboardManager
@@ -40,40 +43,63 @@ from utils.logger import logger
 
 
 # =======================================================================================
-# Default Prompt Formatting Function
+# Prompt Formatting Function
 # =======================================================================================
 
-def create_default_format_function(data_config):
+def format_prompt(data_config: LoRADataConfig, prompt_config: PromptConfig, item: Dict) -> str:
     """Factory function to create format function with dynamic field names."""
+    template = prompt_config.template
+    question_field = item.get(data_config.question_field, "")
+    context_field = item.get(data_config.context_field, "")
+    label_field = item.get(data_config.label_field, "")
 
-    def format_fn(item: dict) -> str:
-        template = """Based on a part of the interview where the interviewer asks a set of questions, classify the type of answer the interviewee provided for the following question.
+    prompt = template.format(
+        question=question_field,
+        context=context_field,
+        label=label_field
+    )
 
-### Question ###
-{field_1}
-### Answer ###
-{field_2}
-
-### Label ###
-{label}"""
-        # Use configurable field names
-        field_1 = item.get(data_config.text_field_1, "")
-        field_2 = item.get(data_config.text_field_2, "")
-        label = item.get(data_config.label_field, "")
-
-        return template.format(
-            field_1=field_1,
-            field_2=field_2,
-            label=label
-        )
-
-    return format_fn
+    return prompt
 
 
-@dataclass
-class PromptConfig:
-    """Prompt template configuration."""
-    format_function: Optional[Callable] = None
+# =======================================================================================
+# Extract label function
+# =======================================================================================
+
+def extract_label(label_config: LabelConfig, text: str) -> str:
+    """
+    Extract classification label from generated text.
+
+    Args:
+        text: Generated text from model
+        label_config: LabelConfig with valid labels
+
+    Returns:
+        Extracted label or first valid label as default
+    """
+    valid_labels = label_config.labels
+    text_lower = text.strip().lower()
+
+    # Try exact match (case insensitive)
+    for label in valid_labels:
+        if label.lower() in text_lower:
+            return label
+
+    # Try partial match
+    for label in valid_labels:
+        label_words = label.lower().split()
+        if all(word in text_lower for word in label_words):
+            return label
+
+    # Try first word match
+    first_word = text_lower.split()[0] if text_lower else ""
+    for label in valid_labels:
+        if first_word in label.lower():
+            return label
+
+    # Default to first label with warning
+    logger.warning(f"Could not extract label from: '{text}'. Using default: {valid_labels[0]}")
+    return valid_labels[0]
 
 
 # =======================================================================================
@@ -87,13 +113,15 @@ class GenericDataset(Dataset):
             self,
             data_files: List[str],
             tokenizer: AutoTokenizer,
-            format_function: Callable[[dict], str],
+            prompt_config: PromptConfig = PromptConfig(),
+            data_config: LoRADataConfig = LoRADataConfig(),
             max_length: int = 256,
             sample_size: Optional[int] = None
     ):
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.format_function = format_function
+        self.data_config = data_config
+        self.prompt_config = prompt_config
 
         # Find and load data
         data_file = self._find_data_file(data_files)
@@ -123,7 +151,11 @@ class GenericDataset(Dataset):
         item = self.data[idx]
 
         # Format using provided function
-        prompt = self.format_function(item)
+        prompt = format_prompt(
+            data_config=self.data_config,
+            prompt_config=self.prompt_config,
+            item=item
+        )
 
         # Tokenize
         encodings = self.tokenizer(
@@ -273,7 +305,6 @@ class LoRATrainer:
         train_dataset = GenericDataset(
             data_files=self.data_config.train_files,
             tokenizer=self.tokenizer,
-            format_function=self.prompt_config.format_function,
             max_length=self.training_config.max_length,
             sample_size=self.data_config.train_sample_size
         )
@@ -281,7 +312,6 @@ class LoRATrainer:
         valid_dataset = GenericDataset(
             data_files=self.data_config.valid_files,
             tokenizer=self.tokenizer,
-            format_function=self.prompt_config.format_function,
             max_length=self.training_config.max_length,
             sample_size=self.data_config.valid_sample_size
         )
@@ -395,50 +425,6 @@ class LoRATrainer:
         logger.info("=" * 50)
 
 
-def _extract_classification_label(text: str, valid_labels: List[str]) -> str:
-    """
-    Extract classification label from generated text.
-
-    Args:
-        text: Generated text from model
-        valid_labels: List of valid classification labels
-
-    Returns:
-        Extracted label or first valid label as default
-    """
-    text_lower = text.strip().lower()
-
-    # Try exact match (case insensitive)
-    for label in valid_labels:
-        if label.lower() in text_lower:
-            return label
-
-    # Try partial match
-    for label in valid_labels:
-        label_words = label.lower().split()
-        if all(word in text_lower for word in label_words):
-            return label
-
-    # Try first word match
-    first_word = text_lower.split()[0] if text_lower else ""
-    for label in valid_labels:
-        if first_word in label.lower():
-            return label
-
-    # Default to first label with warning
-    logger.warning(f"Could not extract label from: '{text}'. Using default: {valid_labels[0]}")
-    return valid_labels[0]
-
-
-def create_extraction_function(label_config: LabelConfig):
-    """Factory function to create extraction function with dynamic labels."""
-
-    def extract_fn(text: str) -> str:
-        return _extract_classification_label(text, valid_labels=label_config.labels)
-
-    return extract_fn
-
-
 # =======================================================================================
 # Inference API
 # =======================================================================================
@@ -450,13 +436,15 @@ class InferenceAPI:
             self,
             model_dir: str,
             model_base: str,
-            format_function: Optional[Callable],
-            extract_function: Optional[Callable[[str], str]]
+            label_config: LabelConfig = LabelConfig(),
+            prompt_config: PromptConfig = PromptConfig(),
+            data_config: LoRADataConfig = LoRADataConfig()
     ):
         self.model_dir = model_dir
         self.model_base = model_base
-        self.format_function = format_function
-        self.extract_function = extract_function
+        self.label_config = label_config
+        self.prompt_config = prompt_config
+        self.data_config = data_config
 
         self.model = None
         self.tokenizer = None
@@ -521,8 +509,7 @@ class InferenceAPI:
 
     def classify(
             self,
-            question: str,
-            answer: str,
+            data: ClassificationRequest,
             max_new_tokens: int = 10,
             temperature: float = 1.0
     ) -> Dict[str, str]:
@@ -530,10 +517,11 @@ class InferenceAPI:
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
-        input_text = self.format_function({
-            "question": question,
-            "answer": answer
-        })
+        input_text = format_prompt(
+            data_config=self.data_config,
+            prompt_config=self.prompt_config,
+            item=data.dict()
+        )
 
         # Tokenize
         inputs = self.tokenizer(
@@ -562,7 +550,10 @@ class InferenceAPI:
         generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
 
         # Extract result
-        result = self.extract_function(generated_text)
+        result = extract_label(
+            label_config=self.label_config,
+            text=generated_text
+        )
 
         return {
             "generated_text": generated_text.strip(),
@@ -599,15 +590,11 @@ def load_model(lora_trainer: LoRATrainer) -> InferenceAPI:
     else:
         logger.info(f"Found trained model at {lora_trainer.model_config.output_dir}")
 
-    extract_function = create_extraction_function(
-        lora_trainer.label_config)
-
     # Load and return API
     api = InferenceAPI(
         model_dir=lora_trainer.model_config.output_dir,
         model_base=lora_trainer.model_config.model_name,
-        format_function=lora_trainer.prompt_config.format_function,
-        extract_function=extract_function
+        prompt_config=lora_trainer.prompt_config,
     )
     api.load_model()
     return api
