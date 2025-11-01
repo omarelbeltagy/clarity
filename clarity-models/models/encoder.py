@@ -10,10 +10,10 @@ from typing import Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
-from data.dto import (
+from datasets import Dataset, DatasetDict
+from dto.dto import (
     ClassificationRequest,
 )
-from datasets import Dataset, DatasetDict
 from models.config.encoder_config import (
     EncoderModelConfig,
     EncoderTrainingConfig,
@@ -375,7 +375,7 @@ class EncoderInferenceAPI:
         pred_label = self.label_config.id2label[pred_id]
 
         return {
-            "clarity_label": pred_label,
+            "name": pred_label,
             "confidence": float(probs[pred_id]),
             "scores": {
                 self.label_config.id2label[i]: float(p)

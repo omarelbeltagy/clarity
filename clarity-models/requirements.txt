@@ -10,3 +10,5 @@ PyYAML==6.0.3
 bitsandbytes==0.42.0
 sentencepiece==0.2.1
 tensorboard==2.20.0
+requests
+scikit-learn

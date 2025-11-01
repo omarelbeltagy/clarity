@@ -8,7 +8,7 @@ import os
 from typing import Dict, List, Optional
 
 import torch
-from data.dto import (
+from dto.dto import (
     ClassificationRequest,
 )
 from models.config.lora_config import (

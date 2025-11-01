@@ -10,7 +10,7 @@ from loguru import logger
 from pydantic import BaseModel
 from torch.multiprocessing import freeze_support
 
-from data.dto import (
+from dto.dto import (
     ClassificationRequest,
 )
 from models.config.encoder_config import (
