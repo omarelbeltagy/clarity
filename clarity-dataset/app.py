@@ -10,7 +10,7 @@ from loguru import logger
 from cleaning import clean_single_text
 
 DATA_DIR_FULL = "/data/full"
-DATA_DIR_SIMPLE = "/data/simple"
+DATA_DIR_SIMPLE = "/data/cleaned"
 
 
 def save_json(data, path):
@@ -20,10 +20,12 @@ def save_json(data, path):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def reduce_dataset(data, include_label=True):
-    """Reduce dataset to essential fields."""
+def clean_dataset(data, include_label=True):
     return [
         {
+            "question_clean": clean_single_text(item["question"], item["president"]),
+            "context_clean": clean_single_text(item["interview_question"] + "\n" + item["interview_answer"],
+                                               item["president"]),
             "question": item["question"],
             "context": item["interview_question"] + "\n" + item["interview_answer"],
             **({"clarity_label": item["clarity_label"]} if include_label else {})
@@ -31,16 +33,6 @@ def reduce_dataset(data, include_label=True):
         for item in data
     ]
 
-def clean_dataset(data, include_label=True):
-    return [
-        {
-            "question_clean": clean_single_text(item["question"], item["president"]),
-            "context_clean": clean_single_text(item["interview_question"] + "\n" + item["interview_answer"],
-                                               item["president"]),
-            **({"clarity_label": item["clarity_label"]} if include_label else {})
-        }
-        for item in data
-    ]
 
 def main():
     """Main function to load, process, and save datasets."""
@@ -74,10 +66,10 @@ def main():
     save_json(test_data, f"{DATA_DIR_FULL}/test.json")
 
     logger.info("Saving reduced datasets...")
-    #keep test data untouched
+    # keep test data untouched
     save_json(clean_dataset(train_data), f"{DATA_DIR_SIMPLE}/train.json")
     save_json(clean_dataset(valid_data), f"{DATA_DIR_SIMPLE}/valid.json")
-    save_json(reduce_dataset(test_data, include_label=False), f"{DATA_DIR_SIMPLE}/test.json")
+    save_json(clean_dataset(test_data), f"{DATA_DIR_SIMPLE}/test.json")
 
 
 if __name__ == "__main__":

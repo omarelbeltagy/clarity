@@ -92,17 +92,17 @@ class LoRADataConfig:
     def __post_init__(self):
         if self.train_files is None:
             self.train_files = [
-                "/app/data/simple/train.json",
-                "./data/simple/train.json",
-                "../data/simple/train.json",
-                "../../data/simple/train.json"
+                "/app/data/cleaned/train.json",
+                "./data/cleaned/train.json",
+                "../data/cleaned/train.json",
+                "../../data/cleaned/train.json"
             ]
         if self.valid_files is None:
             self.valid_files = [
-                "/app/data/simple/valid.json",
-                "./data/simple/valid.json",
-                "../data/simple/valid.json",
-                "../../data/simple/valid.json"
+                "/app/data/cleaned/valid.json",
+                "./data/cleaned/valid.json",
+                "../data/cleaned/valid.json",
+                "../../data/cleaned/valid.json"
             ]
 
     @classmethod

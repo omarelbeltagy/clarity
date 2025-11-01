@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY clarity-models/ ./
 
 # Copy the training data to the container at /app/data
-COPY data/simple/ ./app/data/simple/
+COPY data/cleaned/ ./app/data/cleaned/
 
 # Expose port 8000 for the FastAPI server
 EXPOSE 8000

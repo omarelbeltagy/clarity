@@ -28,8 +28,8 @@ services:
       - "./app.py:/app/app.py"
       - "./logging.yaml:/app/logging.yaml"
       - "./models.yaml:/app/models.yaml"
-      - "../data/simple/train.json:/app/data/simple/train.json"
-      - "../data/simple/valid.json:/app/data/simple/valid.json"
+      - "../data/cleaned/train.json:/app/data/cleaned/train.json"
+      - "../data/cleaned/valid.json:/app/data/cleaned/valid.json"
     environment:
       - "HF_HOME=/app/cache"
       - "PYTHONUNBUFFERED=1"

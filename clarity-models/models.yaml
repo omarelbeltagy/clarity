@@ -61,11 +61,11 @@
 #
 #     data_config:
 #       train_files:                 # List of possible training file paths
-#         - "/app/data/simple/train.json"
-#         - "./data/simple/train.json"
+#         - "/app/data/cleaned/train.json"
+#         - "./data/cleaned/train.json"
 #       valid_files:                 # List of possible validation file paths
-#         - "/app/data/simple/valid.json"
-#         - "./data/simple/valid.json"
+#         - "/app/data/cleaned/valid.json"
+#         - "./data/cleaned/valid.json"
 #       train_sample_size: null      # Limit training samples (null = use all)
 #       valid_sample_size: null      # Limit validation samples (null = use all)
 #       label_field: "clarity_label" # Field name for labels in data
@@ -115,11 +115,11 @@
 #
 #     data_config:
 #       train_files:
-#         - "/app/data/simple/train.json"
-#         - "./data/simple/train.json"
+#         - "/app/data/cleaned/train.json"
+#         - "./data/cleaned/train.json"
 #       valid_files:
-#         - "/app/data/simple/valid.json"
-#         - "./data/simple/valid.json"
+#         - "/app/data/cleaned/valid.json"
+#         - "./data/cleaned/valid.json"
 #       train_sample_size: 600
 #       valid_sample_size: 200
 #       label_field: "clarity_label"
