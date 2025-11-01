@@ -8,6 +8,7 @@ import yaml
 from fastapi import FastAPI
 from loguru import logger
 from pydantic import BaseModel
+from torch.multiprocessing import freeze_support
 
 from data.dto import (
     ClassificationRequest,
@@ -516,6 +517,7 @@ Examples:
 
 if __name__ == "__main__":
     # CLI mode
+    freeze_support()
     main()
 else:
     # API server mode

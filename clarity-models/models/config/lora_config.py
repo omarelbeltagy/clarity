@@ -50,6 +50,8 @@ class LoRATrainingConfig:
     logging_steps: int = 5
     metric_for_best_model: str = "eval_loss"
     greater_is_better: bool = False
+    dataloader_num_workers: int = 0
+    optimizer: str = "adamw_torch"
 
     @classmethod
     def from_dict(cls, cfg: Dict) -> "LoRATrainingConfig":
@@ -70,6 +72,8 @@ class LoRATrainingConfig:
             logging_steps=as_int(cfg.get("logging_steps", 5), 5),
             metric_for_best_model=as_str(cfg.get("metric_for_best_model", "eval_loss"), "eval_loss"),
             greater_is_better=as_bool(cfg.get("greater_is_better", False), False),
+            dataloader_num_workers=as_int(cfg.get("dataloader_num_workers", 0), 0),
+            optimizer=as_str(cfg.get("optimizer", "adamw_torch"), "adamw_torch"),
         )
 
 

@@ -344,9 +344,9 @@ class LoRATrainer:
             weight_decay=cfg.weight_decay,
             eval_strategy=cfg.eval_strategy,
             save_strategy=cfg.save_strategy,
-            dataloader_num_workers=0,
+            dataloader_num_workers=cfg.dataloader_num_workers,
             dataloader_pin_memory=torch.cuda.is_available(),
-            optim="adamw_torch",
+            optim=cfg.optimizer,
         )
 
     def train(self):

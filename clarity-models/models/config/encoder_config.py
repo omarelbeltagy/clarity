@@ -54,6 +54,7 @@ class EncoderTrainingConfig:
     load_best_model_at_end: bool = True
     early_stopping_patience: Optional[int] = None
     early_stopping_threshold: float = 0.0
+    dataloader_num_workers: int = 0
 
     @classmethod
     def from_dict(cls, cfg: Dict) -> "EncoderTrainingConfig":
@@ -77,6 +78,7 @@ class EncoderTrainingConfig:
             load_best_model_at_end=as_bool(cfg.get("load_best_model_at_end", True), True),
             early_stopping_patience=as_int(cfg.get("early_stopping_patience"), None),
             early_stopping_threshold=as_float(cfg.get("early_stopping_threshold", 0.0), 0.0),
+            dataloader_num_workers=as_int(cfg.get("dataloader_num_workers", 0), 0),
         )
 
 

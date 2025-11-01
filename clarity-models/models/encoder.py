@@ -193,6 +193,7 @@ class EncoderTrainer:
             logging_steps=cfg.logging_steps,
             report_to=["tensorboard"],
             remove_unused_columns=False,
+            dataloader_num_workers=cfg.dataloader_num_workers,
             dataloader_pin_memory=torch.cuda.is_available(),
         )
 

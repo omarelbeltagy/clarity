@@ -139,41 +139,33 @@
 #=======================================================================================
 
 models:
-
-  - name: "opt-1.3b"
+  - name: "opt-6.7b"
     type: "lora"
-    enabled: true
-    route: "/classify/opt-1-3b"
+    enabled: false
+    route: "/classify/opt-6-7b"
 
     model_config:
-      model_name: "facebook/opt-1.3b"
+      model_name: "facebook/opt-6.7bb"
       use_8bit: true
 
+    lora_config:
+      r: 16
+      alpha: 32
+      dropout: 0.05
+
     training_config:
-      max_length: 256
-      batch_size: 2
-      gradient_accumulation_steps: 8
-      learning_rate: 3e-4
-      num_epochs: 5
-      warmup_ratio: 0.1
-      weight_decay: 0.01
-      eval_steps: 50
-      save_steps: 50
+      max_length: 192
+      batch_size: 4
+      gradient_accumulation_steps: 2
+      learning_rate: 5e-4
+      num_epochs: 3
       save_total_limit: 3
-      logging_steps: 5
-      metric_for_best_model: "eval_loss"
-      greater_is_better: false
 
     label_config:
       labels:
         - "Clear Reply"
         - "Clear Non-Reply"
         - "Ambivalent"
-
-    tensorboard_config:
-      auto_start: true
-      port: 6006
-      host: "0.0.0.0"
 
   - name: "roberta-large"
     type: "encoder"
@@ -183,15 +175,28 @@ models:
     model_config:
       model_name: "roberta-large"
 
+    label_config:
+      labels:
+        - "Clear Reply"
+        - "Clear Non-Reply"
+        - "Ambivalent"
+
+  - name: "roberta-base"
+    type: "encoder"
+    enabled: true
+    route: "/classify/roberta-base"
+
+    model_config:
+      model_name: "roberta-base"
+
     training_config:
-      max_length: 256
-      batch_size: 8
+      max_length: 192
+      batch_size: 4
       gradient_accumulation_steps: 2
-      num_epochs: 5
       learning_rate: 1e-5
-      eval_strategy: "epoch"
-      save_strategy: "epoch"
-      early_stopping_patience: 2
+      num_epochs: 3
+      save_total_limit: 3
+      logging_steps: 5
 
     label_config:
       labels:
