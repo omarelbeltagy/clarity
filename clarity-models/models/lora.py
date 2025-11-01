@@ -1,5 +1,8 @@
 """
-LoRA Fine-tuning Framework
+LoRA Fine-tuning Framework.
+
+Contains utilities to format prompts, datasets and training/inference
+wrappers for LoRA (PEFT) fine-tuning of causal language models.
 """
 
 import atexit
@@ -47,7 +50,23 @@ from utils.logger import logger
 # =======================================================================================
 
 def format_prompt(data_config: LoRADataConfig, prompt_config: PromptConfig, item: Dict) -> str:
-    """Factory function to create format function with dynamic field names."""
+    """Format a prompt string from a data item using a template.
+
+    Parameters
+    ----------
+    data_config : LoRADataConfig
+        Configuration that contains the field names to read from `item`.
+    prompt_config : PromptConfig
+        Template configuration containing `template` with placeholders.
+    item : dict
+        Single data record containing fields such as question/context/label.
+
+    Returns
+    -------
+    str
+        The formatted prompt ready for tokenization.
+
+    """
     template = prompt_config.template
     question_field = item.get(data_config.question_field, "")
     context_field = item.get(data_config.context_field, "")
@@ -67,15 +86,26 @@ def format_prompt(data_config: LoRADataConfig, prompt_config: PromptConfig, item
 # =======================================================================================
 
 def extract_label(label_config: LabelConfig, text: str) -> str:
-    """
-    Extract classification label from generated text.
+    """Extract the intended label from generated model text.
 
-    Args:
-        text: Generated text from model
-        label_config: LabelConfig with valid labels
+    The function tries several heuristics:
+    1. Case-insensitive exact match of any label inside the text.
+    2. Partial match by checking that all words of a label appear.
+    3. First-word match as a fallback.
+    4. Default to the first available label with a warning.
 
-    Returns:
-        Extracted label or first valid label as default
+    Parameters
+    ----------
+    label_config : LabelConfig
+        Label configuration containing the list `labels`.
+    text : str
+        Generated text to parse for a label.
+
+    Returns
+    -------
+    str
+        One of the labels from `label_config.labels`.
+
     """
     valid_labels = label_config.labels
     text_lower = text.strip().lower()
@@ -107,8 +137,28 @@ def extract_label(label_config: LabelConfig, text: str) -> str:
 # =======================================================================================
 
 class GenericDataset(Dataset):
-    """Generic dataset for text classification tasks."""
+    """Generic PyTorch Dataset for prompt-based causal LM training.
 
+    Tokenizes prompts constructed from JSON records and prepares labels for
+    causal language modeling by masking padding token ids with -100.
+
+    Parameters
+    ----------
+    data_files : list of str
+        Candidate file paths where JSON data is stored. The first existing file
+        will be loaded.
+    tokenizer : transformers.AutoTokenizer
+        Tokenizer used to convert prompt text to model input ids.
+    prompt_config : PromptConfig, optional
+        Prompt template configuration.
+    data_config : LoRADataConfig, optional
+        Data field mappings used by format_prompt.
+    max_length : int, optional
+        Maximum token length for examples.
+    sample_size : int or None, optional
+        If set, only the first `sample_size` examples will be used.
+
+    """
     def __init__(
             self,
             data_files: List[str],
@@ -138,16 +188,30 @@ class GenericDataset(Dataset):
 
     @staticmethod
     def _find_data_file(file_list: List[str]) -> str:
-        """Find first existing file from list."""
+        """Find first existing file path from the candidate list.
+
+        Raises
+        ------
+        FileNotFoundError
+            When no file in `file_list` exists.
+
+        """
         for file_path in file_list:
             if os.path.exists(file_path):
                 return file_path
         raise FileNotFoundError(f"No data file found in: {file_list}")
 
     def __len__(self):
+        """Return number of loaded examples."""
         return len(self.data)
 
     def __getitem__(self, idx):
+        """Return tokenized input and labels for index `idx`.
+
+        Returns a dictionary with keys 'input_ids', 'attention_mask' and 'labels'
+        where label positions corresponding to pad tokens are set to -100.
+
+        """
         item = self.data[idx]
 
         # Format using provided function
@@ -182,8 +246,29 @@ class GenericDataset(Dataset):
 # =======================================================================================
 
 class LoRATrainer:
-    """Modular LoRA trainer for any causal language model."""
+    """Modular LoRA trainer for causal language models.
 
+    Coordinates tokenizer/model loading, optional 8-bit quantization setup,
+    applying LoRA adapters (PEFT), dataset creation and Trainer-based training.
+
+    Parameters
+    ----------
+    model_config : LoRAModelConfig
+        Base model configuration.
+    lora_config : LoRAConfig, optional
+        LoRA hyperparameters (r, alpha, dropout, etc.).
+    training_config : LoRATrainingConfig, optional
+        Training hyperparameters.
+    data_config : LoRADataConfig, optional
+        Data locations and field names.
+    label_config : LabelConfig, optional
+        Labels used for extraction/evaluation.
+    prompt_config : PromptConfig, optional
+        Prompt template config.
+    tensorboard_config : TensorboardConfig, optional
+        Tensorboard server configuration.
+
+    """
     def __init__(
             self,
             model_config: LoRAModelConfig,
@@ -208,7 +293,7 @@ class LoRATrainer:
         self.device = self._detect_device()
 
     def _detect_device(self) -> str:
-        """Detect best available device."""
+        """Detect best device available ("cuda", "mps" or "cpu")."""
         if torch.cuda.is_available():
             return "cuda"
         elif torch.backends.mps.is_available():
@@ -217,7 +302,7 @@ class LoRATrainer:
             return "cpu"
 
     def _load_tokenizer(self):
-        """Load and configure tokenizer."""
+        """Load tokenizer and ensure pad token is defined."""
         logger.info("Loading tokenizer...")
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_config.model_name,
@@ -228,7 +313,13 @@ class LoRATrainer:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _load_model(self):
-        """Load and configure model."""
+        """Load pretrained causal LM and prepare for (k-)bit training.
+
+        If `use_8bit` is True and CUDA is available, quantization with
+        BitsAndBytesConfig is configured and prepare_model_for_kbit_training
+        is invoked.
+
+        """
         logger.info("Loading base model (this may take a few minutes)...")
 
         # Configure quantization
@@ -268,7 +359,12 @@ class LoRATrainer:
             self.model = prepare_model_for_kbit_training(self.model)
 
     def _configure_lora(self):
-        """Configure and apply LoRA."""
+        """Create and apply LoRA PEFT configuration to the base model.
+
+        Determines target modules either from user config, a known mapping or
+        a reasonable fallback.
+
+        """
         logger.info("Configuring LoRA...")
 
         model_type = self.model.config.model_type
@@ -299,7 +395,14 @@ class LoRATrainer:
         self.model.print_trainable_parameters()
 
     def _create_datasets(self):
-        """Create training and validation datasets."""
+        """Create training and validation datasets using GenericDataset.
+
+        Returns
+        -------
+        tuple
+            (train_dataset, valid_dataset)
+
+        """
         logger.info("Loading datasets...")
 
         train_dataset = GenericDataset(
@@ -319,7 +422,7 @@ class LoRATrainer:
         return train_dataset, valid_dataset
 
     def _create_training_arguments(self) -> TrainingArguments:
-        """Create training arguments."""
+        """Construct TrainingArguments from training_config."""
         cfg = self.training_config
 
         return TrainingArguments(
@@ -350,7 +453,12 @@ class LoRATrainer:
         )
 
     def train(self):
-        """Execute the complete training pipeline."""
+        """Run the full training pipeline.
+
+        Starts tensorboard, loads components, applies LoRA adapters,
+        runs Trainer.train(), saves artifacts and cleans up checkpoints.
+
+        """
         logger.info(f"Starting training with model: {self.model_config.model_name}")
         logger.info(f"Device: {self.device}")
 
@@ -414,7 +522,7 @@ class LoRATrainer:
             raise
 
     def _print_summary(self, train_dataset, valid_dataset):
-        """Print training summary."""
+        """Log a brief training summary including sample counts and epochs."""
         logger.info("=" * 50)
         logger.info("Training Summary:")
         logger.info(f"Model: {self.model_config.model_name}")
@@ -430,8 +538,26 @@ class LoRATrainer:
 # =======================================================================================
 
 class InferenceAPI:
-    """Generic inference API for trained models."""
+    """Generic inference API for LoRA-trained models.
 
+    Loads a fine-tuned adapter model if available; otherwise attempts to
+    load the base model. Provides a `classify` method that returns generated
+    text and a label extracted by heuristics.
+
+    Parameters
+    ----------
+    model_dir : str
+        Directory containing the fine-tuned model (or adapter).
+    model_base : str
+        Name of the base model to fall back to if loading fails.
+    label_config : LabelConfig, optional
+        Label list to be used for extraction.
+    prompt_config : PromptConfig, optional
+        Prompt template configuration.
+    data_config : LoRADataConfig, optional
+        Field mappings for constructing prompts.
+
+    """
     def __init__(
             self,
             model_dir: str,
@@ -460,7 +586,17 @@ class InferenceAPI:
         logger.info(f"Using device: {self.device}")
 
     def load_model(self):
-        """Load the trained model for inference."""
+        """Load tokenizer and model for inference.
+
+        Tries to load the fine-tuned artifacts from `model_dir`. If that
+        fails and `model_base` is provided, will load the base model instead.
+
+        Raises
+        ------
+        Exception
+            Propagates loader exception if no fallback is available.
+
+        """
         logger.info(f"Loading model from {self.model_dir}")
 
         try:
@@ -513,7 +649,28 @@ class InferenceAPI:
             max_new_tokens: int = 10,
             temperature: float = 1.0
     ) -> Dict[str, str]:
-        """Generate prediction for input text."""
+        """Generate model output for a single input and extract a label.
+
+        Parameters
+        ----------
+        data : ClassificationRequest
+            DTO containing the fields used by the prompt template.
+        max_new_tokens : int, optional
+            Maximum number of new tokens to generate.
+        temperature : float, optional
+            Sampling temperature (not used with deterministic generation settings).
+
+        Returns
+        -------
+        dict
+            {"generated_text": <str>, "extracted_result": <label_str>}
+
+        Raises
+        ------
+        RuntimeError
+            If the model/tokenizer are not loaded.
+
+        """
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
@@ -566,11 +723,21 @@ class InferenceAPI:
 # =======================================================================================
 
 def load_model(lora_trainer: LoRATrainer) -> InferenceAPI:
-    """
-    Loader function for FastAPI integration.
-    This is called by the FastAPI app to initialize the model.
+    """Loader for FastAPI integration.
 
-    If the trained model doesn't exist, it will train it first.
+    If a fine-tuned LoRA adapter isn't present, training is invoked. On
+    failure the base model is loaded and a warning is issued.
+
+    Parameters
+    ----------
+    lora_trainer : LoRATrainer
+        Configured trainer instance.
+
+    Returns
+    -------
+    InferenceAPI
+        Loaded inference API ready for classification.
+
     """
     # Check if trained model exists
     model_exists = os.path.exists(lora_trainer.model_config.output_dir) and os.path.exists(

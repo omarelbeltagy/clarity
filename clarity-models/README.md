@@ -12,6 +12,7 @@
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Data Format](#data-format)
+- [Testing](#testing)
 
 ---
 
@@ -234,3 +235,18 @@ data_config:
   question_field: "text"
   context_field: "context"
 ```
+
+---
+
+## Testing
+
+To test a Models performance, you can use the [test.py](test.py) script:
+
+```bash
+python test.py
+```
+
+It will load the test dataset and run inference for the endpoint specified in the script. Based on the results it will
+calculate the Accuracy and Macro F1-Score.
+
+Make sure to start the FastAPI server before running the test script.

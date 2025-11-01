@@ -1,6 +1,17 @@
 """
-Encoder Model Fine-tuning Framework
-Supports BERT, RoBERTa, DistilBERT, ALBERT, and other encoder-based models
+Encoder model fine-tuning framework.
+
+This module provides utilities to load data, train encoder-based sequence
+classification models (BERT, RoBERTa, DistilBERT, ALBERT, etc.) and expose a
+simple inference API for FastAPI integration.
+
+The public classes and functions are:
+- EncoderTrainer: encapsulates dataset preparation, model/tokenizer loading and training.
+- EncoderInferenceAPI: lightweight inference wrapper for a trained model directory.
+- load_data_from_files: helper to load JSONL/JSON data from the first available file.
+- load_model: convenience loader that trains the model if no trained artifacts exist,
+  then returns an EncoderInferenceAPI instance.
+
 """
 
 import atexit
@@ -45,7 +56,36 @@ from utils.logger import logger
 # =======================================================================================
 
 def load_data_from_files(file_list: List[str], sample_size: Optional[int] = None) -> List[dict]:
-    """Load data from first available file in list."""
+    """
+    Load JSON data from the first existing file in a list.
+
+    The function iterates over ``file_list`` and returns the parsed JSON content
+    from the first file path that exists on disk. Optionally the returned list
+    is truncated to ``sample_size``.
+
+    Parameters
+    ----------
+    file_list : List[str]
+        Ordered list of candidate file paths to try opening.
+    sample_size : Optional[int], optional
+        If provided, the returned list is limited to the first ``sample_size``
+        elements, by default None.
+
+    Returns
+    -------
+    List[dict]
+        Parsed JSON content as a list of dictionaries.
+
+    Raises
+    ------
+    FileNotFoundError
+        If none of the provided file paths exist.
+
+    Examples
+    --------
+    >>> load_data_from_files(["/tmp/a.json", "/tmp/b.json"], sample_size=100)
+    [{'text': '...'}, ...]
+    """
     for file_path in file_list:
         if os.path.exists(file_path):
             logger.info(f"Loading data from {file_path}")
@@ -67,7 +107,36 @@ def load_data_from_files(file_list: List[str], sample_size: Optional[int] = None
 # =======================================================================================
 
 class EncoderTrainer:
-    """Modular encoder trainer for sequence classification."""
+    """
+    Modular trainer for encoder-based sequence classification.
+
+    The trainer handles tokenizer/model loading, data preprocessing, dataset
+    creation, training argument construction and training orchestration.
+
+    Attributes
+    ----------
+    model_config : EncoderModelConfig
+        Configuration for model name, output directory and related options.
+    training_config : EncoderTrainingConfig
+        Training-specific configuration (batch size, epochs, learning rate, ...).
+    data_config : EncoderDataConfig
+        Data-related configuration (file paths, field names, sample sizes).
+    label_config : LabelConfig
+        Mapping and label information (labels, label2id, id2label).
+    tensorboard_config : TensorboardConfig
+        Configuration for TensorBoard process management.
+    device : str
+        Resolved device string (e.g. "cuda", "mps" or "cpu").
+    model : Optional[transformers.PreTrainedModel]
+        The model instance after loading.
+    tokenizer : Optional[transformers.PreTrainedTokenizer]
+        The tokenizer instance after loading.
+
+    Methods
+    -------
+    train()
+        Runs the full training pipeline: tokenization, training and saving artifacts.
+    """
 
     def __init__(
             self,
@@ -77,6 +146,28 @@ class EncoderTrainer:
             label_config: LabelConfig = LabelConfig(),
             tensorboard_config: TensorboardConfig = TensorboardConfig()
     ):
+        """
+        Initialize the EncoderTrainer.
+
+        Parameters
+        ----------
+        model_config : EncoderModelConfig
+            Model-specific settings including model_name and output_dir.
+        training_config : EncoderTrainingConfig, optional
+            Training settings such as batch size and number of epochs.
+        data_config : EncoderDataConfig, optional
+            Data settings including file paths and field names.
+        label_config : LabelConfig, optional
+            Label mapping and list.
+        tensorboard_config : TensorboardConfig, optional
+            TensorBoard process configuration.
+
+        Notes
+        -----
+        The constructor sets ``model_config.num_labels`` to the number of labels
+        present in ``label_config`` so downstream model creation uses the correct
+        classification head size.
+        """
         self.model_config = model_config
         self.training_config = training_config
         self.data_config = data_config
@@ -92,7 +183,19 @@ class EncoderTrainer:
         self.model_config.num_labels = len(self.label_config.labels)
 
     def _detect_device(self) -> str:
-        """Detect best available device."""
+        """
+        Detect the best available compute device.
+
+        The detection order is:
+        1. CUDA
+        2. Apple's Metal Performance Shaders (MPS)
+        3. CPU
+
+        Returns
+        -------
+        str
+            The device string to use for model and tensor placement ("cuda", "mps" or "cpu").
+        """
         if torch.cuda.is_available():
             return "cuda"
         elif torch.backends.mps.is_available():
@@ -101,7 +204,14 @@ class EncoderTrainer:
             return "cpu"
 
     def _load_tokenizer(self):
-        """Load and configure tokenizer."""
+        """
+        Load the tokenizer corresponding to the configured model.
+
+        Notes
+        -----
+        Uses ``AutoTokenizer.from_pretrained`` and honours the
+        ``model_config.trust_remote_code`` flag.
+        """
         logger.info("Loading tokenizer...")
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_config.model_name,
@@ -109,7 +219,18 @@ class EncoderTrainer:
         )
 
     def _load_model(self):
-        """Load and configure model for sequence classification."""
+        """
+        Load a sequence classification model from pretrained weights.
+
+        The method uses ``AutoModelForSequenceClassification.from_pretrained`` and
+        provides ``num_labels`` as well as ``id2label``/``label2id`` mappings to
+        ensure the classification head and label metadata are configured.
+
+        Notes
+        -----
+        This method does not move the model to a device; that is handled by the
+        Trainer/transformers training loop.
+        """
         logger.info(f"Loading model: {self.model_config.model_name}")
 
         self.model = AutoModelForSequenceClassification.from_pretrained(
@@ -123,7 +244,24 @@ class EncoderTrainer:
         logger.info(f"Model loaded with {self.model_config.num_labels} labels")
 
     def _preprocess_function(self, batch):
-        """Tokenization function"""
+        """
+        Tokenize a batch and attach labels.
+
+        Parameters
+        ----------
+        batch : Mapping
+            Batch mapping containing context and question fields (as configured
+            in ``data_config``) and a label field.
+
+        Returns
+        -------
+        dict
+            Tokenized encoding with an added "labels" key expected by the Trainer.
+
+        Notes
+        -----
+        Uses padding='max_length' and truncation to ``training_config.max_length``.
+        """
         enc = self.tokenizer(
             batch[self.data_config.context_field],
             batch[self.data_config.question_field],
@@ -135,7 +273,20 @@ class EncoderTrainer:
         return enc
 
     def _prepare_datasets(self) -> DatasetDict:
-        """Load and prepare datasets."""
+        """
+        Load raw data files, map labels to IDs and produce tokenized datasets.
+
+        Returns
+        -------
+        DatasetDict
+            HuggingFace ``DatasetDict`` with "train" and "validation" splits that
+            are tokenized and contain a "labels" column.
+
+        Raises
+        ------
+        FileNotFoundError
+            If configured train/validation files cannot be found.
+        """
         logger.info("Preparing datasets...")
 
         # Load data
@@ -170,7 +321,19 @@ class EncoderTrainer:
         return encoded
 
     def _create_training_arguments(self) -> TrainingArguments:
-        """Create training arguments."""
+        """
+        Build HuggingFace TrainingArguments from training configuration.
+
+        Returns
+        -------
+        transformers.TrainingArguments
+            Fully configured TrainingArguments instance used by the Trainer.
+
+        Notes
+        -----
+        Sets logging and TensorBoard integration, handles eval/save strategy
+        and sets device pin_memory according to CUDA availability.
+        """
         cfg = self.training_config
 
         args = TrainingArguments(
@@ -206,6 +369,27 @@ class EncoderTrainer:
         return args
 
     def train(self):
+        """
+        Run the full training pipeline.
+
+        The method:
+        - starts a TensorBoard process (if enabled),
+        - loads tokenizer and model,
+        - prepares datasets,
+        - builds training arguments and callbacks,
+        - runs Trainer.train(),
+        - saves the resulting model and tokenizer,
+        - cleans up old checkpoints.
+
+        Raises
+        ------
+        RuntimeError
+            Propagates unexpected errors during training.
+
+        Notes
+        -----
+        Interrupts (KeyboardInterrupt) are handled gracefully and logged.
+        """
         """Execute the complete training pipeline."""
         logger.info(f"Starting training with model: {self.model_config.model_name}")
         logger.info(f"Device: {self.device}")
@@ -286,7 +470,18 @@ class EncoderTrainer:
             raise
 
     def _print_summary(self, datasets):
-        """Print training summary."""
+        """
+        Log a concise summary of the training run.
+
+        Parameters
+        ----------
+        datasets : DatasetDict
+            The tokenized datasets used for training and evaluation.
+
+        Notes
+        -----
+        This method only logs information and does not return values.
+        """
         logger.info("=" * 50)
         logger.info("Training Summary:")
         logger.info(f"Model: {self.model_config.model_name}")
@@ -303,7 +498,30 @@ class EncoderTrainer:
 # =======================================================================================
 
 class EncoderInferenceAPI:
-    """Inference API for trained encoder models."""
+    """
+    Lightweight inference wrapper for a trained encoder model.
+
+    The class loads tokenizer and model from a directory and exposes a
+    `classify` method that accepts a ClassificationRequest and returns a simple
+    dict with prediction name, confidence and per-class scores.
+
+    Attributes
+    ----------
+    model_dir : str
+        Directory containing trained model artifacts (model weights and tokenizer).
+    label_config : LabelConfig
+        Label mapping information used to convert IDs to human-readable labels.
+    data_config : EncoderDataConfig
+        Data configuration (used primarily to know which fields to expect).
+    max_length : int
+        Maximum sequence length used at inference time.
+    device : str
+        Resolved device string ("cuda", "mps", or "cpu").
+    model : Optional[transformers.PreTrainedModel]
+        Loaded model instance (after calling load_model).
+    tokenizer : Optional[transformers.PreTrainedTokenizer]
+        Loaded tokenizer instance (after calling load_model).
+    """
 
     def __init__(
             self,
@@ -312,6 +530,20 @@ class EncoderInferenceAPI:
             data_config: EncoderDataConfig,
             max_length: int = 128
     ):
+        """
+        Initialize the inference API.
+
+        Parameters
+        ----------
+        model_dir : str
+            Path to the directory containing the saved model and tokenizer.
+        label_config : LabelConfig
+            Label mappings providing id2label and label2id.
+        data_config : EncoderDataConfig
+            Data config (keeps consistency with training).
+        max_length : int, optional
+            Maximum tokenization length, by default 128.
+        """
         self.model_dir = model_dir
         self.label_config = label_config
         self.data_config = data_config
@@ -331,7 +563,18 @@ class EncoderInferenceAPI:
         logger.info(f"Using device: {self.device}")
 
     def load_model(self):
-        """Load the trained model for inference."""
+        """
+        Load model and tokenizer for inference.
+
+        The method loads the tokenizer and the model from ``self.model_dir``
+        using the transformers Auto* interfaces, moves the model to the
+        resolved device and sets it to evaluation mode.
+
+        Raises
+        ------
+        EnvironmentError
+            If model files are missing or cannot be loaded.
+        """
         logger.info(f"Loading model from {self.model_dir}")
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir)
@@ -348,7 +591,31 @@ class EncoderInferenceAPI:
         logger.info("Model loaded successfully")
 
     def classify(self, data: ClassificationRequest) -> Dict:
-        """Classify a request."""
+        """
+        Classify a single request.
+
+        Parameters
+        ----------
+        data : ClassificationRequest
+            DTO containing `context` and `question` strings.
+
+        Returns
+        -------
+        Dict
+            Dictionary with keys:
+            - "name": predicted label (str)
+            - "confidence": confidence of the predicted label (float)
+            - "scores": mapping from label name to confidence (float)
+
+        Raises
+        ------
+        RuntimeError
+            If the model or tokenizer has not been loaded (call ``load_model`` first).
+
+        Notes
+        -----
+        Uses softmax over logits to compute per-class probabilities.
+        """
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
@@ -390,11 +657,28 @@ class EncoderInferenceAPI:
 
 def load_model(encoder_trainer: EncoderTrainer) -> EncoderInferenceAPI:
     """
-    Loader function for FastAPI integration.
+    Ensure a trained model exists and return an EncoderInferenceAPI.
 
-    If the trained model doesn't exist, it will train it first.
+    If no trained artifacts are present in ``encoder_trainer.model_config.output_dir``,
+    the function will trigger training by calling ``encoder_trainer.train()`` and
+    subsequently instantiate and return an EncoderInferenceAPI configured to the
+    trained model directory.
+
+    Parameters
+    ----------
+    encoder_trainer : EncoderTrainer
+        Pre-configured trainer instance used to either locate or produce trained artifacts.
+
+    Returns
+    -------
+    EncoderInferenceAPI
+        Instance ready for inference (``load_model`` has already been called).
+
+    Raises
+    ------
+    Exception
+        Propagates training exceptions if training fails.
     """
-    # Check if trained model exists
     model_exists = (
             os.path.exists(encoder_trainer.model_config.output_dir) and
             (

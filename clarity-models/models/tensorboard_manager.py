@@ -1,11 +1,42 @@
+"""Utilities to manage a TensorBoard subprocess.
+
+This module exposes TensorboardManager which can start and stop an external
+TensorBoard process given a TensorboardConfig. The manager captures stdout/
+stderr and provides basic lifecycle handling.
+"""
+
 import subprocess
 import time
+
 from models.config.tensorboard_config import TensorboardConfig
 from utils.logger import logger
 
 
 class TensorboardManager:
-    """Manages Tensorboard process."""
+    """
+    Manages the lifecycle of an external TensorBoard subprocess.
+
+    Parameters
+    ----------
+    config : TensorboardConfig
+        Configuration object controlling auto-start, host and port.
+
+    Attributes
+    ----------
+    config : TensorboardConfig
+        The configuration passed to the manager.
+    logdir : str or None
+        Last used log directory passed to start().
+    process : subprocess.Popen or None
+        Handle to the running TensorBoard process, if any.
+
+    Notes
+    -----
+    - The manager uses `subprocess.Popen` to start the `tensorboard` binary.
+    - STDOUT/STDERR are captured but not processed further by this class.
+    - The start() method waits a short time to determine whether startup
+      succeeded (process still running).
+    """
 
     def __init__(self, config: TensorboardConfig):
         self.config = config
@@ -13,7 +44,27 @@ class TensorboardManager:
         self.process = None
 
     def start(self, logdir: str):
-        """Start Tensorboard server."""
+        """
+        Start TensorBoard pointing to a given log directory.
+
+        Parameters
+        ----------
+        logdir : str
+            Path to the TensorBoard log directory (event files).
+
+        Returns
+        -------
+        bool
+            True if TensorBoard was launched successfully and appears to be
+            running after a short wait, False otherwise.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the `tensorboard` executable is not found on PATH (caught and
+            logged inside the method).
+        """
+
         if not self.config.auto_start:
             return False
 
@@ -52,7 +103,19 @@ class TensorboardManager:
             return False
 
     def stop(self):
-        """Stop Tensorboard server."""
+        """
+        Stop the TensorBoard subprocess if it is running.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        Terminates the process and waits until it exits. If no process is
+        running this is a no-op.
+        """
+
         if self.process and self.process.poll() is None:
             logger.info("Stopping Tensorboard...")
             self.process.terminate()
@@ -60,5 +123,13 @@ class TensorboardManager:
             logger.info("Tensorboard stopped")
 
     def __del__(self):
-        """Cleanup on deletion."""
+        """
+        Ensure TensorBoard process is terminated on object deletion.
+
+        Notes
+        -----
+        Destructor best-effort stops the process; do not rely on this for
+        deterministic shutdown in long-running applications (call stop()).
+        """
+
         self.stop()

@@ -1,3 +1,23 @@
+"""Main application entrypoint for Clarity Models.
+
+Provides:
+- CLI subcommands to list, train and test models described in a YAML config.
+- FastAPI application initialization to expose classification endpoints.
+
+This module supports two usage modes:
+- CLI mode (train/test/list): executed when run as __main__.
+- API server mode: import this module and serve `app` with an ASGI server.
+
+Key functions
+-------------
+load_config
+    Load YAML configuration from disk.
+load_*_model_from_config
+    Construct trainer/loader objects for different model types.
+initialize_api_server
+    Load configured models and register endpoints dynamically.
+"""
+
 import argparse
 import importlib
 import sys
@@ -50,7 +70,27 @@ app = FastAPI()
 
 
 def load_config(config_path: str = None) -> dict:
-    """Load configuration from YAML file."""
+    """Load models configuration from a YAML file.
+
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to YAML configuration. If None, the module-level CONFIG_PATH is used.
+
+    Returns
+    -------
+    dict
+        Parsed configuration dictionary.
+
+    Raises
+    ------
+    SystemExit
+        Exits the process if the configuration file is missing or unreadable.
+
+    Examples
+    --------
+    >>> config = load_config("my_models.yaml")
+    """
     path = config_path or CONFIG_PATH
     logger.info(f"Loading configuration from: {path}")
 
@@ -63,7 +103,27 @@ def load_config(config_path: str = None) -> dict:
 
 
 def load_lora_model_from_config(model_def: dict):
-    """Load a LoRA model from YAML configuration."""
+    """Instantiate and return a LoRA model API from a configuration dict.
+
+    The function builds a LoRATrainer from the provided model_def and then
+    calls the lower-level loader to return an inference API object.
+
+    Parameters
+    ----------
+    model_def : dict
+        Model definition as found in the YAML config; should contain
+        'model_config', 'lora_config', 'training_config', 'data_config', etc.
+
+    Returns
+    -------
+    object
+        Model API object (expected to implement classify(data) for inference).
+
+    Raises
+    ------
+    Exception
+        Propagates exceptions raised during trainer construction or model loading.
+    """
     logger.info(f"Loading LoRA model '{model_def['name']}'")
 
     # Create trainer
@@ -84,7 +144,23 @@ def load_lora_model_from_config(model_def: dict):
 
 
 def load_encoder_model_from_config(model_def: dict):
-    """Load an encoder model from YAML configuration."""
+    """Instantiate and return an encoder model API from configuration.
+
+    Parameters
+    ----------
+    model_def : dict
+        Encoder model definition from the YAML config.
+
+    Returns
+    -------
+    object
+        Model API object suitable for inference (implements classify).
+
+    Raises
+    ------
+    Exception
+        If instantiation or loading fails.
+    """
     logger.info(f"Loading encoder model '{model_def['name']}'")
 
     # Create trainer
@@ -103,7 +179,28 @@ def load_encoder_model_from_config(model_def: dict):
 
 
 def load_classic_model_from_config(model_def: dict):
-    """Load a classic model using module/loader pattern."""
+    """Dynamically import and invoke a loader for a classic model.
+
+    The expected pattern is to have 'module' and 'loader' keys in the config.
+    The loader is looked up in the imported module and called with no args.
+
+    Parameters
+    ----------
+    model_def : dict
+        Classic model config containing 'module' and 'loader' strings.
+
+    Returns
+    -------
+    object
+        The model instance returned by the loader.
+
+    Raises
+    ------
+    ImportError
+        If the specified module cannot be imported.
+    AttributeError
+        If the loader attribute cannot be found in the imported module.
+    """
     logger.info(f"Loading classic model '{model_def['name']}'")
 
     module = importlib.import_module(model_def["module"])
@@ -112,7 +209,25 @@ def load_classic_model_from_config(model_def: dict):
 
 
 def get_model_by_name(config: dict, model_name: Optional[str] = None):
-    """Get model definition by name or return first enabled model."""
+    """Select a model entry by name or return the first enabled model.
+
+    Parameters
+    ----------
+    config : dict
+        Parsed configuration containing a 'models' sequence.
+    model_name : str, optional
+        Name of the model to select. If omitted, the first enabled model is returned.
+
+    Returns
+    -------
+    dict
+        The selected model definition.
+
+    Raises
+    ------
+    SystemExit
+        If no models exist, the named model is missing, or no enabled models exist.
+    """
     models = config.get("models", [])
 
     if not models:
@@ -141,7 +256,28 @@ def get_model_by_name(config: dict, model_name: Optional[str] = None):
 # =======================================================================================
 
 def cmd_train(args):
-    """Train a model from configuration."""
+    """CLI handler to train a configured model.
+
+    Constructs the appropriate trainer (encoder or lora) from the model
+    configuration and runs trainer.train().
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments for the 'train' command. Typical attributes:
+        - config: str path to config
+        - model: optional model name
+        - tensorboard: bool to enable TensorBoard auto-start
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    SystemExit
+        On configuration errors or if training fails fatally.
+    """
     logger.info("=" * 60)
     logger.info("TRAINING MODE")
     logger.info("=" * 60)
@@ -218,7 +354,25 @@ def cmd_train(args):
 
 
 def cmd_test(args):
-    """Test a trained model."""
+    """CLI handler to test a model either interactively or for a single sample.
+
+    Loads the selected model and either performs a single inference (when
+    --question and --context are provided) or enters an interactive REPL.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments for the 'test' command.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    SystemExit
+        On unrecoverable errors during model loading or inference.
+    """
     logger.info("=" * 60)
     logger.info("TESTING MODE")
     logger.info("=" * 60)
@@ -257,7 +411,7 @@ def cmd_test(args):
                 context=args.context,
             )
 
-            result = api.classify(data=classification_request, )
+            result = api.classify(data=classification_request)
 
             logger.info("\n" + "=" * 60)
             logger.info("PREDICTION RESULT")
@@ -325,7 +479,17 @@ def cmd_test(args):
 
 
 def cmd_list(args):
-    """List all models in configuration."""
+    """List models defined in the configuration file.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        CLI args (only 'config' is relevant).
+
+    Returns
+    -------
+    None
+    """
     config = load_config(args.config)
 
     logger.info("=" * 60)
@@ -344,7 +508,20 @@ def cmd_list(args):
 # =======================================================================================
 
 def initialize_api_server():
-    """Initialize FastAPI server with models."""
+    """Initialize FastAPI app and dynamically register classification endpoints.
+
+    Loads all enabled models from config, constructs model APIs and registers
+    a POST endpoint for each model at its configured route.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - Loaded model objects are stored in app.state.loaded_models.
+    - Endpoints accept a pydantic ClassificationRequest and call api.classify(data).
+    """
     logger.info("Starting Clarity Models API...")
     logger.info(f"Running in Docker: {is_running_in_docker()}")
     logger.info(f"Environment: {get_execution_environment()}")
@@ -410,7 +587,13 @@ def initialize_api_server():
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information."""
+    """Return basic service and model metadata.
+
+    Returns
+    -------
+    dict
+        Service name, list of loaded model names and their endpoint routes.
+    """
     return {
         "service": "Clarity Models API",
         "models": list(app.state.loaded_models.keys()),
@@ -424,7 +607,13 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
+    """Simple health check endpoint.
+
+    Returns
+    -------
+    dict
+        Health status and number of loaded models.
+    """
     return {"status": "healthy", "models_loaded": len(app.state.loaded_models)}
 
 
@@ -433,7 +622,19 @@ async def health():
 # =======================================================================================
 
 def main():
-    """Main entry point for CLI."""
+    """Parse CLI arguments and dispatch to subcommands.
+
+    Recognized subcommands: list, train, test. When used as an API server,
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - Supports 'list', 'train' and 'test' subcommands.
+    - For API server usage, import this module and run via ASGI server (uvicorn).
+    """
     parser = argparse.ArgumentParser(
         description="Clarity Models - Training and Inference Framework",
         formatter_class=argparse.RawDescriptionHelpFormatter,
