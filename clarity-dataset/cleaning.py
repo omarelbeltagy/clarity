@@ -8,8 +8,11 @@ from datasets import load_dataset
 
 #filler words and phrases
 FILLER_TOKENS = ["um", "uh", "ah", "eh","hm","mm", "oh"]
-FILLER_PHRASES = ["you know", "i mean", "kind of", "sort of", "as i say", "all right", "as you know"]
-BOUNDARY_FILLERS = ["well", "so", "anyway", "anyways", "okay", "ok", "right", "look", "like", "basically", "actually", "literally",]
+FILLER_PHRASES = ["what i'm trying to say is", "at the end of the day", "you know what i'm saying", "as some people said", "as some people say", "as i was saying", "thank you very much", "it's kind of like", "that being said", "having said that", "in other words",
+                  "by the way", "the thing is", "the point is", "the fact is", "i mean like", "sort of like", "kind of like", "i'd say that", "i feel like", "to be honest", "to be frank", "to be clear", "to be fair" "as you know", "as i said", "as i say",
+                  "like you said", "like you say", "like i said", "like i say", "in a sense", "if you will", "you know what", "more or less", "all right", "you know", "i mean", "kind of", "sort of", "you see", "i guess", "i suppose", "i think", "let's say",
+                  "it's like", "and stuff", "and things", "or something", "thank you", "thanks",]
+BOUNDARY_FILLERS = ["literally", "basically", "actually", "anyways", "anyway", "please", "listen", "though", "still", "right", "look", "like", "okay", "ok", "well", "now", "so",]
 
 def _normalize(text: str) -> str:
     if not text:
@@ -61,14 +64,26 @@ def _compile_boundary_patterns():
     1) At start of sentence： ^\s*(word)\s*[,;:—–-]
     2) after punctuation： ([.!?:;,\)\]\}]\s*)(word)\s*[,;:—–-]
     """
-    words = "(?:" + "|".join([re.escape(w) for w in BOUNDARY_FILLERS]) + ")"
+    word_alts = []
+    for w in BOUNDARY_FILLERS:
+        parts = [re.escape(p) for p in w.split()]
+        word_alts.append(r"\b" + r"\s+".join(parts) + r"\b")
+    words = "(?:" + "|".join(word_alts) + ")"
 
     # start-of-sentence (allow . too here)
-    RX_START = re.compile(r"(?im)^[ \t]*\b" + words + r"\b[ \t]*[.,;:!?\-—–][ \t]*")
+    RX_START = re.compile(
+        r"(?im)^[ \t]*(?:(?:"
+        + words +
+        r"[ \t]*(?:\.\.\.|\.{2,}|…|[.,;:!?\-—–])\s*"
+        r")+)"
+    )
 
     # after punctuation (require punctuation BEFORE the word; do NOT allow '.' AFTER)
     RX_AFTER = re.compile(
-        r"(?i)([.!?:;,)\]}]\s*)\b" + words + r"\b\s*[,;:!?\-—–]\s*"
+        r"(?i)([.!?:;,)\]}]\s*)(?:(?:"
+        + words +
+        r"\s*[,;:!?\-—–]\s*"
+        r")+)"
     )
     return RX_START, RX_AFTER
 
@@ -197,6 +212,7 @@ def clean_single_text(text:str, president_name : Optional[str]) -> str:
         return ""
 
     name = [president_name] if president_name else []
+    text = _normalize(text)
 
     text = remove_names(text, name, aggressive_lastname=False)
     text = remove_brackets(text)
@@ -227,9 +243,9 @@ def apply_clean_batch(batch):
 if __name__ == "__main__":
     samples = [
         "Well, we can start now.[NY News]",
-        "All right, it works well.",
+        "All right, it works well, okay, please.",
         "Look, this is the key.",
-        "Please look at the figure.",
+        "Thank you very much! Please look at the figure.",
         "Ummm... I mean, it's kind of tricky.",
         "Actually, we can, right?",
     ]

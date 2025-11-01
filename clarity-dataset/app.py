@@ -26,6 +26,14 @@ def reduce_dataset(data, include_label=True):
         {
             "question": item["question"],
             "context": item["interview_question"] + "\n" + item["interview_answer"],
+            **({"clarity_label": item["clarity_label"]} if include_label else {})
+        }
+        for item in data
+    ]
+
+def clean_dataset(data, include_label=True):
+    return [
+        {
             "question_clean": clean_single_text(item["question"], item["president"]),
             "context_clean": clean_single_text(item["interview_question"] + "\n" + item["interview_answer"],
                                                item["president"]),
@@ -33,7 +41,6 @@ def reduce_dataset(data, include_label=True):
         }
         for item in data
     ]
-
 
 def main():
     """Main function to load, process, and save datasets."""
@@ -67,8 +74,9 @@ def main():
     save_json(test_data, f"{DATA_DIR_FULL}/test.json")
 
     logger.info("Saving reduced datasets...")
-    save_json(reduce_dataset(train_data), f"{DATA_DIR_SIMPLE}/train.json")
-    save_json(reduce_dataset(valid_data), f"{DATA_DIR_SIMPLE}/valid.json")
+    #keep test data untouched
+    save_json(clean_dataset(train_data), f"{DATA_DIR_SIMPLE}/train.json")
+    save_json(clean_dataset(valid_data), f"{DATA_DIR_SIMPLE}/valid.json")
     save_json(reduce_dataset(test_data, include_label=False), f"{DATA_DIR_SIMPLE}/test.json")
 
 
