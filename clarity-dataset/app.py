@@ -7,7 +7,7 @@ import yaml
 from datasets import load_dataset
 from loguru import logger
 
-from cleaning import clean_single_text
+from clean import clean_single_text
 
 DATA_DIR_FULL = "/data/full"
 DATA_DIR_SIMPLE = "/data/cleaned"
