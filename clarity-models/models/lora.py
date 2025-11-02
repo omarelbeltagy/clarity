@@ -714,7 +714,7 @@ class InferenceAPI:
 
         return {
             "generated_text": generated_text.strip(),
-            "extracted_result": result
+            "name": result
         }
 
 

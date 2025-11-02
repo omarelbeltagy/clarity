@@ -28,7 +28,7 @@ import requests
 from sklearn.metrics import accuracy_score, f1_score
 
 INPUT_FILE = "../data/cleaned/test.json"
-API_URL = "http://localhost:8000/classify/roberta-base"
+API_URL = "http://localhost:8000/classify/roberta-large"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 MAX_WORKERS = 8

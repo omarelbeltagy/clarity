@@ -28,6 +28,7 @@ import yaml
 from fastapi import FastAPI
 from loguru import logger
 from pydantic import BaseModel
+from sklearn.metrics import accuracy_score, f1_score
 from torch.multiprocessing import freeze_support
 
 from dto.dto import (
@@ -431,6 +432,56 @@ def cmd_test(args):
 
             logger.info("=" * 60)
 
+        # Test batch predictions from json file
+        elif args.file:
+            input_path = Path(args.file)
+            if not input_path.exists():
+                logger.error(f"Input file not found: {input_path}")
+                sys.exit(1)
+
+            logger.info(f"Batch Testing Mode - Input File: {input_path}")
+            with open(input_path, "r", encoding="utf-8") as f:
+                import json
+                test_data = json.load(f)
+
+            y_true, y_pred = [], []
+            for i, entry in enumerate(test_data, start=1):
+                question = entry.get("question")
+                context = entry.get("context")
+                true_label = entry.get("clarity_label", None)
+
+                if not question or not context:
+                    logger.warning(f"Entry {i} missing question or context, skipping.")
+                    continue
+
+                classification_request = ClassificationRequest(
+                    question=question,
+                    context=context,
+                )
+
+                result = api.classify(data=classification_request)
+
+                logger.info("-" * 60)
+                logger.info(f"Entry {i}:")
+                if "name" in result:
+                    pred_label = result['name']
+                    if true_label is not None:
+                        y_true.append(true_label)
+                        y_pred.append(pred_label)
+                        logger.info(f"  True Label: {true_label}, Predicted Label: {pred_label}")
+                    else:
+                        logger.info(f"  Predicted Label: {pred_label}")
+
+            acc = accuracy_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred, average="macro")
+            logger.info("=" * 60)
+            logger.info("BATCH TESTING RESULTS")
+            logger.info("=" * 60)
+            logger.info(f"Total Samples: {len(y_true)}")
+            logger.info(f"Accuracy: {acc:.4f}")
+            logger.info(f"Macro F1: {f1:.4f}")
+            logger.info("=" * 60)
+
         else:
             # Interactive mode
             logger.info("\nInteractive Testing Mode")
@@ -701,6 +752,11 @@ Examples:
         "--question",
         type=str,
         help="Question text for prediction"
+    )
+    parser_test.add_argument(
+        "--file",
+        type=str,
+        help="File containing JSON input for batch predictions"
     )
 
     args = parser.parse_args()

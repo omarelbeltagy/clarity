@@ -1,5 +1,7 @@
 # Clarity Models
 
+- [📁 Trained Models](https://drive.google.com/drive/folders/1C3q9jZ-92H3tPpaPJaXDgTAHIFmHs1w1?usp=share_link)
+
 > This module provides a configurable framework for training and serving classification models.
 > Supports both transformer encoders and large language models with LoRA fine-tuning, all exposed through a FastAPI
 > service.
@@ -161,18 +163,16 @@ In addition to serving models via FastAPI, you can now run training and inferenc
 # List available models from models.yaml
 python app.py list
 # Train a specific model with optional custom config
-python app.py train --config custom-config.yaml --model roberta-base train
-# Run inference on a QA pair
-python app.py test --question "Question?" --context "Context."
+python app.py train --config custom-config.yaml train --model roberta-base
 ```
 
-This is useful for quick experiments or running jobs in environments where an API server is not needed.
+For inference without starting the API server see the [Testing](#testing) section.
 
 ### Google Colab / Jupyter Support
 
 A Jupyter notebook is included for interactive training and evaluation, optimized for Google Colab.
 
-File: [`models-training.ipynb`](models-training.ipynb)
+File: [models-training.ipynb](models-training.ipynb)
 
 ### Accessing the FastAPI Service
 
@@ -193,7 +193,7 @@ Response:
 
 ```json
 {
-  "clarity_label": "Clear Reply",
+  "name": "Clear Reply",
   "confidence": 0.89,
   "scores": {
     "Clear Reply": 0.89,
@@ -240,13 +240,37 @@ data_config:
 
 ## Testing
 
-To test a Models performance, you can use the [test.py](test.py) script:
+To test a Models performance, you can use the `test` argument with the [app.py](app.py) script.
+
+### Single QA pair
+
+To test a single question / answer pair:
 
 ```bash
-python test.py
+python app.py --config <OPTINAL_CUSTOM_MODEL_CONFIG> test --model <MODEL_NAME> --question "Is the sky blue?" --context "During a clear day, the sky appears blue
 ```
 
-It will load the test dataset and run inference for the endpoint specified in the script. Based on the results it will
-calculate the Accuracy and Macro F1-Score.
+The response will be similar to the one from the API:
 
-Make sure to start the FastAPI server before running the test script.
+```json
+{
+  "name": "Clear Reply",
+  "confidence": 0.95,
+  "scores": {
+    "Clear Reply": 0.95,
+    "Clear Non-Reply": 0.03,
+    "Ambivalent": 0.02
+  }
+}
+```
+
+### Dataset Evaluation
+
+If you want to evaluate a whole test dataset, you can provide a JSON file with multiple entries in the same format as
+described in the [Data Format](#data-format) section.
+
+```bash
+python app.py --config <OPTINAL_CUSTOM_MODEL_CONFIG> test --model <MODEL_NAME> --file <PATH_TO_TEST_FILE.json>
+```
+
+This will return evaluation metrics such as accuracy and F1-score for the provided dataset.
