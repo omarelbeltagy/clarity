@@ -23,6 +23,7 @@
 ### Features
 
 - **Multiple model types**: Encoder (BERT-like), LoRA (OPT/GPT-like), and Classic loaders
+- **Together API support**: Remote/hosted models via Together.ai for few-shot/zero-shot inference and fine-tuned models
 - **Configuration-driven**: All aspects controlled via `models.yaml`
 - **Multi-model serving**: Serve multiple models in parallel under different endpoints
 - **Flexible data processing**: Customizable field names, label mappings, sample sizes
@@ -36,20 +37,24 @@
 ``` yaml
 clarity-models/
 ├── Dockerfile
-├── docker-compose.yaml
-├── logging.yaml
+├── docker-compose.yaml     # Docker Compose setup
+├── logging.yaml            # Logging configuration
 ├── models-training.ipynb   # Jupyter notebook for model training experiments on Google Colab
-├── models.yaml
+├── models.yaml             # Model configuration file
 ├── app.py                  # FastAPI app loading models from models.yaml
+├── colab.ipynb             # Google Colab setup notebook
+├── dto/                    # Data Transfer Objects for API requests/responses
+│   ├── ...
 ├── models/
 │   ├── encoder.py          # Encoder training & inference
 │   ├── lora.py             # LoRA training & inference
 │   ├── tensorboard_manager.py
+│   ├── together.py         # Together API integration
 │   └── config/             # Config classes for each model type
+│       ├── ...
 ├── utils/
-│   ├── general_utils.py
-│   └── logger.py
-└── requirements.txt
+│   ├── ...
+└── requirements.txt        # Python dependencies
 ```
 
 ---
@@ -63,6 +68,8 @@ Supported types:
 - `classic`: Custom loader function
 - `encoder`: Transformer encoder fine-tuning
 - `lora`: LLMs with LoRA adapters
+- `together`: Remote/hosted models accessed via the Together API (few-shot/zero-shot/fine-tune). Together Models are
+  only available in the `test` mode for inference.
 
 ### Examples
 
@@ -121,6 +128,29 @@ Supported types:
     port: 6006
 ```
 
+#### Together model
+
+```yaml
+- name: "Llama-Guard-4-12B"
+  type: "together"
+
+  config:
+    model_name: "meta-llama/Llama-Guard-4-12B"  # HF / Together / local id
+    mode: "few-shot"                            # "few-shot" | "zero-shot" | "fine-tune"
+    prompt: null                                # Optional custom prompt template
+    env_files: # Candidate .env files to load API keys from
+      - "/app/data/.env"
+      - "./.env"
+    labels:
+      - "Clear Reply"
+      - "Clear Non-Reply"
+      - "Ambivalent"
+    max_retries: 3
+    max_tokens: 4096
+    temperature: 0.7
+    retry_delay: 2
+```
+
 ---
 
 ## Usage
@@ -172,7 +202,7 @@ For inference without starting the API server see the [Testing](#testing) sectio
 
 A Jupyter notebook is included for interactive training and evaluation, optimized for Google Colab.
 
-File: [models-training.ipynb](models-training.ipynb)
+File: [colab.ipynb](colab.ipynb)
 
 ### Accessing the FastAPI Service
 
@@ -181,7 +211,7 @@ Exposed ports:
 * `8000`: FastAPI service
 * `6006`: TensorBoard (if enabled)
 
-Models defined in [`models.yaml`](models.yaml) are exposed via REST. Example:
+Models defined in [models.yaml](models.yaml) are exposed via REST. Example:
 
 ```bash
 curl -X POST "http://localhost:8000/classify/opt-1-3b" \
@@ -205,7 +235,7 @@ Response:
 
 ### Logging
 
-Logging configured via [`logging.yaml`](logging.yaml). Default format:
+Logging configured via [logging.yaml](logging.yaml). Default format:
 
 ```
 2025-10-26 12:00:00 | INFO     | Training started

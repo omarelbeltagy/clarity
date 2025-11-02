@@ -30,112 +30,174 @@
 # Example entry for encoder models
 #   - name: "roberta-base"
 #     type: "encoder"
-#     enabled: true
-#     route: "/classify/roberta-base"
+#     enabled: true                          # Whether to load this model (default: true)
+#     route: "/classify/roberta-base"        # API route to expose this model
 #
-#     model_config:
-#       model_name: "roberta-base"   # HuggingFace model identifier
-#       num_labels: 3                # Number of classification labels (auto-detected from labels)
-#       trust_remote_code: true      # Allow custom model code
-#       output_dir: null             # Custom output directory (default: ./.artifacts/{model_name})
+#     model_config:                           # Model-level options
+#       model_name: "roberta-base"            # HF model identifier or local folder
+#       num_labels: null                      # Number of labels (auto-set from label_config if null)
+#       trust_remote_code: false              # Allow custom model/tokenizer code from HF hub
+#       output_dir: "./.artifacts/roberta"    # Where to save trained artifacts
 #
-#     training_config:
-#       max_length: 128              # Maximum sequence length
-#       batch_size: 16               # Training batch size
-#       gradient_accumulation_steps: 1  # Gradient accumulation steps
-#       learning_rate: 2e-5          # Learning rate
-#       num_epochs: 3                # Number of training epochs
-#       warmup_ratio: 0.1            # Warmup ratio
-#       weight_decay: 0.01           # Weight decay
-#       eval_strategy: "epoch"       # Evaluation strategy ("epoch" or "steps")
-#       save_strategy: "epoch"       # Save strategy ("epoch" or "steps")
-#       eval_steps: null             # Evaluation steps (if eval_strategy is "steps")
-#       save_steps: null             # Save steps (if save_strategy is "steps")
-#       save_total_limit: 3          # Maximum number of checkpoints to keep
-#       logging_steps: 10            # Logging frequency
-#       metric_for_best_model: "eval_loss"  # Metric to determine best model
-#       greater_is_better: false     # Whether higher metric is better
-#       load_best_model_at_end: true # Load best model at end of training
-#       early_stopping_patience: null  # Early stopping patience (null = disabled)
-#       early_stopping_threshold: 0.0  # Early stopping threshold
+#     training_config:                         # Training / TrainingArguments options
+#       max_length: 128                       # Max token length for tokenization
+#       batch_size: 16                        # Per-device batch size
+#       gradient_accumulation_steps: 1        # Gradient accumulation steps
+#       learning_rate: 2e-5                   # Optimizer learning rate
+#       num_epochs: 3                         # Number of training epochs
+#       warmup_ratio: 0.1                     # Fraction of steps used for warmup
+#       weight_decay: 0.01                    # Weight decay
+#       eval_strategy: "epoch"                # "no" | "steps" | "epoch"
+#       save_strategy: "epoch"                # "no" | "steps" | "epoch"
+#       eval_steps: null                      # If eval_strategy == "steps", how often to eval
+#       save_steps: null                      # If save_strategy == "steps", how often to save
+#       save_total_limit: 3                   # Max number of checkpoints to keep
+#       logging_steps: 10                     # Steps between logging events
+#       metric_for_best_model: "eval_loss"    # Metric used to pick best model
+#       greater_is_better: false              # Whether higher metric is better
+#       load_best_model_at_end: true          # Load best model when training finishes
+#       early_stopping_patience: null         # If set, enable EarlyStoppingCallback (patience)
+#       early_stopping_threshold: 0.0         # Threshold for improvement for early stopping
+#       dataloader_num_workers: 0             # Number of DataLoader workers
+#       optimizer: "adamw_hf"                 # Optional optimizer name passed to Trainer args (if supported)
 #
-#     data_config:
-#       train_files:                 # List of possible training file paths
+#     data_config:                             # Dataset / file / field mappings
+#       train_files:                           # List of candidate training file paths (first existing is used)
 #         - "/app/data/cleaned/train.json"
 #         - "./data/cleaned/train.json"
-#       valid_files:                 # List of possible validation file paths
+#       valid_files:                           # List of candidate validation file paths
 #         - "/app/data/cleaned/valid.json"
 #         - "./data/cleaned/valid.json"
-#       train_sample_size: null      # Limit training samples (null = use all)
-#       valid_sample_size: null      # Limit validation samples (null = use all)
-#       label_field: "clarity_label" # Field name for labels in data
-#       text_field_1: "question"   # Question text field (e.g. 'question')
-#       text_field_2: "answer"       # Answer text field (e.g. 'answer')
+#       train_sample_size: null                # Limit training samples (null = use all)
+#       valid_sample_size: null                # Limit validation samples (null = use all)
+#       label_field: "clarity_label"           # Field name containing label in the data
+#       context_field: "question"              # First text field used by tokenizer (named 'context' in code)
+#       question_field: "answer"               # Second text field used by tokenizer (named 'question' in code)
 #
 #     label_config:
-#       labels:                      # List of label names
+#       labels:                                # Ordered list of label names
 #         - "Clear Reply"
 #         - "Clear Non-Reply"
 #         - "Ambivalent"
-#       label2id: null               # Custom label to ID mapping (auto-generated if null)
-#       id2label: null               # Custom ID to label mapping (auto-generated if null)
+#       label2id: null                         # Optional mapping from label->id (auto-generated if null)
+#       id2label: null                         # Optional mapping from id->label (auto-generated if null)
 #
 #     tensorboard_config:
-#       auto_start: true             # Automatically start TensorBoard
-#       port: 6006                   # TensorBoard port
-#       host: "0.0.0.0"              # TensorBoard host
+#       auto_start: true                       # Start TensorBoard automatically
+#       port: 6006                             # TensorBoard port
+#       host: "0.0.0.0"                        # TensorBoard host binding
+#
+# Notes:
+# - Field names in data_config must match what your dataset contains.
+# - model_config.num_labels will be set from label_config if left null.
+# - training_config options map to HuggingFace TrainingArguments where applicable.
 #
 # =======================================================================================
 # LORA MODEL CONFIGURATION
 # =======================================================================================
-# Example entry for LoRA models:
+# Example entry for LoRA models
 #   - name: "opt-350m"
 #     type: "lora"
-#     enabled: true
-#     route: "/classify/opt-350m"
+#     enabled: true                           # Whether to load this LoRA model
+#     route: "/classify/opt-350m"             # API route to expose this model
 #
-#     model_config:
-#       model_name: "facebook/opt-350m"
-#       use_8bit: true
+#     model_config:                            # Base model options
+#       model_name: "facebook/opt-350m"        # HF model identifier or local folder
+#       use_8bit: false                        # Load model with 8-bit quantization when supported (CUDA)
+#       trust_remote_code: false               # Allow custom code from HF hub for model/tokenizer
+#       output_dir: "./.artifacts/opt-350m"    # Where to save LoRA artifacts
 #
-#     training_config:
-#       max_length: 256
-#       batch_size: 2
-#       gradient_accumulation_steps: 8
-#       learning_rate: 3e-4
-#       num_epochs: 5
-#       warmup_ratio: 0.1
-#       weight_decay: 0.01
-#       eval_steps: 50
-#       save_steps: 50
-#       save_total_limit: 3
-#       logging_steps: 5
-#       metric_for_best_model: "eval_loss"
-#       greater_is_better: false
+#     lora_config:                             # LoRA (PEFT) hyperparameters
+#       r: 8                                   # LoRA rank (low-rank dimension)
+#       alpha: 16                              # LoRA alpha (scaling)
+#       dropout: 0.1                           # LoRA dropout
+#       bias: "none"                           # Bias mode for LoRA ("none"|"all"|"lora_only")
+#       task_type: "CAUSAL_LM"                 # PEFT task type (e.g. "CAUSAL_LM")
+#       target_modules: null                   # Optional list of module names to target (auto-detected if null)
+#
+#     training_config:                          # Training / Trainer arguments for LoRA
+#       max_length: 256                        # Max token length for prompts
+#       batch_size: 2                          # Per-device batch size
+#       gradient_accumulation_steps: 8         # Gradient accumulation steps
+#       learning_rate: 3e-4                    # Learning rate
+#       num_epochs: 5                          # Number of epochs
+#       warmup_ratio: 0.1                      # Warmup fraction
+#       weight_decay: 0.01                     # Weight decay
+#       eval_strategy: "steps"                 # "no" | "steps" | "epoch"
+#       save_strategy: "steps"                 # "no" | "steps" | "epoch"
+#       eval_steps: 50                         # Evaluation frequency in steps (if eval_strategy == "steps")
+#       save_steps: 50                         # Save frequency in steps (if save_strategy == "steps")
+#       save_total_limit: 3                    # Max number of checkpoints to keep
+#       logging_steps: 5                       # Logging frequency
+#       metric_for_best_model: "eval_loss"     # Metric to determine best model
+#       greater_is_better: false               # Whether larger metric is better
+#       dataloader_num_workers: 0              # Number of dataloader workers
+#       optimizer: "adamw_hf"                  # Optional optimizer choice forwarded to Trainer args
 #
 #     data_config:
-#       train_files:
+#       train_files:                           # Candidate training file paths
 #         - "/app/data/cleaned/train.json"
 #         - "./data/cleaned/train.json"
-#       valid_files:
+#       valid_files:                           # Candidate validation file paths
 #         - "/app/data/cleaned/valid.json"
 #         - "./data/cleaned/valid.json"
-#       train_sample_size: 600
-#       valid_sample_size: 200
-#       label_field: "clarity_label"
-#       text_field_1: "question"
-#       text_field_2: "answer"
+#       train_sample_size: 600                 # Limit training examples (null = all)
+#       valid_sample_size: 200                 # Limit validation examples (null = all)
+#       label_field: "clarity_label"           # Field name containing gold label (if any)
+#       context_field: "question"              # Field name for context in prompt formatting
+#       question_field: "answer"               # Field name for question in prompt formatting
+#
+#     prompt_config:
+#       template: "{context}\nQuestion: {question}\nAnswer: {label}"  # Prompt template placeholders: {context},{question},{label}
 #
 #     label_config:
-#       labels:                      # List of label names
+#       labels:                                # Ordered list of label names used for extraction
 #         - "Clear Reply"
 #         - "Clear Non-Reply"
 #         - "Ambivalent"
+#       label2id: null                         # Optional mapping label->id
+#       id2label: null                         # Optional mapping id->label
 #
 #     tensorboard_config:
 #       auto_start: true
 #       port: 6006
 #       host: "0.0.0.0"
+#
+# Notes:
+# - LoRA training supports optional 8-bit quantization (use_8bit) — effective only on CUDA-enabled systems.
+# - lora_config.target_modules can be used to force which projection layers are adapted; otherwise defaults are used.
+# - prompt_config.template is used by GenericDataset/format_prompt; include placeholders matching your data fields.
+# =======================================================================================
+# TOGETHER MODEL CONFIGURATION
+# =======================================================================================
+# Example entry for Together models
+#   - name: "Llama-Guard-4-12B"
+#     type: "together"
+#     enabled: true                          # Whether to load this model (default: true)
+#     route: "/classify/llama-guard-4-12b"   # Optional API route to expose this model
+#
+#     config:                                 # Together-specific configuration block
+#       model_name: "meta-llama/Llama-Guard-4-12B"  # Model identifier (HF / Together / local)
+#       mode: "few-shot"                         # "few-shot" | "zero-shot" | "fine-tune"
+#       prompt: null                             # Optional custom prompt template (string)
+#       env_files:                               # Candidate .env files to load API keys from
+#         - "/app/data/.env"
+#         - "./.env"
+#       labels:                                  # Ordered list of label names used for classification
+#         - "Clear Reply"
+#         - "Clear Non-Reply"
+#         - "Ambivalent"
+#       max_retries: 3
+#       max_tokens: 4096
+#       temperature: 0.7
+#       retry_delay: 2
+#
+# Notes:
+# - The 'config' block maps to TogetherConfig used by the integration code.
+# - If 'prompt' is omitted, a default prompt is selected based on 'mode'.
+# - 'max_tokens' must respect the model's context window (set accordingly).
+# - 'env_files' is used to locate runtime credentials (e.g. TOGETHER_API_KEY).
+# - 'labels' will be used to map extracted labels to classifier outputs.
 #=======================================================================================
 
 models:
@@ -167,19 +229,14 @@ models:
         - "Clear Non-Reply"
         - "Ambivalent"
 
-  - name: "roberta-large"
-    type: "encoder"
-    enabled: true
-    route: "/classify/roberta-large"
+  - name: "Llama-Guard-4-12B"
+    type: "together"
+    enabled: false
 
-    model_config:
-      model_name: "roberta-large"
-
-    label_config:
-      labels:
-        - "Clear Reply"
-        - "Clear Non-Reply"
-        - "Ambivalent"
+    config:
+      model_name: "meta-llama/Llama-Guard-4-12B"
+      mode: "few-shot"
+      max_tokens: 4096
 
   - name: "roberta-base"
     type: "encoder"

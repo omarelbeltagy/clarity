@@ -168,7 +168,6 @@ class LoRADataConfig:
     valid_files: List[str] = None
     train_sample_size: Optional[int] = None
     valid_sample_size: Optional[int] = None
-    # New dynamic field configuration
     label_field: str = "clarity_label"
     question_field: str = "question"
     context_field: str = "context"
@@ -217,9 +216,9 @@ class LoRADataConfig:
         if "label_field" in cfg:
             instance.label_field = as_str(cfg["label_field"], "clarity_label")
         if "question_field" in cfg:
-            instance.text_field_1 = as_str(cfg["question_field"], "question")
+            instance.question_field = as_str(cfg["question_field"], "question")
         if "context_field" in cfg:
-            instance.text_field_2 = as_str(cfg["context_field"], "context")
+            instance.context_field = as_str(cfg["context_field"], "context")
         return instance
 
 

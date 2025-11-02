@@ -35,4 +35,5 @@ services:
       - "HF_HOME=/app/cache"
       - "PYTHONUNBUFFERED=1"
       - "TOKENIZERS_PARALLELISM=false"
+      - "TOGETHER_API_KEY=${TOGETHER_API_KEY:-}"
     restart: "unless-stopped"

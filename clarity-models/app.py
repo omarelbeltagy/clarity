@@ -21,6 +21,7 @@ initialize_api_server
 import argparse
 import importlib
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +50,7 @@ from models.config.lora_config import (
     PromptConfig
 )
 from models.config.tensorboard_config import TensorboardConfig
+from models.config.together_config import TogetherConfig
 from models.encoder import (
     EncoderTrainer,
     load_model as load_encoder_model
@@ -56,6 +58,9 @@ from models.encoder import (
 from models.lora import (
     LoRATrainer,
     load_model as load_lora_model,
+)
+from models.together import (
+    load_model as load_together_model,
 )
 from utils.general_utils import (
     get_execution_environment,
@@ -177,6 +182,23 @@ def load_encoder_model_from_config(model_def: dict):
     encoder_api = load_encoder_model(trainer)
 
     return encoder_api
+
+
+def load_together_model_from_config(model_def: dict):
+    logger.info(f"Loading together model '{model_def['name']}'")
+
+    if model_def.get("config"):
+        config = TogetherConfig.from_dict(model_def.get("config", {}))
+    elif model_def.get("together_config"):
+        config = TogetherConfig.from_dict(model_def.get("together_config", {}))
+    elif model_def.get("model_config"):
+        config = TogetherConfig.from_dict(model_def.get("model_config", {}))
+    else:
+        config = TogetherConfig()
+
+    together_api = load_together_model(config)
+
+    return together_api
 
 
 def load_classic_model_from_config(model_def: dict):
@@ -355,10 +377,10 @@ def cmd_train(args):
 
 
 def cmd_test(args):
-    """CLI handler to test a model either interactively or for a single sample.
+    """CLI handler to test a configured model.
 
-    Loads the selected model and either performs a single inference (when
-    --question and --context are provided) or enters an interactive REPL.
+    Loads the specified model and performs inference based on provided
+    question/context inputs, either interactively or from a json file.
 
     Parameters
     ----------
@@ -383,10 +405,9 @@ def cmd_test(args):
     model_def = get_model_by_name(config, args.model)
 
     logger.info(f"Model: {model_def.get('name')}")
-    logger.info(f"Type: {model_def.get('type')}")
-    logger.info("=" * 60)
-
     model_type = model_def.get("type", "classic")
+    logger.info(f"Type: {model_type}")
+    logger.info("=" * 60)
 
     try:
         # Load the model
@@ -396,6 +417,8 @@ def cmd_test(args):
             api = load_lora_model_from_config(model_def)
         elif model_type == "classic":
             api = load_classic_model_from_config(model_def)
+        elif model_type == "together":
+            api = load_together_model_from_config(model_def)
         else:
             logger.error(f"Unknown model type: {model_type}")
             sys.exit(1)
@@ -444,32 +467,46 @@ def cmd_test(args):
                 import json
                 test_data = json.load(f)
 
+            def process_entry(entry, index, api_instance):
+                entry_question = entry.get("question")
+                entry_context = entry.get("context")
+                entry_true_label = entry.get("clarity_label", None)
+
+                if not entry_question or not entry_context:
+                    logger.warning(f"Entry {index} missing question or context, skipping.")
+                    return None, None
+
+                try:
+                    request = ClassificationRequest(
+                        question=entry_question,
+                        context=entry_context,
+                    )
+
+                    classification_result = api_instance.classify(data=request)
+
+                    logger.info("-" * 60)
+                    logger.info(f"Entry {index}:")
+
+                    entry_pred_label = classification_result['name']
+
+                    return entry_true_label, entry_pred_label
+                except Exception as e:
+                    logger.error(f"[Error processing entry {index}] {e}")
+                    return None, None
+
             y_true, y_pred = [], []
-            for i, entry in enumerate(test_data, start=1):
-                question = entry.get("question")
-                context = entry.get("context")
-                true_label = entry.get("clarity_label", None)
 
-                if not question or not context:
-                    logger.warning(f"Entry {i} missing question or context, skipping.")
-                    continue
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(process_entry, entry, i, api): i for i, entry in
+                           enumerate(test_data, start=1)}
 
-                classification_request = ClassificationRequest(
-                    question=question,
-                    context=context,
-                )
-
-                result = api.classify(data=classification_request)
-
-                logger.info("-" * 60)
-                logger.info(f"Entry {i}:")
-                if "name" in result:
-                    pred_label = result['name']
-                    if true_label is not None:
+                for future in as_completed(futures):
+                    true_label, pred_label = future.result()
+                    if true_label is not None and pred_label is not None:
                         y_true.append(true_label)
                         y_pred.append(pred_label)
                         logger.info(f"  True Label: {true_label}, Predicted Label: {pred_label}")
-                    else:
+                    elif pred_label is not None:
                         logger.info(f"  Predicted Label: {pred_label}")
 
             acc = accuracy_score(y_true, y_pred)

@@ -4,7 +4,7 @@ Simple container classes (dataclasses) that represent request payloads
 and lightweight DTOs for internal calls.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 
 @dataclass
@@ -24,3 +24,6 @@ class ClassificationRequest:
     """
     question: str
     context: str
+
+    def dict(self):
+        return asdict(self)

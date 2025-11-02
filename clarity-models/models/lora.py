@@ -648,7 +648,7 @@ class InferenceAPI:
             data: ClassificationRequest,
             max_new_tokens: int = 10,
             temperature: float = 1.0
-    ) -> Dict[str, str]:
+    ) -> Dict:
         """Generate model output for a single input and extract a label.
 
         Parameters
