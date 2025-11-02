@@ -156,7 +156,13 @@ def main():
     # Apply BERT summaries if requested (after cleaning)
     if args.use_bert:
         logger.info("Generating BERT summaries for train set...")
-        train_cleaned[:10] = generate_bert_summary(train_cleaned[:10])
+        train_cleaned = generate_bert_summary(train_cleaned)
+        
+        logger.info("Generating BERT summaries for validation set...")
+        valid_cleaned = generate_bert_summary(valid_cleaned)
+        
+        logger.info("Generating BERT summaries for test set...")
+        test_cleaned = generate_bert_summary(test_cleaned)
 
     logger.info("Saving processed datasets...")
     save_json(train_cleaned, f"{DATA_DIR_SIMPLE}/train.json")
