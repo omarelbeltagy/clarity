@@ -59,15 +59,13 @@ def generate_bert_summary(data, **kwargs):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModel.from_pretrained(MODEL_NAME)
 
-    # Extract context from interview_question + interview_answer
-    texts = []
+    # Extract contexts from context_clean, append to array
+    contexts = []
     for item in data:
-        question = item.get("interview_question", "")
-        answer = item.get("interview_answer", "")
-        context = question + "\n" + answer
-        texts.append(context)
+        context = item.get("context_clean", "")
+        contexts.append(context)
     
-    emb = generate_bert_embeddings(texts, model, tokenizer)
+    emb = generate_bert_embeddings(contexts, model, tokenizer)
 
     for i, item in enumerate(data):
         # store as list to remain JSON serializable
