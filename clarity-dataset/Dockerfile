@@ -17,13 +17,10 @@ RUN apt-get update \
 
 # Copy the requirements.txt
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy the contents to the container at /app
 COPY app.py .
 COPY clean.py .
 COPY summarize.py .
 COPY logging.yaml .
-
-# Set entrypoint to python app.py so flags can be passed
-ENTRYPOINT ["python", "app.py"]
