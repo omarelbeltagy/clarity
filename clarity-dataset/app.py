@@ -145,7 +145,7 @@ def main():
     save_json(valid_data, f"{DATA_DIR_FULL}/valid.json")
     save_json(test_data, f"{DATA_DIR_FULL}/test.json")
 
-    logger.info("Cleaning and saving processed datasets...")
+    logger.info("Cleaning datasets...")
     train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers, 
                                    clean_names=args.clean_names)
     valid_cleaned = clean_dataset(valid_data, clean_fillers=args.clean_fillers,
