@@ -212,6 +212,7 @@ class EncoderDataConfig:
             self.train_files = [
                 "/app/data/cleaned/train.json",
                 "./data/cleaned/train.json",
+                "../clarity-dataset/data/cleaned/train.json"
                 "../data/cleaned/train.json",
                 "../../data/cleaned/train.json"
             ]
@@ -219,6 +220,7 @@ class EncoderDataConfig:
             self.valid_files = [
                 "/app/data/cleaned/valid.json",
                 "./data/cleaned/valid.json",
+                "../clarity-dataset/data/cleaned/valid.json",
                 "../data/cleaned/valid.json",
                 "../../data/cleaned/valid.json"
             ]

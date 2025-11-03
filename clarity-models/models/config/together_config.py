@@ -4,105 +4,78 @@ This module provides default prompt templates and the TogetherConfig dataclass
 which centralises model, prompt and runtime options used by the inference code.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict, List
 
+import yaml
 from utils.general_utils import (
+    SafeDict,
     as_int,
     as_float,
     as_bool,
     as_str
 )
 
-FINE_TUNE_PROMPT = """
-Based on a part of the interview where the interviewer asks a set of questions, classify the type of answer the interviewee provided for the following question.
-Respond with exactly one of the following labels: [Clear Reply], [Clear Non-Reply], [Ambivalent].
 
-### Part of the interview ###
-{context}
+def load_default_prompt(prompt_env: str, prompt_default_file: str) -> str:
+    """Load a prompt template from a YAML file, injecting taxonomy data.
 
-### Question ###
-{question}
-"""
+    Parameters
+    ----------
+    prompt_env : str
+        Environment variable name to override the prompt file path.
+    prompt_default_file : str
+        Default path to the prompt YAML file.
+    Returns
+    -------
+    str
+        The prompt template string with taxonomy data injected.
+    Raises
+    ------
+    FileNotFoundError
+        If the prompt file or taxonomy file cannot be found.
+    """
+    taxonomy_default_path = os.getenv("TAXONOMY_FILE", "../assets/taxonomy/clarity-categories.yaml")
+    if not os.path.exists(taxonomy_default_path):
+        raise FileNotFoundError(f"Taxonomy file not found: {taxonomy_default_path}")
+    taxonomy_str = build_taxonomy_string(taxonomy_default_path)
 
-ZERO_SHOT_PROMPT = """
-You are an expert in political sciences and interview analysis.
-Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+    path = os.getenv(prompt_env, prompt_default_file)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Prompt file not found: {path}")
+    with open(path, encoding="utf-8") as f:
+        data = {"taxonomy": taxonomy_str}
+        return yaml.safe_load(f).get("prompt", "").format_map(SafeDict(data))
 
-Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response provided by the interviewee for the following question using the following taxonomy and then provide a chain of thought explanation for your decision:
 
-1. Clear Reply - The information requested is explicitly stated (in the requested form)
-2. Clear Non-Reply - The information requested is not given at all due to ignorance, need for clarification or declining to answer
-3. Ambivalent - The information requested is given in an incomplete way e.g. the answer is too general, partial, implicit, dodging or deflection
+def build_taxonomy_string(file_path: str) -> str:
+    """Build a taxonomy string from a YAML file for inclusion in prompts.
 
----
-Here is the segment of the interview that you should analyze:
+    Parameters
+    ----------
+    file_path : str
+        Path to the YAML file containing the taxonomy definition.
+    Returns
+    -------
+    str
+        Formatted taxonomy string with numbered categories.
+    """
+    with open(file_path, "r") as f:
+        data = yaml.safe_load(f)
 
-### Part of the Interview ###
-{context}
-### Question ###
-{question}
----
+    categories = data.get("categories", [])
+    result = []
+    for i, cat in enumerate(categories, start=1):
+        result.append(f"{i}. {cat['name']} - {cat['description'].strip()}")
 
-Return only the label in the format "Label: <label>". No additional text or metadata.
-"""
+    return "\n".join(result)
 
-FEW_SHOT_PROMPT = """
-You are an expert in political sciences and interview analysis.
-Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
 
-Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response provided by the interviewee for the following question using the following taxonomy and then provide a chain of thought explanation for your decision:
-
-1. Clear Reply - The information requested is explicitly stated (in the requested form)
-2. Clear Non-Reply - The information requested is not given at all due to ignorance, need for clarification or declining to answer
-3. Ambivalent - The information requested is given in an incomplete way e.g. the answer is too general, partial, implicit, dodging or deflection
-
----
-
-Here is one small example for each term of the taxonomy:
-
-Question: Do you have your own views about PR at Westminster don’t you?
-Answer: I do.
-Label: Clear Reply
-Explanation: The answer directly gives the info requested.
-
-Question: Are you going to watch television?
-Answer: What else is there to do?
-Label: Ambivalent
-Explanation: They suggest planning to watch TV, despite not explicitly stating it.
-
-Question: Do you like my new dress?
-Answer: We are late.
-Label: Ambivalent
-Explanation: Does not even acknowledge the question and goes straight to another topic.
-
-Question: Did you enjoy the film?
-Answer: The directing was great.
-Label: Ambivalent
-Explanation: Directing is only part of what constitutes a film.
-
-Question: What’s your favorite film?
-Answer: Fight Club, Filth, and Hereditary.
-Label: Ambivalent
-Explanation: The reply gives three movies instead of one, which makes the desired information unclear.
-
-Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
-Answer: I am not going to prophesy what will happen.
-Label: Clear Non-Reply
-Explanation: Directly stating they won’t answer.
-
----
-Here is the segment of the interview that you should analyze:
-
-### Part of the Interview ###
-{context}
-### Question ###
-{question}
-
----
-
-Return only the label in the format "Label: <label>". No additional text or metadata.
-"""
+# Default prompt templates loaded from YAML files with taxonomy injection
+FINE_TUNE_PROMPT = load_default_prompt("FINE_TUNE_PROMPT_FILE", "../assets/prompts/lora.yaml")
+ZERO_SHOT_PROMPT = load_default_prompt("ZERO_SHOT_PROMPT_FILE", "../assets/prompts/zero-shot.yaml")
+FEW_SHOT_PROMPT = load_default_prompt("FEW_SHOT_PROMPT_FILE", "../assets/prompts/few-shot.yaml")
 
 
 @dataclass

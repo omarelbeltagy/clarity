@@ -1,0 +1,11 @@
+name: "Clarity Category"
+categories:
+  - name: "Clear Reply"
+    description: |
+      The information requested is explicitly stated (in the requested form)
+  - name: "Ambivalent"
+    description: |
+      The information requested is given in an incomplete way e.g. the answer is too general, partial, implicit, dodging or deflection
+  - name: "Clear Non-Reply"
+    description: |
+      The information requested is not given at all due to ignorance, need for clarification or declining to answer

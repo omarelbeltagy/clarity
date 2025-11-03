@@ -1,0 +1,31 @@
+name: "Evasion Techniques"
+categories:
+  - name: "Explicit"
+    description: >
+      The information requested is explicitly stated (in the requested form)
+  - name: "Implicit"
+    description: >
+      The information requested is given, but without being explicitly stated
+      (not in the expected form)
+  - name: "General"
+    description: >
+      The information provided is too general/lacks the requested specificity
+  - name: "Partial"
+    description: >
+      Offers only a specific component of the requested information
+  - name: "Dodging"
+    description: >
+      Ignoring the question altogether
+  - name: "Deflection"
+    description: >
+      Starts on topic but shifts the focus and makes a different point than what is asked
+  - name: "Declining to answer"
+    description: >
+      Acknowledge the question but directly or indirectly refusing to answer
+      at the moment
+  - name: "Claims ignorance"
+    description: >
+      The answerer claims/admits not to know the answer themselves
+  - name: "Clarification"
+    description: >
+      Does not provide the requested information and asks for clarification

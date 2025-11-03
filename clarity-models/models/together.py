@@ -164,6 +164,7 @@ class InferenceAPI:
         for attempt in range(self.together_config.max_retries):
             try:
                 prompt = format_prompt(self.together_config.prompt, data)
+                logger.info(f"Classifying {prompt}")
 
                 response = self.client.chat.completions.create(
                     model=self.together_config.model_name,

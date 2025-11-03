@@ -1,0 +1,19 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response provided by the interviewee for the following question using the following taxonomy and then provide a chain of thought explanation for your decision:
+  
+  {taxonomy}
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  ### Part of the Interview ###
+  {context}
+  ### Question ###
+  {question}
+  
+  ---
+  
+  Return only the label in the format "Label: <label>". No additional text or metadata.

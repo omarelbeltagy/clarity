@@ -10,6 +10,17 @@ import shutil
 from utils.logger import logger
 
 
+class SafeDict(dict):
+    """Dictionary that returns placeholder for missing keys during formatting.
+
+    This class extends the built-in dict to override the __missing__ method,
+    returning the placeholder string '{key}' when a key is not found.
+    """
+
+    def __missing__(self, key):
+        return '{' + key + '}'
+
+
 def cleanup_checkpoints(output_dir: str):
     """
     Delete checkpoint directories in a given output directory.

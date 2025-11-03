@@ -15,6 +15,7 @@
 - [Usage](#usage)
 - [Data Format](#data-format)
 - [Testing](#testing)
+- [Fine Tuning with Together](#fine-tuning-with-together)
 
 ---
 
@@ -304,3 +305,40 @@ python app.py --config <OPTINAL_CUSTOM_MODEL_CONFIG> test --model <MODEL_NAME> -
 ```
 
 This will return evaluation metrics such as accuracy and F1-score for the provided dataset.
+
+---
+
+## Fine Tuning with Together
+
+You can fine-tune models hosted on Together.ai using the dashboard on the [Together Platform](https://together.ai/).
+This enabled for way faster training and deployment of LLMs with a lot of parameters.
+
+To prepare your dataset for Together fine-tuning, use the following format in a JSONL file. For more information
+regarding
+the dataset format, see the [README](../clarity-dataset/README.md#together-export-format) of
+the `clarity-dataset` module.
+
+```
+{
+    "prompt": "<prompt-text-with-context-and-question>",
+    "completion": "Label: <clarity_label>"
+}
+```
+
+### Steps
+
+1. Prepare your dataset in the Together format.
+2. Log in to your Together account and navigate to the fine-tuning section.
+3. Upload your dataset and configure the fine-tuning parameters.
+4. Start the fine-tuning process and monitor its progress via the Together dashboard.
+
+### Using Fine-Tuned Models
+
+Before you start the testing you need to create a dedicated endpoint for your fine-tuned model on the Together platform.
+To do so, follow the instructions in
+the [Together Documentation](https://docs.together.ai/docs/fine-tuning-quickstart/).
+
+Once your model is fine-tuned and deployed, you can use it in the `clarity-models` module by specifying the model name
+in the
+`together` model configuration.
+

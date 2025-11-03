@@ -178,6 +178,7 @@ class LoRADataConfig:
             self.train_files = [
                 "/app/data/cleaned/train.json",
                 "./data/cleaned/train.json",
+                "../clarity-dataset/data/cleaned/train.json"
                 "../data/cleaned/train.json",
                 "../../data/cleaned/train.json"
             ]
@@ -185,6 +186,7 @@ class LoRADataConfig:
             self.valid_files = [
                 "/app/data/cleaned/valid.json",
                 "./data/cleaned/valid.json",
+                "../clarity-dataset/data/cleaned/valid.json"
                 "../data/cleaned/valid.json",
                 "../../data/cleaned/valid.json"
             ]

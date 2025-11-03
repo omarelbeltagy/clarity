@@ -15,12 +15,17 @@ services:
   dataset:
     container_name: "clarity-dataset"
     build:
-      context: .
-      dockerfile: "Dockerfile"
+      context: ..
+      dockerfile: "clarity-dataset/Dockerfile"
     platform: "linux/amd64"
     volumes:
-      - "../data:/data"
       - "./app.py:/app/app.py"
       - "./cleaning.py:/app/cleaning.py"
       - "./logging.yaml:/app/logging.yaml"
+      - "./utils:/app/utils"
+      - "./data:/data"
+      - "../assets/prompts/lora.yaml:/app/lora-prompt.yaml"
+    environment:
+      - "DARA_DIR=/data"
+      - "LORA_PROMPT_FILE=/app/lora-prompt.yaml"
     restart: "no"
