@@ -21,6 +21,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>clarity-neo4j</module>
         <module>clarity-utils</module>
     </modules>
 
@@ -41,10 +42,13 @@
         <version.maven.compiler>3.14.1</version.maven.compiler>
         <version.maven.resources>3.3.1</version.maven.resources>
         <version.nd4j>1.0.0-M2.1</version.nd4j>
+        <version.org.neo4j>5.26.13</version.org.neo4j>
+        <version.org.neo4j.driver>6.0.1</version.org.neo4j.driver>
         <version.slf4j>2.0.13</version.slf4j>
         <version.test.assertj>3.25.3</version.test.assertj>
         <version.test.junit>5.10.2</version.test.junit>
         <!-- Project dependencies -->
+        <version.clarity.neo4j>0.0.1</version.clarity.neo4j>
         <version.clarity.utils>0.0.1</version.clarity.utils>
     </properties>
 
