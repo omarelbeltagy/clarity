@@ -1,5 +1,7 @@
 # Clarity Models
 
+- [📁 Trained Models](https://drive.google.com/drive/folders/1C3q9jZ-92H3tPpaPJaXDgTAHIFmHs1w1?usp=share_link)
+
 > This module provides a configurable framework for training and serving classification models.
 > Supports both transformer encoders and large language models with LoRA fine-tuning, all exposed through a FastAPI
 > service.
@@ -12,6 +14,8 @@
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Data Format](#data-format)
+- [Testing](#testing)
+- [Fine Tuning with Together](#fine-tuning-with-together)
 
 ---
 
@@ -20,6 +24,7 @@
 ### Features
 
 - **Multiple model types**: Encoder (BERT-like), LoRA (OPT/GPT-like), and Classic loaders
+- **Together API support**: Remote/hosted models via Together.ai for few-shot/zero-shot inference and fine-tuned models
 - **Configuration-driven**: All aspects controlled via `models.yaml`
 - **Multi-model serving**: Serve multiple models in parallel under different endpoints
 - **Flexible data processing**: Customizable field names, label mappings, sample sizes
@@ -33,20 +38,24 @@
 ``` yaml
 clarity-models/
 ├── Dockerfile
-├── docker-compose.yaml
-├── logging.yaml
+├── docker-compose.yaml     # Docker Compose setup
+├── logging.yaml            # Logging configuration
 ├── models-training.ipynb   # Jupyter notebook for model training experiments on Google Colab
-├── models.yaml
+├── models.yaml             # Model configuration file
 ├── app.py                  # FastAPI app loading models from models.yaml
+├── colab.ipynb             # Google Colab setup notebook
+├── dto/                    # Data Transfer Objects for API requests/responses
+│   ├── ...
 ├── models/
 │   ├── encoder.py          # Encoder training & inference
 │   ├── lora.py             # LoRA training & inference
 │   ├── tensorboard_manager.py
+│   ├── together.py         # Together API integration
 │   └── config/             # Config classes for each model type
+│       ├── ...
 ├── utils/
-│   ├── general_utils.py
-│   └── logger.py
-└── requirements.txt
+│   ├── ...
+└── requirements.txt        # Python dependencies
 ```
 
 ---
@@ -60,6 +69,8 @@ Supported types:
 - `classic`: Custom loader function
 - `encoder`: Transformer encoder fine-tuning
 - `lora`: LLMs with LoRA adapters
+- `together`: Remote/hosted models accessed via the Together API (few-shot/zero-shot/fine-tune). Together Models are
+  only available in the `test` mode for inference.
 
 ### Examples
 
@@ -118,6 +129,29 @@ Supported types:
     port: 6006
 ```
 
+#### Together model
+
+```yaml
+- name: "Llama-Guard-4-12B"
+  type: "together"
+
+  config:
+    model_name: "meta-llama/Llama-Guard-4-12B"  # HF / Together / local id
+    mode: "few-shot"                            # "few-shot" | "zero-shot" | "fine-tune"
+    prompt: null                                # Optional custom prompt template
+    env_files: # Candidate .env files to load API keys from
+      - "/app/data/.env"
+      - "./.env"
+    labels:
+      - "Clear Reply"
+      - "Clear Non-Reply"
+      - "Ambivalent"
+    max_retries: 3
+    max_tokens: 4096
+    temperature: 0.7
+    retry_delay: 2
+```
+
 ---
 
 ## Usage
@@ -160,18 +194,16 @@ In addition to serving models via FastAPI, you can now run training and inferenc
 # List available models from models.yaml
 python app.py list
 # Train a specific model with optional custom config
-python app.py train --config custom-config.yaml --model roberta-base train
-# Run inference on a QA pair
-python app.py test --question "Question?" --context "Context."
+python app.py train --config custom-config.yaml train --model roberta-base
 ```
 
-This is useful for quick experiments or running jobs in environments where an API server is not needed.
+For inference without starting the API server see the [Testing](#testing) section.
 
 ### Google Colab / Jupyter Support
 
 A Jupyter notebook is included for interactive training and evaluation, optimized for Google Colab.
 
-File: [`models-training.ipynb`](models-training.ipynb)
+File: [colab.ipynb](colab.ipynb)
 
 ### Accessing the FastAPI Service
 
@@ -180,7 +212,7 @@ Exposed ports:
 * `8000`: FastAPI service
 * `6006`: TensorBoard (if enabled)
 
-Models defined in [`models.yaml`](models.yaml) are exposed via REST. Example:
+Models defined in [models.yaml](models.yaml) are exposed via REST. Example:
 
 ```bash
 curl -X POST "http://localhost:8000/classify/opt-1-3b" \
@@ -192,7 +224,7 @@ Response:
 
 ```json
 {
-  "clarity_label": "Clear Reply",
+  "name": "Clear Reply",
   "confidence": 0.89,
   "scores": {
     "Clear Reply": 0.89,
@@ -204,7 +236,7 @@ Response:
 
 ### Logging
 
-Logging configured via [`logging.yaml`](logging.yaml). Default format:
+Logging configured via [logging.yaml](logging.yaml). Default format:
 
 ```
 2025-10-26 12:00:00 | INFO     | Training started
@@ -234,3 +266,79 @@ data_config:
   question_field: "text"
   context_field: "context"
 ```
+
+---
+
+## Testing
+
+To test a Models performance, you can use the `test` argument with the [app.py](app.py) script.
+
+### Single QA pair
+
+To test a single question / answer pair:
+
+```bash
+python app.py --config <OPTINAL_CUSTOM_MODEL_CONFIG> test --model <MODEL_NAME> --question "Is the sky blue?" --context "During a clear day, the sky appears blue
+```
+
+The response will be similar to the one from the API:
+
+```json
+{
+  "name": "Clear Reply",
+  "confidence": 0.95,
+  "scores": {
+    "Clear Reply": 0.95,
+    "Clear Non-Reply": 0.03,
+    "Ambivalent": 0.02
+  }
+}
+```
+
+### Dataset Evaluation
+
+If you want to evaluate a whole test dataset, you can provide a JSON file with multiple entries in the same format as
+described in the [Data Format](#data-format) section.
+
+```bash
+python app.py --config <OPTINAL_CUSTOM_MODEL_CONFIG> test --model <MODEL_NAME> --file <PATH_TO_TEST_FILE.json>
+```
+
+This will return evaluation metrics such as accuracy and F1-score for the provided dataset.
+
+---
+
+## Fine Tuning with Together
+
+You can fine-tune models hosted on Together.ai using the dashboard on the [Together Platform](https://together.ai/).
+This enabled for way faster training and deployment of LLMs with a lot of parameters.
+
+To prepare your dataset for Together fine-tuning, use the following format in a JSONL file. For more information
+regarding
+the dataset format, see the [README](../clarity-dataset/README.md#together-export-format) of
+the `clarity-dataset` module.
+
+```
+{
+    "prompt": "<prompt-text-with-context-and-question>",
+    "completion": "Label: <clarity_label>"
+}
+```
+
+### Steps
+
+1. Prepare your dataset in the Together format.
+2. Log in to your Together account and navigate to the fine-tuning section.
+3. Upload your dataset and configure the fine-tuning parameters.
+4. Start the fine-tuning process and monitor its progress via the Together dashboard.
+
+### Using Fine-Tuned Models
+
+Before you start the testing you need to create a dedicated endpoint for your fine-tuned model on the Together platform.
+To do so, follow the instructions in
+the [Together Documentation](https://docs.together.ai/docs/fine-tuning-quickstart/).
+
+Once your model is fine-tuned and deployed, you can use it in the `clarity-models` module by specifying the model name
+in the
+`together` model configuration.
+

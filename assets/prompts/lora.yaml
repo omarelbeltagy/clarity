@@ -1,0 +1,10 @@
+prompt: |
+  Based on a part of the interview where the
+  interviewer asks a set of questions, classify the type of answer
+  the interviewee provided for the following question
+
+  ### Part of the interview ###
+  {context}
+
+  ### Question ###
+  {question}
