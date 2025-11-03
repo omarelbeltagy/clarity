@@ -47,7 +47,3 @@ prompt: |
   {context}
   ### Question ###
   {question}
-  
-  ---
-  
-  Return only the label in the format "Label: <label>". No additional text or metadata.

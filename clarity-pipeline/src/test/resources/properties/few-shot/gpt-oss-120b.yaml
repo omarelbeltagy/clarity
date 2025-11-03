@@ -1,0 +1,10 @@
+name: "gpt-oss-120b"
+cluster: "OpenAI"
+version: "few-shot:v1"
+model: "together:openai/gpt-oss-120b"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+prompt: "../assets/prompts/few-shot.yaml"

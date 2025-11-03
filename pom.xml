@@ -22,6 +22,7 @@
 
     <modules>
         <module>clarity-neo4j</module>
+        <module>clarity-pipeline</module>
         <module>clarity-utils</module>
     </modules>
 
@@ -33,15 +34,22 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <!-- Versions of dependencies -->
+        <version.anthropic>2.9.0</version.anthropic>
+        <version.apache.commons>1.26.2</version.apache.commons>
+        <version.apache.poi>5.4.1</version.apache.poi>
+        <version.commons.io>2.16.1</version.commons.io>
         <version.dotenv>5.2.2</version.dotenv>
         <version.gson>2.10.1</version.gson>
         <version.jackson>2.18.0</version.jackson>
         <version.jsonschema-generator>4.38.0</version.jsonschema-generator>
+        <version.kotlin>2.2.21</version.kotlin>
         <version.logback>1.5.20</version.logback>
         <version.lombok>1.18.30</version.lombok>
         <version.maven.compiler>3.14.1</version.maven.compiler>
         <version.maven.resources>3.3.1</version.maven.resources>
         <version.nd4j>1.0.0-M2.1</version.nd4j>
+        <version.okhttp>4.12.0</version.okhttp>
+        <version.openai>4.5.0</version.openai>
         <version.org.neo4j>5.26.13</version.org.neo4j>
         <version.org.neo4j.driver>6.0.1</version.org.neo4j.driver>
         <version.slf4j>2.0.13</version.slf4j>

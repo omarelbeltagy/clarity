@@ -22,7 +22,7 @@ and produces exports compatible with the Together API.
 Project structure (relevant files):
 
 ```yaml
-├── data/                         # Output data directory (configurable via DARA_DIR)
+├── data/                         # Output data directory (configurable via DATA_DIR)
 ├── Dockerfile                    # Docker image definition
 ├── app.py                        # Entrypoint: download, clean, split and Together-export
 ├── cleaning.py                   # Data cleaning and transformation helpers
@@ -116,7 +116,7 @@ python app.py # Start the data processing
 - Logging
     - Configured via [logging.yaml](logging.yaml)
 - Environment variables:
-    - `DARA_DIR`
+    - `DATA_DIR`
         - Base directory where outputs are written.
 
     - `LORA_PROMPT_FILE`
@@ -133,13 +133,12 @@ python app.py # Start the data processing
 
 ## Together export format
 
-Entries written to `{DARA_DIR}/together/*.jsonl` follow the shape:
+Entries written to `{DATA_DIR}/together/*.jsonl` follow the shape:
 
 ```
-{
-    "prompt": "<prompt-text-with-context-and-question>",
-    "completion": "Label: <clarity_label>"
-}
+{ "prompt": "<prompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
+{ "prompt": "<prompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
+{ "prompt": "<prompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
 ```
 
 One JSON object per line (JSONL). Only records with non-empty interview_question, interview_answer, question and

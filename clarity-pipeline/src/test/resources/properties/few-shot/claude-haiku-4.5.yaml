@@ -1,0 +1,10 @@
+name: "Claude Haiku 4.5"
+cluster: "Claude"
+version: "few-shot:v1"
+model: "anthropic:claude-haiku-4-5"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+prompt: "../assets/prompts/few-shot.yaml"

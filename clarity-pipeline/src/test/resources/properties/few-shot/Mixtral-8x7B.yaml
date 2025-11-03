@@ -1,0 +1,12 @@
+name: "Mixtral-8x7B"
+cluster: "Mistralai"
+version: "few-shot:v2:text"
+model: "together:mistralai/Mixtral-8x7B-Instruct-v0.1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+response-format: "text"
+worker-threads: 16
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+prompt: "../assets/prompts/few-shot.yaml"

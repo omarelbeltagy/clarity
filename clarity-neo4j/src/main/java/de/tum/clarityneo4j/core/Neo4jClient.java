@@ -8,11 +8,14 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.internal.value.NodeValue;
 import org.neo4j.driver.internal.value.RelationshipValue;
+import org.neo4j.driver.types.MapAccessor;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -559,5 +562,110 @@ public class Neo4jClient {
             throw new IllegalArgumentException("Cypher query cannot be null or empty");
         }
         return driver.session().run(cypherQuery, params).stream();
+    }
+
+
+    private List<Map<String, Object>> getRecordsAsMap(String query, Map<String, Object> params) {
+        return getRecords(query, params)
+                .map(MapAccessor::asMap)
+                .toList();
+    }
+
+    public <T extends Neo4jNode> void batchSaveNodes(List<T> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+
+        Map<Class<?>, List<Neo4jNode>> groupedByType = nodes.stream()
+                                                            .collect(Collectors.groupingBy(Neo4jNode::getClass));
+
+        for (Map.Entry<Class<?>, List<Neo4jNode>> entry : groupedByType.entrySet()) {
+            batchSaveNodesSingleType(entry.getValue());
+        }
+    }
+
+    private <T extends Neo4jNode> void batchSaveNodesSingleType(List<T> nodes) {
+        String label = Neo4jNode.getLabel(nodes.getFirst().getClass());
+        List<Map<String, Object>> nodeData = IntStream.range(0, nodes.size())
+                                                      .mapToObj(i -> {
+                                                          Map<String, Object> data = new HashMap<>();
+                                                          data.put("index", i);
+                                                          data.put("props", nodes.get(i).toPropertiesMap());
+                                                          return data;
+                                                      })
+                                                      .toList();
+
+        String query = String.format("""
+                                             UNWIND $nodeData AS data
+                                             CREATE (n:%s)
+                                             SET n = data.props
+                                             RETURN elementId(n) as elementId, data.index as idx
+                                             ORDER BY idx
+                                             """, label);
+
+        try {
+            Map<String, Object> params = Map.of("nodeData", nodeData);
+            List<Map<String, Object>> results = getRecordsAsMap(query, params);
+
+            for (int i = 0; i < results.size(); i++) {
+                String elementId = (String) results.get(i).get("elementId");
+                nodes.get(i).setElementId(elementId);
+            }
+
+            log.info("Batch saved {} nodes of type {}", nodes.size(), label);
+        } catch (Exception e) {
+            log.error("Failed to batch save nodes", e);
+            throw new RuntimeException("Batch save failed", e);
+        }
+    }
+
+    public <T extends Neo4jRelation> void batchCreateRelations(List<T> relations) {
+        if (relations == null || relations.isEmpty()) {
+            return;
+        }
+
+        Map<Class<?>, List<Neo4jRelation>> groupedByType = relations.stream()
+                                                                    .collect(Collectors.groupingBy(
+                                                                            Neo4jRelation::getClass));
+
+        for (Map.Entry<Class<?>, List<Neo4jRelation>> entry : groupedByType.entrySet()) {
+            batchCreateRelationsSingleType(entry.getValue());
+        }
+    }
+
+    private <T extends Neo4jRelation> void batchCreateRelationsSingleType(List<T> relations) {
+        String type = Neo4jRelation.getType(relations.getFirst().getClass());
+        List<Map<String, Object>> relationData = IntStream.range(0, relations.size())
+                                                          .mapToObj(i -> {
+                                                              Map<String, Object> data = new HashMap<>();
+                                                              data.put("index", i);
+                                                              data.put("startId", relations.get(i).getStartNodeId());
+                                                              data.put("endId", relations.get(i).getEndNodeId());
+                                                              data.put("props", relations.get(i).toPropertiesMap());
+                                                              return data;
+                                                          })
+                                                          .toList();
+        String query = String.format("""
+                                             UNWIND $relationData AS data
+                                             MATCH (src), (dst)
+                                             WHERE elementId(src) = data.startId
+                                             AND elementId(dst) = data.endId
+                                             CREATE (src)-[r:%s]->(dst)
+                                             SET r = data.props
+                                             RETURN elementId(r) as elementId, data.index as idx
+                                             ORDER BY idx
+                                             """, type);
+        try {
+            Map<String, Object> params = Map.of("relationData", relationData);
+            List<Map<String, Object>> results = getRecordsAsMap(query, params);
+            for (int i = 0; i < results.size(); i++) {
+                String elementId = (String) results.get(i).get("elementId");
+                relations.get(i).setElementId(elementId);
+            }
+            log.info("Batch created {} relationships of type {}", relations.size(), type);
+        } catch (Exception e) {
+            log.error("Failed to batch create relationships", e);
+            throw new RuntimeException("Batch create relationships failed", e);
+        }
     }
 }

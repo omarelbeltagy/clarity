@@ -240,7 +240,7 @@ models:
 
   - name: "roberta-base"
     type: "encoder"
-    enabled: false
+    enabled: true
     route: "/classify/roberta-base"
 
     model_config:
@@ -254,6 +254,20 @@ models:
       num_epochs: 3
       save_total_limit: 3
       logging_steps: 5
+
+    label_config:
+      labels:
+        - "Clear Reply"
+        - "Clear Non-Reply"
+        - "Ambivalent"
+
+  - name: "roberta-large"
+    type: "encoder"
+    enabled: true
+    route: "/classify/roberta-large"
+
+    model_config:
+      model_name: "roberta-large"
 
     label_config:
       labels:

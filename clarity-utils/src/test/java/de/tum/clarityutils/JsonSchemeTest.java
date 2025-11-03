@@ -55,9 +55,9 @@ public class JsonSchemeTest {
         private int attempts;
         @JsonProperty(value = "max-tokens", defaultValue = "4096")
         private int maxTokens;
-        @JsonProperty(value = "top-p", defaultValue = "0.5")
+        @JsonProperty(value = "top-p", defaultValue = "0.9")
         private double topP;
-        @JsonProperty(value = "temperature", defaultValue = "0.7")
+        @JsonProperty(value = "temperature", defaultValue = "0.9")
         private double temperature;
         @JsonProperty(value = "response-format", defaultValue = "json_object")
         private ResponseFormat responseFormat;

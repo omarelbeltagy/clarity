@@ -1,0 +1,36 @@
+<!--
+Logback configuration file to set logging levels and formats.
+
+This configuration defines a console appender with color-coded log levels
+and disables logging for specific classes from the victools JSON schema generator library.
+-->
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                %d{HH:mm:ss.SSS} [%thread] %highlight(%-5level){FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green,
+                DEBUG=blue, TRACE=cyan} %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.github.victools.jsonschema.generator.impl.MemberCollectionContextImpl"
+            level="OFF"
+            additivity="false"/>
+
+    <logger name="com.github.victools.jsonschema.generator.impl.SchemaGenerationContextImpl"
+            level="OFF"
+            additivity="false"/>
+
+    <logger name="org.nd4j"
+            level="WARN"
+            additivity="false"/>
+
+    <logger name="io.netty"
+            level="WARN"
+            additivity="false"/>
+
+    <root level="debug">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

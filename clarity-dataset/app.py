@@ -8,7 +8,6 @@ Together API for few-shot/zero-shot inference.
 import json
 import os
 import random
-
 import yaml
 from datasets import load_dataset
 
@@ -19,7 +18,7 @@ from utils.logger import logger
 def get_data_path():
     """Return and ensure the data directory exists.
 
-    The function checks the DARA_DIR environment variable and falls back to
+    The function checks the DATA_DIR environment variable and falls back to
     "../data" if not set. The directory will be created if it does not yet
     exist. This ensures that it will work both natively and within Docker.
 
@@ -32,7 +31,7 @@ def get_data_path():
     -----
     The returned path can be relative or absolute depending on the environment.
     """
-    data_path_env = os.getenv("DARA_DIR")
+    data_path_env = os.getenv("DATA_DIR")
 
     if data_path_env:
         data_path_dir = data_path_env
@@ -231,7 +230,7 @@ def main():
     The function performs the following steps:
     1. Load the 'ailsntua/QEvasion' dataset splits (train and test).
     2. Shuffle and split the train split into train/validation (80/20).
-    3. Persist the full and cleaned datasets under the DARA_DIR directory.
+    3. Persist the full and cleaned datasets under the DATA_DIR directory.
     4. Convert train/valid to Together JSONL format.
 
     Returns
