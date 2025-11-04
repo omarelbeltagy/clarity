@@ -1,10 +1,14 @@
 name: "Claude Opus 4.1"
 cluster: "Claude"
 version: "few-shot:v1"
-model: "anthropic:claude-opus-4-1"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
-prompt: "../assets/prompts/few-shot.yaml"
+strategy:
+  type: "single"
+  model:
+    provider: "anthropic"
+    name: "claude-opus-4-1"
+    prompt: "../assets/prompts/few-shot.yaml"

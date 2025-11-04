@@ -1,10 +1,14 @@
 name: "gpt-5-nano"
 cluster: "OpenAI"
 version: "few-shot:v1"
-model: "openai:gpt-5-nano"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
-prompt: "../assets/prompts/few-shot.yaml"
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-5-nano"
+    prompt: "../assets/prompts/few-shot.yaml"

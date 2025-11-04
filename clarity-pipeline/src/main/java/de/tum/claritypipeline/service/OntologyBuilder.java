@@ -4,7 +4,11 @@ import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
-import de.tum.claritypipeline.model.*;
+import de.tum.claritypipeline.model.Category;
+import de.tum.claritypipeline.model.Classification;
+import de.tum.claritypipeline.model.Cluster;
+import de.tum.claritypipeline.model.Taxonomy;
+import de.tum.claritypipeline.model.properties.ClassificationProperties;
 import de.tum.claritypipeline.model.relation.BelongsTo;
 import de.tum.claritypipeline.model.relation.HasCategory;
 import de.tum.claritypipeline.model.relation.HasRun;
@@ -249,6 +253,11 @@ public class OntologyBuilder {
         }
     }
 
+    /**
+     * Ensures that the Taxonomy root node exists in the graph
+     *
+     * @param properties The classification properties
+     */
     private synchronized void ensureTaxonomyRootNode(ClassificationProperties properties) {
         try {
             String query = String.format("""

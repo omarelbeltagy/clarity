@@ -1,31 +1,21 @@
 package de.tum.clarityutils;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * Utility class for serializing and deserializing objects to and from JSON using Gson.
- * <p>
- * This class provides static methods to serialize Java objects to JSON strings and to deserialize
- * JSON strings back into Java objects or lists of objects. It is designed to simplify the conversion
- * between Java objects and their JSON representations, supporting both single objects and arrays/lists.
- * <p>
- * Example usage:
- * <pre>
- *     String json = SerializationUtils.serialize(myObject);
- *     MyClass obj = SerializationUtils.deserialize(json, MyClass.class);
- *     List&lt;MyClass&gt; list = SerializationUtils.deserializeList(jsonArray, MyClass[].class);
- * </pre>
+ * Utility class for serializing and deserializing objects to and from JSON using Jackson.
  */
 public class SerializationUtils {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     /**
      * Serializes an object to its JSON string representation.
-     * <p>
-     * Uses Gson to convert the provided object into a JSON string. If the object is {@code null},
-     * the method returns {@code null}.
      *
      * @param obj the object to serialize
      * @return the JSON string representation of the object, or {@code null} if the object is {@code null}
@@ -34,15 +24,15 @@ public class SerializationUtils {
         if (obj == null) {
             return null;
         }
-        Gson gson = new Gson();
-        return gson.toJson(obj);
+        try {
+            return MAPPER.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize object of type " + obj.getClass(), e);
+        }
     }
 
     /**
      * Deserializes a JSON string into an object of the specified class.
-     * <p>
-     * Uses Gson to parse the JSON string and create an instance of the specified class.
-     * If the JSON string is {@code null}, the method returns {@code null}.
      *
      * @param json        the JSON string
      * @param targetClass the class of T
@@ -50,30 +40,36 @@ public class SerializationUtils {
      * @return the deserialized object, or {@code null} if the JSON string is {@code null}
      */
     public static <T> T deserialize(String json, Class<T> targetClass) {
-        if (json == null) {
+        if (json == null || json.isEmpty() || json.equals("null")) {
             return null;
         }
-        Gson gson = new Gson();
-        return gson.fromJson(json, targetClass);
+        try {
+            return MAPPER.readValue(json, targetClass);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to deserialize JSON to " + targetClass.getSimpleName(), e);
+        }
     }
 
     /**
      * Deserializes a JSON string into a list of objects of the specified class.
-     * <p>
-     * Uses Gson to parse the JSON string and create an array of the specified type, then converts it to a list.
-     * If the JSON string is {@code null}, an empty list is returned.
      *
      * @param json        the JSON string
-     * @param targetClass the array class of T (e.g., MyClass[].class)
+     * @param targetClass the class of T
      * @param <T>         the type of the desired objects
      * @return a list of deserialized objects, or an empty list if the JSON string is {@code null}
      */
-    public static <T> List<T> deserializeList(String json, Class<T[]> targetClass) {
+    public static <T> List<T> deserializeList(String json, Class<T> targetClass) {
         if (json == null || json.isEmpty() || json.equals("null")) {
-            json = "[]"; // Return an empty list if json is null
+            return Collections.emptyList();
         }
-        Gson gson = new Gson();
-        T[] array = gson.fromJson(json, targetClass);
-        return Arrays.asList(array);
+        try {
+            return MAPPER.readValue(
+                    json,
+                    TypeFactory.defaultInstance().constructCollectionType(List.class, targetClass)
+            );
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Failed to deserialize JSON array to List<" + targetClass.getSimpleName() + ">", e);
+        }
     }
 }

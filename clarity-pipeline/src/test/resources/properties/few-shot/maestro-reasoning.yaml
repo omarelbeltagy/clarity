@@ -1,11 +1,15 @@
 name: "maestro-reasoning"
 cluster: "ArceeAI"
 version: "few-shot:v1:text"
-model: "together:arcee-ai/maestro-reasoning"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
-response-format: "text"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
-prompt: "../assets/prompts/few-shot.yaml"
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "arcee-ai/maestro-reasoning"
+    prompt: "../assets/prompts/few-shot.yaml"
+    response-format: "text"

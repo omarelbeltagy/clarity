@@ -1,10 +1,14 @@
 name: "DeepSeek-R1-Distill-Llama-70B"
 cluster: "DeepSeek"
 version: "few-shot:v1"
-model: "together:deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
-prompt: "../assets/prompts/few-shot.yaml"
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+    prompt: "../assets/prompts/few-shot.yaml"

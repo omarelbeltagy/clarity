@@ -19,12 +19,24 @@ import java.util.List;
 @NoArgsConstructor
 public class Cluster extends Neo4jNode {
 
+    /**
+     * * The name of the cluster.
+     */
     private String name;
 
+    /**
+     * The classifications belonging to this cluster.
+     */
     @JsonIgnore
     @Neo4jIgnore
     private List<Classification> children;
 
+    /**
+     * Retrieves the child classifications connected to this cluster via "BELONGS_TO" relationships.
+     *
+     * @param neo4jClient The Neo4j client used to execute the query.
+     * @return A list of Classification nodes connected to this cluster.
+     */
     public List<Classification> getChildren(Neo4jClient neo4jClient) {
         if (this.children != null) {
             return this.children;

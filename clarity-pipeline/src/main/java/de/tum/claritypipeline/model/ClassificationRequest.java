@@ -1,5 +1,6 @@
 package de.tum.claritypipeline.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import java.io.Serializable;
@@ -21,12 +22,20 @@ public class ClassificationRequest implements Serializable {
      *
      * <p>Typically a short sentence or question.
      */
-    String question;
+    private String question;
 
     /**
      * Optional additional context that may influence classification.
      *
      * <p>May be null or empty if not needed.
      */
-    String context;
+    private String context;
+
+    /**
+     * The taxonomy to use for classification.
+     *
+     * <p>Ignored during serialization.
+     */
+    @JsonIgnore
+    private Taxonomy taxonomy;
 }

@@ -6,6 +6,7 @@ import de.tum.clarityneo4j.annotations.Node;
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
+import de.tum.claritypipeline.model.properties.ClassificationProperties;
 import de.tum.claritypipeline.model.relation.HasRun;
 import lombok.*;
 
@@ -31,10 +32,19 @@ public class Classification extends Neo4jNode {
      */
     private String name;
 
+    /**
+     * The classification runs connected to this classification.
+     */
     @JsonIgnore
     @Neo4jIgnore
     private List<ClassificationProperties> children;
 
+    /**
+     * Retrieves the child classification properties connected to this classification via "HAS_RUN" relationships.
+     *
+     * @param neo4jClient The Neo4j client used to execute the query.
+     * @return A list of ClassificationProperties nodes connected to this classification.
+     */
     public List<ClassificationProperties> getChildren(Neo4jClient neo4jClient) {
         if (this.children != null) {
             return this.children;

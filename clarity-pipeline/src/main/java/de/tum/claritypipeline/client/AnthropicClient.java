@@ -5,8 +5,8 @@ import com.anthropic.models.messages.ContentBlock;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tum.claritypipeline.model.ClassificationProperties;
 import de.tum.claritypipeline.model.ResponseFormat;
+import de.tum.claritypipeline.model.properties.ModelConfig;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.Getter;
@@ -21,11 +21,11 @@ import java.util.regex.Pattern;
 public class AnthropicClient implements Client {
     private final Logger log = org.slf4j.LoggerFactory.getLogger(AnthropicClient.class);
 
-    private final ClassificationProperties properties;
+    private final ModelConfig properties;
     private final com.anthropic.client.AnthropicClient client;
     private final ObjectMapper objectMapper;
 
-    public AnthropicClient(ClassificationProperties properties) {
+    public AnthropicClient(ModelConfig properties) {
         String apiKey = EnvLoader.get("ANTHROPIC_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalStateException(
@@ -53,7 +53,7 @@ public class AnthropicClient implements Client {
                                 + properties.getResponseFormat());
             }
             MessageCreateParams params = MessageCreateParams.builder()
-                                                            .model(properties.getModel())
+                                                            .model(properties.getName())
                                                             .maxTokens(properties.getMaxTokens())
                                                             .temperature(properties.getTemperature())
                                                             .addUserMessage(prompt)

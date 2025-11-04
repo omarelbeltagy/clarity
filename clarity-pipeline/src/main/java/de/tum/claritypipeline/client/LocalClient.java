@@ -1,6 +1,6 @@
 package de.tum.claritypipeline.client;
 
-import de.tum.claritypipeline.model.ClassificationProperties;
+import de.tum.claritypipeline.model.properties.ModelConfig;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 public class LocalClient implements Client {
     private final Logger log = org.slf4j.LoggerFactory.getLogger(LocalClient.class);
 
-    private final ClassificationProperties properties;
+    private final ModelConfig properties;
 
     @Override
     public String makeRequest(String body) {
@@ -36,7 +36,7 @@ public class LocalClient implements Client {
             );
 
             Request request = new Request.Builder()
-                    .url(properties.getModel())
+                    .url(properties.getName())
                     .post(requestBody)
                     .build();
 

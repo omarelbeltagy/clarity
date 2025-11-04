@@ -3,9 +3,9 @@ package de.tum.claritypipeline.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import de.tum.claritypipeline.model.ClassificationProperties;
 import de.tum.claritypipeline.model.ClassificationResult;
 import de.tum.claritypipeline.model.ResponseFormat;
+import de.tum.claritypipeline.model.properties.ModelConfig;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.JsonScheme;
 import de.tum.clarityutils.SerializationUtils;
@@ -28,13 +28,13 @@ public class TogetherClient implements Client {
     private static final Pattern MARKDOWN_CODE_BLOCK = Pattern.compile("```(?:json)?\\s*(.+?)```", Pattern.DOTALL);
 
     private final Logger log = LoggerFactory.getLogger(TogetherClient.class);
-    private final ClassificationProperties properties;
+    private final ModelConfig properties;
     private final OkHttpClient httpClient;
     private final String apiKey;
     private final ThreadLocal<ObjectMapper> threadLocalMapper;
 
 
-    public TogetherClient(ClassificationProperties properties) {
+    public TogetherClient(ModelConfig properties) {
         this.apiKey = validateApiKey();
         this.properties = properties;
         this.httpClient = buildHttpClient();
@@ -118,7 +118,7 @@ public class TogetherClient implements Client {
     private String buildRequestBody(String prompt) throws IOException {
         ObjectMapper objectMapper = threadLocalMapper.get();
         ObjectNode node = objectMapper.createObjectNode();
-        node.put("model", properties.getModel());
+        node.put("model", properties.getName());
         node.put("max_tokens", properties.getMaxTokens());
         node.put("temperature", properties.getTemperature());
         node.put("top_p", properties.getTopP());

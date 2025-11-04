@@ -1,10 +1,14 @@
 name: "o3"
 cluster: "OpenAI"
 version: "few-shot:v1"
-model: "openai:o3"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
-prompt: "../assets/prompts/few-shot.yaml"
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "o3"
+    prompt: "../assets/prompts/few-shot.yaml"

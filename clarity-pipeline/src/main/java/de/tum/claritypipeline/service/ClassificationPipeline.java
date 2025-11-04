@@ -3,15 +3,13 @@ package de.tum.claritypipeline.service;
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
-import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.*;
+import de.tum.claritypipeline.model.properties.ClassificationProperties;
 import de.tum.claritypipeline.model.relation.BelongsTo;
 import de.tum.claritypipeline.model.relation.GeneratedBy;
 import de.tum.claritypipeline.model.relation.HasClassification;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
-import de.tum.claritypipeline.utils.PromptUtils;
 import de.tum.clarityutils.ModelEvaluator;
-import de.tum.clarityutils.SerializationUtils;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -74,7 +72,7 @@ public class ClassificationPipeline {
                 }
             }
             try {
-                ClassificationResult classificationResult = makeClassificationRequest(classificationRequest);
+                ClassificationResult classificationResult = executeStrategy(classificationRequest);
                 if (classificationResult != null) {
                     return classificationResult;
                 }
@@ -89,28 +87,17 @@ public class ClassificationPipeline {
         throw new RuntimeException("All classification attempts failed.");
     }
 
+
     /**
-     * Make the classification request to the configured client.
+     * Execute the classification strategy defined in the properties.
      *
      * @param classificationRequest The request containing question and answer.
-     * @return The classification response from the classifier.
+     * @return The classification result.
      */
-    private ClassificationResult makeClassificationRequest(
+    private ClassificationResult executeStrategy(
             ClassificationRequest classificationRequest
     ) {
-        String prompt = switch (properties.getClient()) {
-            case LocalClient ignore -> SerializationUtils.serialize(classificationRequest);
-            default -> PromptUtils.replacePrompt(classificationRequest, properties);
-        };
-
-        if (properties.getResponseFormat() == ResponseFormat.JSON_OBJECT) {
-            return properties.getClient()
-                             .makeRequest(prompt, ClassificationResult.class);
-        } else {
-            String response = properties.getClient()
-                                        .makeRequest(prompt);
-            return ClassificationResult.builder().name(response).build();
-        }
+        return properties.getStrategy().execute(classificationRequest);
     }
 
     // -------------------------------- Pipeline Entry --------------------------------
@@ -210,8 +197,7 @@ public class ClassificationPipeline {
      * Generate evaluation metrics for the classification run and store them in the database.
      */
     private void generateEvaluation() {
-        log.info("Generating evaluation for classification run {} for model {}", properties.getVersion(),
-                 properties.getModel());
+        log.info("Generating evaluation for classification run {}", properties.getVersion());
         String query = String.format("""
                                              MATCH (n:%s)--(cr:%s)--(c:%s)
                                              WHERE cr.version = '%s'
@@ -366,6 +352,7 @@ public class ClassificationPipeline {
                                     .question(qa.getQuestion())
                                     .context(qa.getInterviewQuestion() + "\n"
                                                      + qa.getInterviewAnswer())
+                                    .taxonomy(properties.getTaxonomy())
                                     .build();
     }
 
@@ -413,5 +400,8 @@ public class ClassificationPipeline {
 
     // -------------------------------- Inner Classes --------------------------------
 
+    /**
+     * A record representing a classification task, containing the QA, classification result, and category.
+     */
     private record ClassificationTask(QA qa, ClassificationResult result, Category category) {}
 }

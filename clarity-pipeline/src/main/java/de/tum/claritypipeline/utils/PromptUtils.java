@@ -31,16 +31,19 @@ public class PromptUtils {
 
     public static String replacePrompt(
             ClassificationRequest classificationRequest,
-            ClassificationProperties properties
+            String prompt,
+            ResponseFormat responseFormat,
+            boolean injectResponseFormat,
+            Taxonomy taxonomy
     ) {
-        if (properties == null || properties.getPrompt() == null || classificationRequest == null) {
+        if (prompt == null || classificationRequest == null) {
             throw new IllegalArgumentException("Arguments must not be null");
         }
 
-        String ontology = buildOntologyString(properties.getTaxonomy().getCategories());
-        String processedPrompt = replacePlaceholders(properties.getPrompt(), classificationRequest, ontology);
-        if (properties.isInjectResponseFormatInPrompt()) {
-            return appendResponseFormatInstructions(processedPrompt, properties.getResponseFormat());
+        String ontology = buildOntologyString(taxonomy.getCategories());
+        String processedPrompt = replacePlaceholders(prompt, classificationRequest, ontology);
+        if (injectResponseFormat) {
+            return appendResponseFormatInstructions(processedPrompt, responseFormat);
         } else {
             return processedPrompt;
         }

@@ -5,8 +5,8 @@ import com.openai.credential.BearerTokenCredential;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
-import de.tum.claritypipeline.model.ClassificationProperties;
 import de.tum.claritypipeline.model.ResponseFormat;
+import de.tum.claritypipeline.model.properties.ModelConfig;
 import de.tum.clarityutils.EnvLoader;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,17 +19,17 @@ import java.util.regex.Matcher;
 public class OpenAIClient implements Client {
     private final Logger log = org.slf4j.LoggerFactory.getLogger(OpenAIClient.class);
 
-    private final ClassificationProperties properties;
+    private final ModelConfig properties;
     private final ChatModel chatModel;
     private final com.openai.client.OpenAIClient client;
 
-    public OpenAIClient(ClassificationProperties properties) {
+    public OpenAIClient(ModelConfig properties) {
         String apiKey = EnvLoader.get("OPENAI_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalStateException(
                     "OPENAI_API_KEY environment variable is not set. Please set it to use OpenAIClassifier.");
         }
-        this.chatModel = ChatModel.of(properties.getModel());
+        this.chatModel = ChatModel.of(properties.getName());
         this.properties = properties;
         this.client = new OpenAIOkHttpClient.Builder().credential(
                 BearerTokenCredential.create(apiKey)).build();
@@ -68,7 +68,7 @@ public class OpenAIClient implements Client {
 
     private <T> T makeStructuredRequest(String prompt, Class<T> clazz) {
         StructuredChatCompletionCreateParams<T> params;
-        if (properties.getModel().toLowerCase().startsWith("gpt-4")) {
+        if (properties.getName().toLowerCase().startsWith("gpt-4")) {
             params =
                     ChatCompletionCreateParams.builder()
                                               .model(chatModel)
