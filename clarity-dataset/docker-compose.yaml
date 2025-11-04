@@ -2,13 +2,22 @@
 # Docker Compose file to build and run the clarity-dataset image which downloads and
 # prepares datasets for further use.
 #
-# To start the dataset service, you can use either of the following methods:
-#   1. From the command line, navigate to `clarity-dataset/` and run
-#        `docker compose up -d`
-#   2. Use the IntelliJ Docker plugin to run this file as a Docker Compose configuration.
+# Usage examples:
+#   1. Basic run (no cleaning, no BERT):
+#        docker compose up
 #
-# To force a rebuild of the image, use:
-#        `docker compose build --no-cache`
+#   2. Run with flags - use 'run' instead of 'up':
+#        docker compose run --rm dataset --clean-all
+#        docker compose run --rm dataset --use-bert
+#        docker compose run --rm dataset --clean-all --use-bert
+#        docker compose run --rm dataset --clean-fillers
+#        docker compose run --rm dataset --clean-names
+#
+# Available flags:
+#   --clean-fillers    Remove filler words (um, uh, you know, etc.)
+#   --clean-names      Remove president names and titles
+#   --clean-all        Apply both cleaning options
+#   --use-bert         Generate BERT-based summary embeddings
 #=======================================================================================
 
 services:
@@ -20,7 +29,8 @@ services:
     platform: "linux/amd64"
     volumes:
       - "./app.py:/app/app.py"
-      - "./cleaning.py:/app/cleaning.py"
+      - "./clean.py:/app/clean.py"
+      - "./summarize.py:/app/summarize.py"
       - "./logging.yaml:/app/logging.yaml"
       - "./utils:/app/utils"
       - "./data:/data"

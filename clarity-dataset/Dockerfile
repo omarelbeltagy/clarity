@@ -1,6 +1,7 @@
 #================================== Description ========================================
 # Dockerfile to build the clarity-dataset service which is responsible for
-# downloading the dataset and save it in the desired format.
+# downloading the dataset and saving it in the desired format.
+# Supports configurable text cleaning and BERT-based summary generation.
 
 # NOTE:
 # The build context should be set to the root directory of the repository when building this
@@ -14,6 +15,8 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements.txt

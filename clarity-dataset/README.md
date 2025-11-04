@@ -14,6 +14,7 @@ and produces exports compatible with the Together API.
 - [Output & Directories](#output--directories)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Processing Options](#processing-options)
 
 ---
 
@@ -25,11 +26,13 @@ Project structure (relevant files):
 ├── data/                         # Output data directory (configurable via DARA_DIR)
 ├── Dockerfile                    # Docker image definition
 ├── app.py                        # Entrypoint: download, clean, split and Together-export
-├── cleaning.py                   # Data cleaning and transformation helpers
+├── clean.py                      # Data cleaning and transformation helpers
+├── summary.py                    # BERT-based summary generation
 ├── docker-compose.yaml           # Docker Compose configuration (mounts prompt file)
 ├── logging.yaml                  # Logging configuration
 ├── utils/                        # helper modules
-└── requirements.txt              # Python dependencies
+├── requirements.txt              # Python dependencies
+└── README.md               # This file
 ```
 
 ---
@@ -48,6 +51,21 @@ Project structure (relevant files):
 
 ## Output & Directories
 
+- **Dataset Download**  
+  Downloads the dataset from the provided source.
+  
+- **Dataset Split**  
+  Splits the training data into training and validation sets (80/20 split with random seed 42).
+  
+- **Data Transformation**  
+  Simplifies and preprocesses the dataset for model consumption with configurable options:
+  - Filler word removal (um, uh, you know, etc.)
+  - President name removal (direct address, titles, full names)
+  - BERT-based summary generation (dense vector embeddings)
+
+- **Flexible Processing**  
+  Control which preprocessing steps to apply via command-line flags.
+
 By default the tool writes to a data directory (see [Configuration](#configuration)). The following structure will be
 created:
 
@@ -60,7 +78,6 @@ created:
 
 Together JSONL entries are generated from a [prompt template](../assets/prompts/lora.yaml) loaded from a YAML file
 (`LORA_PROMPT_FILE`).
-
 ---
 
 ## Usage
@@ -89,14 +106,60 @@ docker compose build --no-cache
 From inside the `clarity-dataset/` directory:
 
 ```bash
-# Build and start the container
+# Basic usage
 docker compose up -d
+```
+
+```bash
+# Clean fillers only
+docker compose run --rm dataset python app.py --clean-fillers
+```
+
+```bash
+# Clean names only
+docker compose run --rm dataset python app.py --clean-names
+```
+
+```bash
+# Clean everything (fillers + names)
+docker compose run --rm dataset python app.py --clean-all
+```
+
+```bash
+# Generate BERT summaries (without cleaning)
+docker compose run --rm dataset python app.py --use-bert
+```
+
+```bash
+# Full processing: clean everything + BERT summaries
+docker compose run --rm dataset python app.py --clean-all --use-bert
 ```
 
 ```bash
 # Rebuild from scratch if needed
 docker compose build --no-cache
 ```
+
+### Output Structure
+
+The script generates two sets of outputs:
+
+1. **Full datasets** (`/data/full/`)
+   - Original, unprocessed data
+   - Files: `train.json`, `valid.json`, `test.json`
+
+2. **Cleaned datasets** (`/data/cleaned/`)
+   - Processed according to specified flags
+   - Files: `train.json`, `valid.json`, `test.json`
+   - Each item contains:
+     - `question`: Original question
+     - `context`: Original interview Q&A concatenated
+     - `question_clean`: Cleaned question (if cleaning enabled)
+     - `context_clean`: Cleaned context (if cleaning enabled)
+     - `clarity_label`: Classification label
+     - `summary_bert`: BERT embedding vector (if --use-bert enabled)
+
+---
 
 ### Native
 
@@ -113,6 +176,7 @@ python app.py # Start the data processing
 
 ## Configuration
 
+### Logging
 - Logging
     - Configured via [logging.yaml](logging.yaml)
 - Environment variables:
@@ -144,3 +208,52 @@ Entries written to `{DARA_DIR}/together/*.jsonl` follow the shape:
 
 One JSON object per line (JSONL). Only records with non-empty interview_question, interview_answer, question and
 clarity_label are exported.
+
+### Command-Line Flags
+
+| Flag | Description |
+|------|-------------|
+| `--clean-fillers` | Remove filler words and phrases (um, uh, you know, etc.) |
+| `--clean-names` | Remove president names and titles (Mr. President, Biden, etc.) |
+| `--clean-all` | Apply both filler and name cleaning |
+| `--use-bert` | Generate BERT-based summary embeddings for each QA pair using default BERT model|
+
+
+**Supported BERT Model:**
+- `bert-base-uncased` (default) - 768 dimensions
+
+---
+
+## Examples
+
+### Generate multiple variants
+
+```bash
+# Variant 1: Original data with BERT
+docker compose run --rm dataset python app.py --use-bert
+
+# Variant 2: Clean fillers only
+docker compose run --rm dataset python app.py --clean-fillers
+
+# Variant 3: Full cleaning with BERT
+docker compose run --rm dataset python app.py --clean-all --use-bert
+```
+
+### Custom workflow
+
+```bash
+# 1. Build the image
+docker compose build
+
+# 2. Run with specific configuration
+docker compose run --rm dataset python app.py --clean-all --use-bert
+
+# 3. Check the output
+ls -lh ../data/cleaned/
+```
+
+---
+
+## Notes
+
+- The BERT summary generation can take around 2 hours, depending on hardware

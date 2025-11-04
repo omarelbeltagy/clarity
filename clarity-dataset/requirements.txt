@@ -1,3 +1,12 @@
+# Dataset and data processing
 datasets==4.2.0
+huggingface-hub>=0.16.0
+
+# NLP and transformers for BERT summaries
+transformers>=4.30.0
+torch>=2.0.0
+tokenizers>=0.13.0
+
+# Utilities
 loguru==0.7.3
 PyYAML==6.0.3
