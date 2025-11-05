@@ -5,8 +5,8 @@ import com.anthropic.models.messages.ContentBlock;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tum.claritypipeline.model.properties.ModelConfig;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.Getter;
@@ -34,7 +34,7 @@ public class AnthropicClient implements Client {
     /**
      * Configuration properties for the model (name, tokens, temperature, pattern, etc.).
      */
-    private final ModelConfig properties;
+    private final ModelProperties properties;
 
     /**
      * Underlying Anthropic SDK client used to send requests.
@@ -53,7 +53,7 @@ public class AnthropicClient implements Client {
      * @param properties model configuration containing model name and runtime settings
      * @throws IllegalStateException if ANTHROPIC_API_KEY is not set
      */
-    public AnthropicClient(ModelConfig properties) {
+    public AnthropicClient(ModelProperties properties) {
         String apiKey = EnvLoader.get("ANTHROPIC_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalStateException(

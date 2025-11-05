@@ -3,10 +3,10 @@ package de.tum.claritypipeline.strategy;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import de.tum.claritypipeline.client.LocalClient;
-import de.tum.claritypipeline.model.ClassificationRequest;
-import de.tum.claritypipeline.model.ClassificationResult;
-import de.tum.claritypipeline.model.properties.ModelConfig;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.classification.ClassificationRequest;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
+import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.utils.PromptUtils;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.*;
@@ -36,7 +36,7 @@ public class SingleStrategy implements ClassificationStrategy {
      */
     @JsonProperty("model")
     @JsonPropertyDescription("The model configuration to use for classification.")
-    private ModelConfig model;
+    private ModelProperties model;
 
     /**
      * Execute the single-call classification.

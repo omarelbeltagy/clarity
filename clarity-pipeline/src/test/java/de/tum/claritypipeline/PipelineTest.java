@@ -1,7 +1,7 @@
 package de.tum.claritypipeline;
 
-import de.tum.claritypipeline.model.QA;
-import de.tum.claritypipeline.model.properties.DatasetType;
+import de.tum.claritypipeline.model.config.DatasetType;
+import de.tum.claritypipeline.model.core.QA;
 import de.tum.claritypipeline.service.ClassificationPipeline;
 import de.tum.claritypipeline.service.DatasetGraphImporter;
 import de.tum.claritypipeline.service.DatasetReader;

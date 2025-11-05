@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model.properties;
+package de.tum.claritypipeline.model.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PatternConfig {
+public class PatternProperties {
 
     /**
      * Mapping from human-friendly flag names to java.util.regex.Pattern flags.

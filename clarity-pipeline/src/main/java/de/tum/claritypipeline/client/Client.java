@@ -1,7 +1,7 @@
 package de.tum.claritypipeline.client;
 
-import de.tum.claritypipeline.model.properties.ClassificationProperties;
-import de.tum.claritypipeline.model.properties.ModelConfig;
+import de.tum.claritypipeline.model.config.ClassificationProperties;
+import de.tum.claritypipeline.model.config.ModelProperties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -21,7 +21,7 @@ public interface Client {
      * @return concrete Client implementation
      * @throws IllegalArgumentException if provider is invalid
      */
-    static Client create(ModelConfig modelConfig) {
+    static Client create(ModelProperties modelConfig) {
         ModelProvider provider = parseProvider(modelConfig.getProvider());
         return provider.createClient(modelConfig);
     }
@@ -122,7 +122,7 @@ public interface Client {
          * @param config the model properties
          * @return a new Client instance for the provider
          */
-        public Client createClient(ModelConfig config) {
+        public Client createClient(ModelProperties config) {
             return factory.create(config);
         }
 
@@ -137,7 +137,7 @@ public interface Client {
              * @param config the model properties
              * @return a concrete Client instance
              */
-            Client create(ModelConfig config);
+            Client create(ModelProperties config);
         }
     }
 }

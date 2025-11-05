@@ -2,9 +2,9 @@ package de.tum.claritypipeline.service;
 
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
-import de.tum.claritypipeline.model.Cluster;
-import de.tum.claritypipeline.model.Evaluation;
-import de.tum.claritypipeline.model.properties.EvaluationExportOptions;
+import de.tum.claritypipeline.model.config.EvaluationExportProperties;
+import de.tum.claritypipeline.model.core.Cluster;
+import de.tum.claritypipeline.model.evaluation.Evaluation;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.poi.ss.usermodel.*;
@@ -37,9 +37,9 @@ public class EvaluationExporter {
     };
 
     private final Neo4jClient client;
-    private final EvaluationExportOptions options;
+    private final EvaluationExportProperties options;
 
-    private EvaluationExporter(Neo4jClient client, EvaluationExportOptions options) {
+    private EvaluationExporter(Neo4jClient client, EvaluationExportProperties options) {
         this.client = client;
         this.options = options;
     }
@@ -51,7 +51,7 @@ public class EvaluationExporter {
      * @throws IOException if the default Neo4j client could not be initialized
      */
     public static EvaluationExporter create() throws IOException {
-        return new EvaluationExporter(new Neo4jClient(), new EvaluationExportOptions());
+        return new EvaluationExporter(new Neo4jClient(), new EvaluationExportProperties());
     }
 
     /**
@@ -61,7 +61,7 @@ public class EvaluationExporter {
      * @return configured EvaluationExporter
      */
     public static EvaluationExporter create(Neo4jCredentials credentials) {
-        return new EvaluationExporter(new Neo4jClient(credentials), new EvaluationExportOptions());
+        return new EvaluationExporter(new Neo4jClient(credentials), new EvaluationExportProperties());
     }
 
     /**
@@ -71,7 +71,7 @@ public class EvaluationExporter {
      * @return configured EvaluationExporter
      * @throws IOException if the default Neo4j client could not be initialized
      */
-    public static EvaluationExporter create(EvaluationExportOptions options) throws IOException {
+    public static EvaluationExporter create(EvaluationExportProperties options) throws IOException {
         return new EvaluationExporter(new Neo4jClient(), options);
     }
 
@@ -82,7 +82,7 @@ public class EvaluationExporter {
      * @param options     export formatting and behavior options
      * @return configured EvaluationExporter
      */
-    public static EvaluationExporter create(Neo4jCredentials credentials, EvaluationExportOptions options) {
+    public static EvaluationExporter create(Neo4jCredentials credentials, EvaluationExportProperties options) {
         return new EvaluationExporter(new Neo4jClient(credentials), options);
     }
 
@@ -289,11 +289,11 @@ public class EvaluationExporter {
         private final XSSFCellStyle headerStyle;
         private final XSSFCellStyle cellStyle;
         private final XSSFCellStyle numberStyle;
-        private final EvaluationExportOptions options;
+        private final EvaluationExportProperties options;
 
-        StyleHelper(XSSFWorkbook workbook, EvaluationExportOptions options) {
+        StyleHelper(XSSFWorkbook workbook, EvaluationExportProperties options) {
             if (options == null) {
-                options = new EvaluationExportOptions();
+                options = new EvaluationExportProperties();
             }
             this.options = options;
             this.headerStyle = createHeaderStyle(workbook);

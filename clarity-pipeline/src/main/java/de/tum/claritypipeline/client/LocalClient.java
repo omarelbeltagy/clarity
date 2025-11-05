@@ -1,6 +1,6 @@
 package de.tum.claritypipeline.client;
 
-import de.tum.claritypipeline.model.properties.ModelConfig;
+import de.tum.claritypipeline.model.config.ModelProperties;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,7 +26,7 @@ public class LocalClient implements Client {
     /**
      * Model configuration containing the local endpoint URL and other settings.
      */
-    private final ModelConfig properties;
+    private final ModelProperties properties;
 
     /**
      * Send a request body to the local model endpoint and return a plain String response.

@@ -5,8 +5,8 @@ import com.openai.credential.BearerTokenCredential;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
-import de.tum.claritypipeline.model.properties.ModelConfig;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +29,7 @@ public class OpenAIClient implements Client {
     /**
      * Model configuration (name, tokens, temperature, etc.).
      */
-    private final ModelConfig properties;
+    private final ModelProperties properties;
 
     /**
      * ChatModel wrapper representing the chosen model in the SDK.
@@ -47,7 +47,7 @@ public class OpenAIClient implements Client {
      * @param properties model configuration
      * @throws IllegalStateException if OPENAI_API_KEY is missing
      */
-    public OpenAIClient(ModelConfig properties) {
+    public OpenAIClient(ModelProperties properties) {
         String apiKey = EnvLoader.get("OPENAI_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalStateException(
