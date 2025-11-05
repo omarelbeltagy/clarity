@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model.properties;
+package de.tum.claritypipeline.model.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -15,7 +15,7 @@
 - [Usage](#usage)
 - [Data Format](#data-format)
 - [Testing](#testing)
-- [Fine Tuning with Together](#fine-tuning-with-together)
+- [Fine-Tuning with Together](#fine-tuning-with-together)
 
 ---
 

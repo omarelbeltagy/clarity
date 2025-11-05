@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model;
+package de.tum.claritypipeline.model.core;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.tum.clarityneo4j.annotations.Neo4jIgnore;
@@ -6,6 +6,7 @@ import de.tum.clarityneo4j.annotations.Node;
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
+import de.tum.claritypipeline.model.classification.Classification;
 import de.tum.claritypipeline.model.relation.BelongsTo;
 import lombok.*;
 

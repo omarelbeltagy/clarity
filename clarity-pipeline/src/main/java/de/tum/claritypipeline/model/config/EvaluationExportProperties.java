@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model.properties;
+package de.tum.claritypipeline.model.config;
 
 import lombok.*;
 
@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EvaluationExportOptions {
+public class EvaluationExportProperties {
     /**
      * Number of decimal places to round numerical values to in the export.
      */

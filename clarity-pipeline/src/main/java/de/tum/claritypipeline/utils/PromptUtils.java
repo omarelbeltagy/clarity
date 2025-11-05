@@ -1,9 +1,13 @@
 package de.tum.claritypipeline.utils;
 
 import de.tum.clarityneo4j.model.Neo4jEmbeddingSearchResult;
-import de.tum.claritypipeline.model.*;
-import de.tum.claritypipeline.model.properties.RaqProperties;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.classification.ClassificationRequest;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
+import de.tum.claritypipeline.model.config.RaqProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
+import de.tum.claritypipeline.model.core.Category;
+import de.tum.claritypipeline.model.core.QA;
+import de.tum.claritypipeline.model.core.Taxonomy;
 import de.tum.claritypipeline.service.EmbeddingService;
 import de.tum.clarityutils.JsonScheme;
 import jdk.jfr.Description;

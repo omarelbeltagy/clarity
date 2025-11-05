@@ -17,6 +17,9 @@
     - [Evaluation](#evaluation)
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
+    - [Project Building](#project-building)
+    - [Configuration](#api-keys)
+    - [Database Setup](#database-setup)
 - [Modules](#modules)
 - [Pipeline](#pipeline)
 
@@ -62,8 +65,11 @@ Both tasks use macro F1‐score evaluated on a test set.
 
 > Before setting up the project, ensure you have the following installed:
 
+* [Java 21](https://www.oracle.com/de/java/technologies/downloads/)
+* [Maven 3.9.9](https://maven.apache.org/download.cgi)
 * [Git](https://git-scm.com)
 * [Docker](https://www.docker.com/get-started/)
+* [Python 3.9+](https://www.python.org/downloads/)
 * An IDE such as [IntelliJ IDEA](https://www.jetbrains.com/de-de/idea/)
   or [Eclipse](https://www.eclipse.org/downloads/) (optional but recommended)
 
@@ -73,7 +79,52 @@ Both tasks use macro F1‐score evaluated on a test set.
 
 > To set up the project and run it locally, follow these steps:
 
-TODO
+### Project Building
+
+1. Clone the repository:
+    ```bash
+    git clone <REPOSITORY_URL>
+    ```
+
+2. Build the java project with Maven:
+    ```bash
+    cd <PROJECT_DIRECTORY>
+    mvn clean install -U -DskipTests
+    ```
+
+### API Keys
+
+For using the APIs of common LLMs that are needed for the classification you need to provide API keys. For that create a
+`.env` file in the project root with the following content:
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+TOGETHER_API_KEY=your_together_api_key
+```
+
+### Database Setup
+
+The project uses a [Neo4j](https://neo4j.com) graph database to store and manage data. It already provides
+a [Neo4j docker-compose setup](clarity-neo4j/src/main/resources/docker-compose.yaml)for local development.
+
+To start the Neo4j database locally in a Docker container:
+
+1. Open a Terminal Window
+2. Navigate to the [`docker-compose.yaml`](clarity-neo4j/src/main/resources/docker-compose.yaml) file for neo4j
+    ```bash
+    cd <PROJECT_ROOT>
+    cd clarity-neo4j/src/main/resources
+    ```
+3. Start the docker container:
+    ```bash
+    docker compose up -d
+    ```
+
+The `docker-compose` file is just a helper for local development. You can use any neo4j instance and configure the
+connection
+details using a credentials yaml file and load the properties from
+there [@see](clarity-neo4j/src/main/resources/neo4j-credentials.yaml).
 
 ---
 
@@ -81,7 +132,15 @@ TODO
 
 > The project is separated into several modules, each responsible for different functionalities:
 
-TODO
+- [**clarity-dataset**](clarity-dataset/README.md): Download cleaning and transforming the dataset
+  for clarity classification.
+- [**clarity-models**](clarity-models/README.md): Framework for training and serving classification models. Supports
+  encoder models and LLMs with LoRA Fine-Tuning. Provides instructions to train larger models with Together.ai.
+- [**clarity-neo4j**](clarity-neo4j): Handles interactions with the Neo4j database and
+  provides utilities for managing neo4j data.
+- [**clarity-pipeline**](clarity-pipeline): Contains the services and logic used in the classification pipeline. This
+  includes data ingestion, processing of data and the actual classification using different approaches.
+- [**clarity-utils**](clarity-utils): Contains general java utility classes and functions used across the project.
 
 ---
 
@@ -89,4 +148,7 @@ TODO
 
 > The classification pipeline consists of several steps to process the data and classify the clarity of responses
 
-TODO
+For information on running and setting up the classification pipeline, please refer to the
+[README](clarity-pipeline/README.md) in the `clarity-pipeline` module.
+
+![Pipeline Diagram](assets/pipeline.png)

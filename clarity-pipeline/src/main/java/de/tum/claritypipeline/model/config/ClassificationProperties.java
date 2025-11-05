@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model.properties;
+package de.tum.claritypipeline.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -14,10 +14,10 @@ import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
-import de.tum.claritypipeline.model.Classification;
-import de.tum.claritypipeline.model.Cluster;
-import de.tum.claritypipeline.model.Evaluation;
-import de.tum.claritypipeline.model.Taxonomy;
+import de.tum.claritypipeline.model.classification.Classification;
+import de.tum.claritypipeline.model.core.Cluster;
+import de.tum.claritypipeline.model.core.Taxonomy;
+import de.tum.claritypipeline.model.evaluation.Evaluation;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
 import de.tum.claritypipeline.service.EmbeddingService;
 import de.tum.claritypipeline.strategy.ClassificationStrategy;

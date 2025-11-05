@@ -3,9 +3,9 @@ package de.tum.claritypipeline.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import de.tum.claritypipeline.model.ClassificationResult;
-import de.tum.claritypipeline.model.properties.ModelConfig;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
+import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.JsonScheme;
 import de.tum.clarityutils.SerializationUtils;
@@ -54,7 +54,7 @@ public class TogetherClient implements Client {
     /**
      * Configuration for the model to use (name, tokens, temperature, etc.).
      */
-    private final ModelConfig properties;
+    private final ModelProperties properties;
 
     /**
      * OkHttp client used to perform HTTP calls.
@@ -80,7 +80,7 @@ public class TogetherClient implements Client {
      *
      * @param properties model configuration to use for requests
      */
-    public TogetherClient(ModelConfig properties) {
+    public TogetherClient(ModelProperties properties) {
         this.apiKey = validateApiKey();
         this.properties = properties;
         this.httpClient = buildHttpClient();

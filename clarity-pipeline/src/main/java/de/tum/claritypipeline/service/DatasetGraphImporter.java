@@ -2,7 +2,7 @@ package de.tum.claritypipeline.service;
 
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
-import de.tum.claritypipeline.model.QA;
+import de.tum.claritypipeline.model.core.QA;
 import org.slf4j.Logger;
 
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model;
+package de.tum.claritypipeline.model.evaluation;
 
 import de.tum.clarityneo4j.annotations.Node;
 import de.tum.clarityneo4j.core.Neo4jNode;

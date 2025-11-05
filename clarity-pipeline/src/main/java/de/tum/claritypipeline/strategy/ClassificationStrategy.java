@@ -2,8 +2,8 @@ package de.tum.claritypipeline.strategy;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import de.tum.claritypipeline.model.ClassificationRequest;
-import de.tum.claritypipeline.model.ClassificationResult;
+import de.tum.claritypipeline.model.classification.ClassificationRequest;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
 
 /**
  * Strategy interface for executing a classification workflow.

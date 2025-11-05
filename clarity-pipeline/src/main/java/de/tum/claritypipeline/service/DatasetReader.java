@@ -2,8 +2,8 @@ package de.tum.claritypipeline.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tum.claritypipeline.model.QA;
-import de.tum.claritypipeline.model.properties.DatasetType;
+import de.tum.claritypipeline.model.config.DatasetType;
+import de.tum.claritypipeline.model.core.QA;
 import lombok.NoArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

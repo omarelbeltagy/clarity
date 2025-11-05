@@ -3,11 +3,11 @@ package de.tum.claritypipeline.strategy;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import de.tum.claritypipeline.client.LocalClient;
-import de.tum.claritypipeline.model.ClassificationRequest;
-import de.tum.claritypipeline.model.ClassificationResult;
-import de.tum.claritypipeline.model.JudgementResult;
-import de.tum.claritypipeline.model.properties.ModelConfig;
-import de.tum.claritypipeline.model.properties.ResponseFormat;
+import de.tum.claritypipeline.model.classification.ClassificationRequest;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
+import de.tum.claritypipeline.model.classification.JudgementResult;
+import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.utils.PromptUtils;
 import lombok.*;
 
@@ -38,7 +38,7 @@ public class JudgementStrategy implements ClassificationStrategy {
      */
     @JsonProperty("classification-model")
     @JsonPropertyDescription("The model configuration to use for the initial classification.")
-    private ModelConfig classificationModel;
+    private ModelProperties classificationModel;
 
     /**
      * Model configuration used for the judgement step.
@@ -49,7 +49,7 @@ public class JudgementStrategy implements ClassificationStrategy {
      */
     @JsonProperty("judgement-model")
     @JsonPropertyDescription("The model configuration to use for the judgement step.")
-    private ModelConfig judgementModel;
+    private ModelProperties judgementModel;
 
     /**
      * Execute the two-step judgement strategy.

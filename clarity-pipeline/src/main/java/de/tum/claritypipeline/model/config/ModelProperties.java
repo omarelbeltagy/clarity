@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model.properties;
+package de.tum.claritypipeline.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ModelConfig {
+public class ModelProperties {
 
     /**
      * The model name
@@ -110,14 +110,14 @@ public class ModelConfig {
     /**
      * Configuration for the pattern used to extract labels from textual responses.
      *
-     * <p>Contains the regex and flags; defaults are provided by {@link PatternConfig}.
+     * <p>Contains the regex and flags; defaults are provided by {@link PatternProperties}.
      */
     @JsonProperty("pattern")
     @JsonPropertyDescription("The pattern configuration for extracting labels from text. Contains the regex and flags.")
     @Neo4jIgnore
     @Setter(AccessLevel.NONE)
     @Getter(AccessLevel.NONE)
-    private PatternConfig patternConfig;
+    private PatternProperties patternConfig;
 
     /**
      * Whether to inject response format instructions into the prompt.
@@ -208,7 +208,7 @@ public class ModelConfig {
             throw new IllegalArgumentException("Model name must be specified in Model configuration.");
         }
         if (patternConfig == null) {
-            patternConfig = new PatternConfig();
+            patternConfig = new PatternProperties();
         }
         int flags = patternConfig.getFlagsMask();
         this.pattern = Pattern.compile(patternConfig.getRegex(), flags);
