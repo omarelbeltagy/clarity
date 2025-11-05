@@ -53,15 +53,15 @@ Project structure (relevant files):
 
 - **Dataset Download**  
   Downloads the dataset from the provided source.
-  
+
 - **Dataset Split**  
   Splits the training data into training and validation sets (80/20 split with random seed 42).
-  
+
 - **Data Transformation**  
   Simplifies and preprocesses the dataset for model consumption with configurable options:
-  - Filler word removal (um, uh, you know, etc.)
-  - President name removal (direct address, titles, full names)
-  - BERT-based summary generation (dense vector embeddings)
+    - Filler word removal (um, uh, you know, etc.)
+    - President name removal (direct address, titles, full names)
+    - BERT-based summary generation (dense vector embeddings)
 
 - **Flexible Processing**  
   Control which preprocessing steps to apply via command-line flags.
@@ -81,20 +81,6 @@ Together JSONL entries are generated from a [prompt template](../assets/prompts/
 ---
 
 ## Usage
-
-Prerequisites:
-
-- Docker
-
-Build and run (from clarity-dataset/):
-
-```bash
-# Build and start container (daemon)
-docker compose up -d
-
-# Rebuild without cache if needed
-docker compose build --no-cache
-```
 
 ### Prerequisites
 
@@ -145,19 +131,19 @@ docker compose build --no-cache
 The script generates two sets of outputs:
 
 1. **Full datasets** (`/data/full/`)
-   - Original, unprocessed data
-   - Files: `train.json`, `valid.json`, `test.json`
+    - Original, unprocessed data
+    - Files: `train.json`, `valid.json`, `test.json`
 
 2. **Cleaned datasets** (`/data/cleaned/`)
-   - Processed according to specified flags
-   - Files: `train.json`, `valid.json`, `test.json`
-   - Each item contains:
-     - `question`: Original question
-     - `context`: Original interview Q&A concatenated
-     - `question_clean`: Cleaned question (if cleaning enabled)
-     - `context_clean`: Cleaned context (if cleaning enabled)
-     - `clarity_label`: Classification label
-     - `summary_bert`: BERT embedding vector (if --use-bert enabled)
+    - Processed according to specified flags
+    - Files: `train.json`, `valid.json`, `test.json`
+    - Each item contains:
+        - `question`: Original question
+        - `context`: Original interview Q&A concatenated
+        - `question_clean`: Cleaned question (if cleaning enabled)
+        - `context_clean`: Cleaned context (if cleaning enabled)
+        - `clarity_label`: Classification label
+        - `summary_bert`: BERT embedding vector (if --use-bert enabled)
 
 ---
 
@@ -177,6 +163,7 @@ python app.py # Start the data processing
 ## Configuration
 
 ### Logging
+
 - Logging
     - Configured via [logging.yaml](logging.yaml)
 - Environment variables:
@@ -210,15 +197,15 @@ clarity_label are exported.
 
 ### Command-Line Flags
 
-| Flag | Description |
-|------|-------------|
-| `--clean-fillers` | Remove filler words and phrases (um, uh, you know, etc.) |
-| `--clean-names` | Remove president names and titles (Mr. President, Biden, etc.) |
-| `--clean-all` | Apply both filler and name cleaning |
-| `--use-bert` | Generate BERT-based summary embeddings for each QA pair using default BERT model|
-
+| Flag              | Description                                                                      |
+|-------------------|----------------------------------------------------------------------------------|
+| `--clean-fillers` | Remove filler words and phrases (um, uh, you know, etc.)                         |
+| `--clean-names`   | Remove president names and titles (Mr. President, Biden, etc.)                   |
+| `--clean-all`     | Apply both filler and name cleaning                                              |
+| `--use-bert`      | Generate BERT-based summary embeddings for each QA pair using default BERT model |
 
 **Supported BERT Model:**
+
 - `bert-base-uncased` (default) - 768 dimensions
 
 ---

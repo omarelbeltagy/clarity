@@ -21,16 +21,14 @@ initialize_api_server
 import argparse
 import importlib
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-from typing import Optional
-
 import yaml
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import FastAPI
-from loguru import logger
+from pathlib import Path
 from pydantic import BaseModel
 from sklearn.metrics import accuracy_score, f1_score
 from torch.multiprocessing import freeze_support
+from typing import Optional
 
 from dto.dto import (
     ClassificationRequest,
