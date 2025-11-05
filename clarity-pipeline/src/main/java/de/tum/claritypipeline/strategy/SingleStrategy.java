@@ -26,6 +26,9 @@ public class SingleStrategy implements ClassificationStrategy {
             default -> PromptUtils.replacePrompt(request, model.getPrompt(), model.getResponseFormat(),
                                                  model.isInjectResponseFormat(), request.getTaxonomy());
         };
+        if (model.getRaqProperties().isEnabled()) {
+            prompt = PromptUtils.injectExamplesWithRaq(prompt, model.getRaqProperties(), request);
+        }
 
         if (model.getResponseFormat() == ResponseFormat.JSON_OBJECT) {
             return model.getClient()

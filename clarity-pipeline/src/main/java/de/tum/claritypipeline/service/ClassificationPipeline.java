@@ -107,8 +107,6 @@ public class ClassificationPipeline {
      * The classifications are stored in the Neo4j database.
      */
     public void classify() {
-        validateQuery();
-
         ontologyBuilder.persistOntologyInGraph(properties);
 
         List<QA> qas = fetchQAs();
@@ -353,17 +351,8 @@ public class ClassificationPipeline {
                                     .context(qa.getInterviewQuestion() + "\n"
                                                      + qa.getInterviewAnswer())
                                     .taxonomy(properties.getTaxonomy())
+                                    .answer(qa.getInterviewAnswer())
                                     .build();
-    }
-
-    /**
-     * Validate that the query is defined in the properties.
-     * Throws an IllegalArgumentException if the query is not defined.
-     */
-    private void validateQuery() {
-        if (properties.getQuery() == null || properties.getQuery().isEmpty()) {
-            throw new IllegalArgumentException("Query for classification is not defined in properties.");
-        }
     }
 
     /**

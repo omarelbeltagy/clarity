@@ -129,6 +129,9 @@ public class ModelConfig {
     @JsonPropertyDescription("Whether to inject response format instructions into the prompt.")
     private boolean injectResponseFormat = true;
 
+    @JsonProperty("raq")
+    private RaqProperties raqProperties = new RaqProperties();
+
     /**
      * Compiled regex pattern for label extraction from text responses.
      *

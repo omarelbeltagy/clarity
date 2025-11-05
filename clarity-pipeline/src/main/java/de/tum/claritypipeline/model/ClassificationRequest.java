@@ -32,6 +32,14 @@ public class ClassificationRequest implements Serializable {
     private String context;
 
     /**
+     * The answer associated with the question, if applicable.
+     *
+     * <p>Ignored during serialization.
+     */
+    @JsonIgnore
+    private String answer;
+
+    /**
      * The taxonomy to use for classification.
      *
      * <p>Ignored during serialization.

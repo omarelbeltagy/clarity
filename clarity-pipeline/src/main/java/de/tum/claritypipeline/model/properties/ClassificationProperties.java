@@ -19,6 +19,7 @@ import de.tum.claritypipeline.model.Cluster;
 import de.tum.claritypipeline.model.Evaluation;
 import de.tum.claritypipeline.model.Taxonomy;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
+import de.tum.claritypipeline.service.EmbeddingService;
 import de.tum.claritypipeline.strategy.ClassificationStrategy;
 import de.tum.clarityutils.AfterDeserialization;
 import de.tum.clarityutils.JacksonUtils;
@@ -127,6 +128,15 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     @Neo4jIgnore
     @Getter(AccessLevel.NONE)
     private String clusterName;
+
+    /**
+     * The embedding model to use for generating embeddings.
+     *
+     * <p>Default is "text-embedding-3-small".
+     */
+    @JsonProperty("embedding-model")
+    @JsonPropertyDescription("The embedding model to use for generating embeddings.")
+    private String embeddingModel = "text-embedding-3-small";
 
     /**
      * File path to the taxonomy YAML file used for mapping or validating labels.
@@ -253,15 +263,13 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
             throw new IOException("Missing taxonomy for classification properties");
         }
 
-        try {
-            if (neo4jCredentialsFile == null || neo4jCredentialsFile.isEmpty()) {
-                neo4jCredentials = Neo4jCredentials.getDefault();
-            } else {
-                neo4jCredentials = Neo4jCredentials.load(neo4jCredentialsFile);
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to load Neo4j credentials from file: " + neo4jCredentialsFile, e);
+        if (neo4jCredentialsFile == null || neo4jCredentialsFile.isEmpty()) {
+            neo4jCredentials = Neo4jCredentials.getDefault();
+        } else {
+            neo4jCredentials = Neo4jCredentials.load(neo4jCredentialsFile);
         }
+
+        EmbeddingService.initialize(neo4jCredentials, embeddingModel);
 
         this.classification = Classification.builder()
                                             .name(name)

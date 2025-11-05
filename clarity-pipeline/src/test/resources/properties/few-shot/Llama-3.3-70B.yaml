@@ -1,6 +1,6 @@
 name: "Llama-3.3-70B"
 cluster: "LLaMA"
-version: "few-shot:v1"
+version: "raq:v2"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 query: |
   MATCH (n:QA)
@@ -12,3 +12,7 @@ strategy:
     provider: "together"
     name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
     prompt: "../assets/prompts/few-shot.yaml"
+    raq:
+      enabled: true
+      embedding-index: "qa_answer"
+      k: 2

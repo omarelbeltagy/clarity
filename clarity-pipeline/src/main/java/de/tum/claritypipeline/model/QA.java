@@ -1,5 +1,6 @@
 package de.tum.claritypipeline.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import de.tum.clarityneo4j.annotations.Node;
 import de.tum.clarityneo4j.core.Neo4jNode;
@@ -155,4 +156,13 @@ public class QA extends Neo4jNode {
      */
     @JsonProperty("train")
     private boolean train;
+
+    @JsonIgnore
+    private double[] questionAnswerEmbedding;
+
+    @JsonIgnore
+    private double[] questionEmbedding;
+
+    @JsonIgnore
+    private double[] answerEmbedding;
 }
