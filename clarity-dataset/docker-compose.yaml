@@ -36,6 +36,6 @@ services:
       - "./data:/data"
       - "../assets/prompts/lora.yaml:/app/lora-prompt.yaml"
     environment:
-      - "DARA_DIR=/data"
+      - "DATA_DIR=/data"
       - "LORA_PROMPT_FILE=/app/lora-prompt.yaml"
     restart: "no"

@@ -1,0 +1,20 @@
+name: "Mixtral-8x7B"
+cluster: "Mistralai"
+version: "text:raq:v2"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+worker-threads: 16
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    prompt: "../assets/prompts/raq.yaml"
+    response-format: "text"
+    raq:
+      enabled: true
+      embedding-index: "qa_answer"
+      k: 124
