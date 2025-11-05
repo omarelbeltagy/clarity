@@ -60,4 +60,22 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
     @JsonIgnore
     @Neo4jIgnore
     private Map<String, Double> scores;
+
+    /**
+     * If the classification strategy is 'judgement' this is the explanation provided by the judgement model that
+     * verifies the initial classification.
+     *
+     * <p>Ignored for persistence/serialization.
+     */
+    @JsonIgnore
+    private String judgementExplanation;
+
+    /**
+     * If the classification strategy is 'judgement' this is the confidence score provided by the judgement model
+     * that verifies the initial classification.
+     *
+     * <p>Ignored for persistence/serialization.
+     */
+    @JsonIgnore
+    private double judgementConfidence;
 }

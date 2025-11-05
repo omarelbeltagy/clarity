@@ -1,7 +1,6 @@
 package de.tum.claritypipeline.model.properties;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import de.tum.claritypipeline.model.EmbeddingIndex;
 import de.tum.clarityutils.AfterDeserialization;
 import lombok.*;
 

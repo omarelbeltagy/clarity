@@ -3,6 +3,7 @@ package de.tum.claritypipeline.utils;
 import de.tum.clarityneo4j.model.Neo4jEmbeddingSearchResult;
 import de.tum.claritypipeline.model.*;
 import de.tum.claritypipeline.model.properties.RaqProperties;
+import de.tum.claritypipeline.model.properties.ResponseFormat;
 import de.tum.claritypipeline.service.EmbeddingService;
 import de.tum.clarityutils.JsonScheme;
 import jdk.jfr.Description;
@@ -19,6 +20,7 @@ public class PromptUtils {
     private static final String PLACEHOLDER_ONTOLOGY = "{ontology}";
     private static final String PLACEHOLDER_TAXONOMY = "{taxonomy}";
     private static final String PLACEHOLDER_RAQ_EXAMPLES = "{raq_examples}";
+    private static final String PLACEHOLDER_CLASSIFICATION_RESULT = "{classification_result}";
 
     private static final String TEXT_FORMAT_SUFFIX = """
             
@@ -31,12 +33,12 @@ public class PromptUtils {
             
             ---
             
-            Answer strictly in the following JSON format:
+            Respond ONLY with valid minified JSON that strictly follows this schema. Do not include any text, comments, explanations, or markdown.
             %s
             """;
 
     @Description("Experimental. Not generic.")
-    public static String injectExamplesWithRaq(
+    private static String injectExamplesWithRaq(
             String prompt, RaqProperties raqProperties, ClassificationRequest request) {
         if (prompt == null || raqProperties == null) {
             throw new IllegalArgumentException("Arguments must not be null");
@@ -85,24 +87,28 @@ public class PromptUtils {
         return sb.toString();
     }
 
-    public static String replacePrompt(
+    public static <T> String replacePrompt(
             ClassificationRequest classificationRequest,
             String prompt,
             ResponseFormat responseFormat,
             boolean injectResponseFormat,
-            Taxonomy taxonomy
+            Taxonomy taxonomy,
+            RaqProperties raqProperties,
+            Class<T> resultClass
     ) {
         if (prompt == null || classificationRequest == null) {
             throw new IllegalArgumentException("Arguments must not be null");
         }
 
         String ontology = buildOntologyString(taxonomy.getCategories());
-        String processedPrompt = replacePlaceholders(prompt, classificationRequest, ontology);
+        prompt = replacePlaceholders(prompt, classificationRequest, ontology);
         if (injectResponseFormat) {
-            return appendResponseFormatInstructions(processedPrompt, responseFormat);
-        } else {
-            return processedPrompt;
+            prompt = appendResponseFormatInstructions(prompt, responseFormat, resultClass);
         }
+        if (raqProperties.isEnabled()) {
+            prompt = injectExamplesWithRaq(prompt, raqProperties, classificationRequest);
+        }
+        return prompt;
     }
 
     private static String buildOntologyString(List<Category> categories) {
@@ -127,14 +133,36 @@ public class PromptUtils {
                 .replace(PLACEHOLDER_TAXONOMY, ontology);
     }
 
-    private static String appendResponseFormatInstructions(String prompt, ResponseFormat format) {
+    private static <T> String appendResponseFormatInstructions(
+            String prompt, ResponseFormat format, Class<T> resultClass) {
         return switch (format) {
             case TEXT -> prompt + TEXT_FORMAT_SUFFIX;
-            case JSON_OBJECT -> prompt + JSON_FORMAT_TEMPLATE.formatted(getJsonSchema());
+            case JSON_OBJECT -> prompt + JSON_FORMAT_TEMPLATE.formatted(getJsonSchema(resultClass));
         };
     }
 
-    private static String getJsonSchema() {
-        return new JsonScheme<>(ClassificationResult.class).getPropertiesString();
+    private static <T> String getJsonSchema(Class<T> resultClass) {
+        return new JsonScheme<>(resultClass).getPropertiesString();
+    }
+
+    public static <T> String replaceJudgementPrompt(
+            ClassificationRequest request, ClassificationResult initialResult, String prompt,
+            ResponseFormat responseFormat, boolean injectResponseFormat, Taxonomy taxonomy, RaqProperties raqProperties,
+            Class<T> resultClass
+    ) {
+        prompt = replacePrompt(request, prompt, responseFormat, injectResponseFormat, taxonomy, raqProperties,
+                               resultClass);
+        String classificationResultStr = buildClassificationResult(initialResult);
+        prompt = prompt.replace(PLACEHOLDER_CLASSIFICATION_RESULT, classificationResultStr);
+        return prompt;
+    }
+
+    private static String buildClassificationResult(ClassificationResult result) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Name: ").append(result.getName()).append("\n");
+        if (result.getExplanation() != null && !result.getExplanation().isEmpty()) {
+            sb.append("Explanation: ").append(result.getExplanation()).append("\n");
+        }
+        return sb.toString();
     }
 }

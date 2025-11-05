@@ -9,15 +9,40 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+/**
+ * Client defines the contract for model clients used to send prompts and receive responses.
+ * Implementations must provide makeRequest methods for text and structured output.
+ */
 public interface Client {
-    String makeRequest(String prompt);
-
-    <T> T makeRequest(String prompt, Class<T> responseType);
-
+    /**
+     * Create a concrete Client instance based on the provided model configuration.
+     *
+     * @param modelConfig model configuration containing provider and model settings
+     * @return concrete Client implementation
+     * @throws IllegalArgumentException if provider is invalid
+     */
     static Client create(ModelConfig modelConfig) {
         ModelProvider provider = parseProvider(modelConfig.getProvider());
         return provider.createClient(modelConfig);
     }
+
+    /**
+     * Send a prompt and receive a plain text response.
+     *
+     * @param prompt prompt text
+     * @return response as String or null on error
+     */
+    String makeRequest(String prompt);
+
+    /**
+     * Send a prompt and parse the response into the specified type.
+     *
+     * @param prompt       prompt text
+     * @param responseType expected response class
+     * @param <T>          response type
+     * @return parsed response instance or null on error
+     */
+    <T> T makeRequest(String prompt, Class<T> responseType);
 
     /**
      * Parse and validate the provider name into a {@link ModelProvider} enum.
@@ -67,7 +92,7 @@ public interface Client {
          * <p>Normalization: uppercase, remove whitespace, hyphens and underscores.
          *
          * @param raw raw provider string (may be null)
-         * @return matching de.tum.claritypipeline.model.ModelProvider or null if none matches
+         * @return matching ModelProvider or null if none matches
          */
         public static ModelProvider fromValue(String raw) {
             if (raw == null) return null;
@@ -110,7 +135,7 @@ public interface Client {
              * Create a client using the provided properties.
              *
              * @param config the model properties
-             * @return a concrete Classifier instance
+             * @return a concrete Client instance
              */
             Client create(ModelConfig config);
         }

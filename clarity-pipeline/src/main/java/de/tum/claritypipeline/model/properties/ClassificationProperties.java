@@ -135,7 +135,7 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
      * <p>Default is "text-embedding-3-small".
      */
     @JsonProperty("embedding-model")
-    @JsonPropertyDescription("The embedding model to use for generating embeddings.")
+    @JsonPropertyDescription("The embedding model to use for generating embeddings if it is used for the strategy.")
     private String embeddingModel = "text-embedding-3-small";
 
     /**

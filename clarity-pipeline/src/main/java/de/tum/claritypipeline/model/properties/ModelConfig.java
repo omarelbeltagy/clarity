@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import de.tum.clarityneo4j.annotations.Neo4jIgnore;
 import de.tum.claritypipeline.client.Client;
-import de.tum.claritypipeline.model.ResponseFormat;
 import de.tum.clarityutils.AfterDeserialization;
 import lombok.*;
 

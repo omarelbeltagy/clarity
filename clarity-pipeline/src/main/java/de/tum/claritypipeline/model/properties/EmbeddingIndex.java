@@ -1,7 +1,8 @@
-package de.tum.claritypipeline.model;
+package de.tum.claritypipeline.model.properties;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import de.tum.clarityneo4j.core.Neo4jNode;
+import de.tum.claritypipeline.model.QA;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

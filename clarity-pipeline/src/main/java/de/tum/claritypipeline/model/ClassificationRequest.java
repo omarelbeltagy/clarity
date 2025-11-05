@@ -33,6 +33,7 @@ public class ClassificationRequest implements Serializable {
 
     /**
      * The answer associated with the question, if applicable.
+     * Only used for internal classifier logic or evaluation. Not serialized.
      *
      * <p>Ignored during serialization.
      */
@@ -41,6 +42,7 @@ public class ClassificationRequest implements Serializable {
 
     /**
      * The taxonomy to use for classification.
+     * Only used for internal classifier logic. Not serialized.
      *
      * <p>Ignored during serialization.
      */

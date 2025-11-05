@@ -5,8 +5,8 @@ import com.anthropic.models.messages.ContentBlock;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.tum.claritypipeline.model.ResponseFormat;
 import de.tum.claritypipeline.model.properties.ModelConfig;
+import de.tum.claritypipeline.model.properties.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.Getter;
@@ -16,15 +16,43 @@ import org.slf4j.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * AnthropicClient is a concrete implementation of the Client interface
+ * that communicates with Anthropic models using the Anthropic SDK.
+ * <p>
+ * It supports both text-based responses and structured JSON object responses,
+ * depending on the configured ModelConfig.
+ */
 @Getter
 @Setter
 public class AnthropicClient implements Client {
+    /**
+     * Logger instance for logging errors and debug information.
+     */
     private final Logger log = org.slf4j.LoggerFactory.getLogger(AnthropicClient.class);
 
+    /**
+     * Configuration properties for the model (name, tokens, temperature, pattern, etc.).
+     */
     private final ModelConfig properties;
+
+    /**
+     * Underlying Anthropic SDK client used to send requests.
+     */
     private final com.anthropic.client.AnthropicClient client;
+
+    /**
+     * ObjectMapper instance for JSON processing (if needed).
+     */
     private final ObjectMapper objectMapper;
 
+    /**
+     * Construct an AnthropicClient using the provided model configuration.
+     * The constructor reads ANTHROPIC_API_KEY from the environment and initializes the SDK client.
+     *
+     * @param properties model configuration containing model name and runtime settings
+     * @throws IllegalStateException if ANTHROPIC_API_KEY is not set
+     */
     public AnthropicClient(ModelConfig properties) {
         String apiKey = EnvLoader.get("ANTHROPIC_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
@@ -38,11 +66,26 @@ public class AnthropicClient implements Client {
         this.objectMapper = new ObjectMapper();
     }
 
+    /**
+     * Send a request to the Anthropic model and return a plain text response.
+     *
+     * @param prompt prompt text to send to the model
+     * @return model output as String, or null on error
+     */
     @Override
     public String makeRequest(String prompt) {
         return makeRequest(prompt, String.class);
     }
 
+    /**
+     * Send a request to the Anthropic model and parse the response into the specified type.
+     * For ResponseFormat.JSON_OBJECT the response is deserialized into clazz, otherwise only String is supported.
+     *
+     * @param prompt the prompt to send
+     * @param clazz  desired response class
+     * @param <T>    response type
+     * @return parsed response instance or null on error
+     */
     @Override
     public <T> T makeRequest(String prompt, Class<T> clazz) {
         try {
@@ -82,6 +125,13 @@ public class AnthropicClient implements Client {
         }
     }
 
+    /**
+     * Try to extract a JSON payload from an Anthropic SDK JSON wrapper string.
+     * The method attempts to find an inner JSON object represented after "text=".
+     *
+     * @param input raw input string possibly containing inner JSON
+     * @return extracted JSON string or null if none found
+     */
     private String extractInnerJson(String input) {
         final Pattern pattern =
                 Pattern.compile("text=\\{(.*)}\\s*}", Pattern.DOTALL);
@@ -100,6 +150,15 @@ public class AnthropicClient implements Client {
         return null;
     }
 
+    /**
+     * Parse a structured JSON response from an Anthropic Message into the provided class.
+     * The method inspects ContentBlock entries, handles embedded JSON and fenced ```json blocks.
+     *
+     * @param response the Anthropic message response
+     * @param clazz    class to deserialize into
+     * @param <T>      type parameter
+     * @return deserialized instance of clazz, or null if parsing fails
+     */
     private <T> T parseStructuredResponse(Message response, Class<T> clazz) {
         try {
             for (ContentBlock block : response.content()) {
@@ -137,6 +196,13 @@ public class AnthropicClient implements Client {
         return null;
     }
 
+    /**
+     * Parse a plain text response from an Anthropic Message using the configured regex pattern.
+     * If a match is found the first capturing group is returned.
+     *
+     * @param response Anthropic message response
+     * @return matched text or null if nothing matched
+     */
     private String parseTextResponse(Message response) {
         try {
             for (ContentBlock block : response.content()) {

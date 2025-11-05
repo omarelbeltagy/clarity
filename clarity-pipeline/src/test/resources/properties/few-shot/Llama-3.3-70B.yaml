@@ -1,18 +1,19 @@
-name: "Llama-3.3-70B"
-cluster: "LLaMA"
-version: "raq:v2"
+name: "gpt-5-nano"
+cluster: "OpenAI"
+version: "judgement:v1"
 taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+worker-threads: 16
 query: |
   MATCH (n:QA)
   WHERE n.test = true
   RETURN n
 strategy:
-  type: "single"
-  model:
-    provider: "together"
-    name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  type: "judgement"
+  classification-model:
+    provider: "openai"
+    name: "gpt-5-nano"
     prompt: "../assets/prompts/few-shot.yaml"
-    raq:
-      enabled: true
-      embedding-index: "qa_answer"
-      k: 2
+  judgement-model:
+    provider: "openai"
+    name: "gpt-5-nano"
+    prompt: "../assets/prompts/judgement.yaml"

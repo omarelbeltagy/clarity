@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.strategy;
+package de.tum.claritypipeline.utils;
 
 import com.openai.models.embeddings.CreateEmbeddingResponse;
 import com.openai.models.embeddings.EmbeddingCreateParams;

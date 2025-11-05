@@ -10,19 +10,43 @@ import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * LocalClient sends HTTP requests to a locally hosted model endpoint using OkHttp.
+ * The ModelConfig.name is used as the URL to POST the raw request body to.
+ */
 @AllArgsConstructor
 @Getter
 @Setter
 public class LocalClient implements Client {
+    /**
+     * Logger for this client.
+     */
     private final Logger log = org.slf4j.LoggerFactory.getLogger(LocalClient.class);
 
+    /**
+     * Model configuration containing the local endpoint URL and other settings.
+     */
     private final ModelConfig properties;
 
+    /**
+     * Send a request body to the local model endpoint and return a plain String response.
+     *
+     * @param body request payload to POST
+     * @return response parsed into String
+     */
     @Override
     public String makeRequest(String body) {
         return makeRequest(body, String.class);
     }
 
+    /**
+     * Send a request body to the local model endpoint and deserialize the response into clazz.
+     *
+     * @param body  request payload
+     * @param clazz desired response class
+     * @param <T>   response type
+     * @return deserialized response instance
+     */
     @Override
     public <T> T makeRequest(String body, Class<T> clazz) {
         try {

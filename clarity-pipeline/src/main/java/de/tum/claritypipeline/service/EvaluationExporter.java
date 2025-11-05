@@ -4,7 +4,7 @@ import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
 import de.tum.claritypipeline.model.Cluster;
 import de.tum.claritypipeline.model.Evaluation;
-import de.tum.claritypipeline.model.EvaluationExportOptions;
+import de.tum.claritypipeline.model.properties.EvaluationExportOptions;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.poi.ss.usermodel.*;

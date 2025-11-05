@@ -5,8 +5,8 @@ import com.openai.credential.BearerTokenCredential;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
-import de.tum.claritypipeline.model.ResponseFormat;
 import de.tum.claritypipeline.model.properties.ModelConfig;
+import de.tum.claritypipeline.model.properties.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,15 +14,39 @@ import org.slf4j.Logger;
 
 import java.util.regex.Matcher;
 
+/**
+ * OpenAIClient communicates with OpenAI chat models using the OpenAI SDK.
+ * It supports text responses and structured response deserialization when supported by the model.
+ */
 @Getter
 @Setter
 public class OpenAIClient implements Client {
+    /**
+     * Logger for OpenAIClient.
+     */
     private final Logger log = org.slf4j.LoggerFactory.getLogger(OpenAIClient.class);
 
+    /**
+     * Model configuration (name, tokens, temperature, etc.).
+     */
     private final ModelConfig properties;
+
+    /**
+     * ChatModel wrapper representing the chosen model in the SDK.
+     */
     private final ChatModel chatModel;
+
+    /**
+     * Underlying OpenAI SDK client.
+     */
     private final com.openai.client.OpenAIClient client;
 
+    /**
+     * Create a new OpenAIClient using the environment OPENAI_API_KEY and the provided configuration.
+     *
+     * @param properties model configuration
+     * @throws IllegalStateException if OPENAI_API_KEY is missing
+     */
     public OpenAIClient(ModelConfig properties) {
         String apiKey = EnvLoader.get("OPENAI_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
@@ -35,11 +59,25 @@ public class OpenAIClient implements Client {
                 BearerTokenCredential.create(apiKey)).build();
     }
 
+    /**
+     * Send a prompt and return a plain text response.
+     *
+     * @param prompt prompt to send
+     * @return response text or null
+     */
     @Override
     public String makeRequest(String prompt) {
         return makeRequest(prompt, String.class);
     }
 
+    /**
+     * Send a prompt and parse result either as structured object or text depending on configuration.
+     *
+     * @param prompt input prompt
+     * @param clazz  expected return type
+     * @param <T>    response type
+     * @return parsed response or null on error
+     */
     @Override
     public <T> T makeRequest(String prompt, Class<T> clazz) {
         try {
@@ -66,6 +104,14 @@ public class OpenAIClient implements Client {
         }
     }
 
+    /**
+     * Build and send a structured request to OpenAI and return a deserialized object.
+     *
+     * @param prompt prompt text
+     * @param clazz  expected class
+     * @param <T>    response type
+     * @return deserialized response or null
+     */
     private <T> T makeStructuredRequest(String prompt, Class<T> clazz) {
         StructuredChatCompletionCreateParams<T> params;
         if (properties.getName().toLowerCase().startsWith("gpt-4")) {
@@ -97,6 +143,12 @@ public class OpenAIClient implements Client {
                      .orElse(null);
     }
 
+    /**
+     * Send a text-only request and return the parsed label using the configured regex.
+     *
+     * @param prompt prompt text
+     * @return extracted label string or null
+     */
     private String makeTextRequest(String prompt) {
         ChatCompletionCreateParams params =
                 ChatCompletionCreateParams.builder()
@@ -117,6 +169,12 @@ public class OpenAIClient implements Client {
         return parseResponseText(content);
     }
 
+    /**
+     * Parse raw content returned from OpenAI using the configured regex pattern and return the first group.
+     *
+     * @param content raw model content
+     * @return matched group or null
+     */
     private String parseResponseText(String content) {
         Matcher matcher = properties.getPattern().matcher(content);
         if (matcher.find()) {

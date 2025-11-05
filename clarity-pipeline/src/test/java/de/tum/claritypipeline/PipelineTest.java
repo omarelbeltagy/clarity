@@ -1,7 +1,7 @@
 package de.tum.claritypipeline;
 
-import de.tum.claritypipeline.model.DatasetType;
 import de.tum.claritypipeline.model.QA;
+import de.tum.claritypipeline.model.properties.DatasetType;
 import de.tum.claritypipeline.service.ClassificationPipeline;
 import de.tum.claritypipeline.service.DatasetGraphImporter;
 import de.tum.claritypipeline.service.DatasetReader;
@@ -58,7 +58,7 @@ public class PipelineTest {
     @Test
     public void testClassify() throws IOException {
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/Mixtral-8x7B.yaml");
+                "src/test/resources/properties/few-shot/Llama-3.3-70B.yaml");
         classificationPipeline.classify();
     }
 

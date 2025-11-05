@@ -1,4 +1,4 @@
-package de.tum.claritypipeline.model;
+package de.tum.claritypipeline.model.properties;
 
 /**
  * Enumeration of dataset types used in the classification pipeline.

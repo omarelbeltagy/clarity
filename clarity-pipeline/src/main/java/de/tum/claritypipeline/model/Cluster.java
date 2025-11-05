@@ -11,6 +11,11 @@ import lombok.*;
 
 import java.util.List;
 
+/**
+ * Represents a cluster grouping entity stored in Neo4j.
+ *
+ * <p>Used to link classifications into clusters.
+ */
 @Node(label = "Cluster")
 @Getter
 @Setter
