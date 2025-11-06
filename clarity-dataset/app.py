@@ -22,7 +22,8 @@ from clean import (
     remove_names
 )
 from summarize import generate_bert_summary, generate_bart_summary
-# from utils.logger import logger
+#from utils.logger import logger
+from loguru import logger
 
 
 def get_data_path():

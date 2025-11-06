@@ -5,12 +5,10 @@ Generates dense vector representations using BERT embeddings.
 import torch
 import re
 import numpy as np
-from torch.compiler import disable
-from math import ceil
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
-
-from utils.logger import logger
+from loguru import logger
+#from utils.logger import logger
 
 # Basic configuration
 BERT_NAME = "bert-base-uncased"
