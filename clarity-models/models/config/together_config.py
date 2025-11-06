@@ -5,10 +5,9 @@ which centralises model, prompt and runtime options used by the inference code.
 """
 
 import os
+import yaml
 from dataclasses import dataclass
 from typing import Dict, List
-
-import yaml
 from utils.general_utils import (
     SafeDict,
     as_int,
@@ -18,7 +17,7 @@ from utils.general_utils import (
 )
 
 
-def load_default_prompt(prompt_env: str, prompt_default_file: str) -> str:
+def load_default_prompt(prompt_env: str, prompt_default_file: str, add_format: bool = True) -> str:
     """Load a prompt template from a YAML file, injecting taxonomy data.
 
     Parameters
@@ -46,7 +45,15 @@ def load_default_prompt(prompt_env: str, prompt_default_file: str) -> str:
         raise FileNotFoundError(f"Prompt file not found: {path}")
     with open(path, encoding="utf-8") as f:
         data = {"taxonomy": taxonomy_str}
-        return yaml.safe_load(f).get("prompt", "").format_map(SafeDict(data))
+        prompt = yaml.safe_load(f).get("prompt", "").format_map(SafeDict(data))
+        if add_format:
+            format = """  
+    
+Return only the label in the format "Label: <label>". No additional text or metadata.
+"""
+            prompt += format
+        return prompt
+    return None
 
 
 def build_taxonomy_string(file_path: str) -> str:
@@ -73,9 +80,12 @@ def build_taxonomy_string(file_path: str) -> str:
 
 
 # Default prompt templates loaded from YAML files with taxonomy injection
-FINE_TUNE_PROMPT = load_default_prompt("FINE_TUNE_PROMPT_FILE", "../assets/prompts/lora.yaml")
-ZERO_SHOT_PROMPT = load_default_prompt("ZERO_SHOT_PROMPT_FILE", "../assets/prompts/zero-shot.yaml")
-FEW_SHOT_PROMPT = load_default_prompt("FEW_SHOT_PROMPT_FILE", "../assets/prompts/few-shot.yaml")
+FINE_TUNE_PROMPT = load_default_prompt(prompt_env="FINE_TUNE_PROMPT_FILE",
+                                       prompt_default_file="../assets/prompts/lora.yaml", add_format=False)
+ZERO_SHOT_PROMPT = load_default_prompt(prompt_env="ZERO_SHOT_PROMPT_FILE",
+                                       prompt_default_file="../assets/prompts/zero-shot.yaml", add_format=True)
+FEW_SHOT_PROMPT = load_default_prompt(prompt_env="FEW_SHOT_PROMPT_FILE",
+                                      prompt_default_file="../assets/prompts/few-shot.yaml", add_format=True)
 
 
 @dataclass

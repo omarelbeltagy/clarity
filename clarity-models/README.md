@@ -15,7 +15,7 @@
 - [Usage](#usage)
 - [Data Format](#data-format)
 - [Testing](#testing)
-- [Fine Tuning with Together](#fine-tuning-with-together)
+- [Fine-Tuning with Together](#fine-tuning-with-together)
 
 ---
 
@@ -308,10 +308,10 @@ This will return evaluation metrics such as accuracy and F1-score for the provid
 
 ---
 
-## Fine Tuning with Together
+## Fine-Tuning with Together
 
 You can fine-tune models hosted on Together.ai using the dashboard on the [Together Platform](https://together.ai/).
-This enabled for way faster training and deployment of LLMs with a lot of parameters.
+This enables way faster training and deployment of LLMs with a lot of parameters.
 
 To prepare your dataset for Together fine-tuning, use the following format in a JSONL file. For more information
 regarding
@@ -319,10 +319,9 @@ the dataset format, see the [README](../clarity-dataset/README.md#together-expor
 the `clarity-dataset` module.
 
 ```
-{
-    "prompt": "<prompt-text-with-context-and-question>",
-    "completion": "Label: <clarity_label>"
-}
+{ "prompt": "<prompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
+{ "prompt": "<prompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
+{ "prompt": "<prçompt-text-with-context-and-question>", "completion": "Label: <clarity_label>" }
 ```
 
 ### Steps
@@ -341,4 +340,21 @@ the [Together Documentation](https://docs.together.ai/docs/fine-tuning-quickstar
 Once your model is fine-tuned and deployed, you can use it in the `clarity-models` module by specifying the model name
 in the
 `together` model configuration.
+
+### Configuration Example
+
+For the initial experiments the following LoRA configuration was used:
+
+- **Rank**: 16
+- **Alpha**: 32
+- **Dropout**: 0.05
+- **Epochs**: 3
+- **Batch Size**: 16
+- **Learning Rate**: 0.0001
+- **Max Gradient Norm**: 1
+- **Weight Decay**: 0.005
+- **Warmup Ratio**: 0.05
+- **Scheduler Cycles**: 0.5
+- **Checkpoints**: 1
+- **Evaluations**: 1
 

@@ -6,11 +6,11 @@ import torch
 import re
 import numpy as np
 from torch.compiler import disable
+from math import ceil
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
-from loguru import logger
-from math import ceil
 
+from utils.logger import logger
 
 # Basic configuration
 BERT_NAME = "bert-base-uncased"
@@ -68,7 +68,8 @@ def split_sentences(text: str):
 def cos(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-9))
 
-def select_topk_mmr(text, bert_model, bert_token, k = 6, lam = 0.65):
+
+def select_topk_mmr(text, bert_model, bert_token, k=6, lam=0.65):
     sents = split_sentences(text)
     if not sents:
         return []
@@ -90,7 +91,7 @@ def select_topk_mmr(text, bert_model, bert_token, k = 6, lam = 0.65):
     return chosen
 
 # Use BART to generate summaries
-def _chunk_by_tokens(text, tokenizer, max_tokens = 900):
+def _chunk_by_tokens(text, tokenizer, max_tokens=900):
     if not text:
         return []
 
@@ -98,18 +99,19 @@ def _chunk_by_tokens(text, tokenizer, max_tokens = 900):
     chunks = []
 
     for i in range(0, len(ids), max_tokens):
-        piece = ids[i : i + max_tokens]
+        piece = ids[i: i + max_tokens]
         chunks.append(tokenizer.decode(piece, skip_special_tokens=True))
 
     return chunks or [""]
 
-def bart_summarize_text(text: str, tokenizer, model, device="cpu", max_input_tokens = 900,
-                        min_summary_tokens = 40, max_summary_tokens = 300, num_beams = 4):
+
+def bart_summarize_text(text: str, tokenizer, model, device="cpu", max_input_tokens=900,
+                        min_summary_tokens=40, max_summary_tokens=300, num_beams=4):
     # single text
     if not text or not text.strip():
         return ""
 
-    chunks = _chunk_by_tokens(text, tokenizer, max_tokens = max_input_tokens)
+    chunks = _chunk_by_tokens(text, tokenizer, max_tokens=max_input_tokens)
 
     partial = []
     for ch in chunks:
@@ -129,7 +131,7 @@ def bart_summarize_text(text: str, tokenizer, model, device="cpu", max_input_tok
     if len(partial) == 1:
         return partial[0]
 
-    #combine partial summary parts
+    # combine partial summary parts
     combined = " ".join(partial)
     inputs = tokenizer(combined, return_tensors="pt", truncation=True, max_length=1024).to(device)
 
@@ -171,7 +173,7 @@ def generate_bert_summary(data, **kwargs):
     for item in data:
         context = item.get("context_clean", "")
         contexts.append(context)
-    
+
     emb = generate_bert_embeddings(contexts, model, tokenizer)
 
     for i, item in enumerate(data):
@@ -181,7 +183,7 @@ def generate_bert_summary(data, **kwargs):
     logger.info("BERT summaries added to dataset")
     return data
 
-def generate_bart_summary(data, source_field = "context_clean", target_field = "summary_bart"):
+def generate_bart_summary(data, source_field="context_clean", target_field="summary_bart"):
     if not data:
         logger.warning("Empty dataset received, skipping summarization.")
         return data
@@ -222,8 +224,10 @@ def generate_bart_summary(data, source_field = "context_clean", target_field = "
 # Tests
 if __name__ == "__main__":
     data = [
-        {"context_clean": "President Biden said the new economic plan will create more jobs. However, some critics argue that the tax increase may hurt small businesses. The government insists that overall growth will be strong."},
-        {"context_clean": "The company reported strong quarterly earnings, driven by growth in its cloud services. Analysts expect revenue to continue rising next quarter."}
+        {
+            "context_clean": "President Biden said the new economic plan will create more jobs. However, some critics argue that the tax increase may hurt small businesses. The government insists that overall growth will be strong."},
+        {
+            "context_clean": "The company reported strong quarterly earnings, driven by growth in its cloud services. Analysts expect revenue to continue rising next quarter."}
     ]
 
     data = generate_bart_summary(data)

@@ -13,7 +13,6 @@ import sys
 
 import yaml
 from datasets import load_dataset
-from loguru import logger
 
 from clean import (
     clean_single_text,
@@ -215,6 +214,10 @@ def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=Fal
         'clarity_label'.
     include_label : bool, optional
         Whether to include the original 'clarity_label' in the output
+        (default: True).
+    clean_fillers: bool, optional
+        (default: True).
+    clean_names: bool, optional
         (default: True).
 
     Returns

@@ -1,0 +1,42 @@
+#================================== Description ========================================
+# Docker Compose file to run a Neo4j database
+#
+# The database is configured with some common plugins and uses volumes to persist data,
+# logs, and plugins.
+# It uses the default credentials provided in `neo4j-credentials.yaml` in this directory.
+#
+# To start the database, choose one of the following options:
+#   1. From the command line, navigate to `src/main/resources/` and run
+#        `docker compose up -d`
+#   2. Use the IntelliJ Docker plugin to run this file as a Docker Compose configuration.
+#=======================================================================================
+
+services:
+  neo4j:
+    container_name: "clarity-neo4j"
+    image: "neo4j:5.26.13-ubi9"
+    environment:
+      - "NEO4J_AUTH=neo4j/clarity123"
+      - "NEO4J_PLUGINS=[\"apoc\",\"apoc-extended\",\"graph-data-science\",\"n10s\"]"
+    ports:
+      - "47474:7474"
+      - "47687:7687"
+    restart: "unless-stopped"
+    volumes:
+      - "clarity-neo4j-data:/data"
+      - "clarity-neo4j-logs:/logs"
+      - "clarity-neo4j-plugins:/plugins"
+    healthcheck:
+      test: [ "CMD-SHELL", "/var/lib/neo4j/bin/neo4j status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  clarity-neo4j-data:
+    name: "clarity-neo4j-data"
+  clarity-neo4j-logs:
+    name: "clarity-neo4j-logs"
+  clarity-neo4j-plugins:
+    name: "clarity-neo4j-plugins"

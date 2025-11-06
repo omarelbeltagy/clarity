@@ -1,0 +1,14 @@
+name: "Claude Sonnet 4.5"
+cluster: "Claude"
+version: "few-shot:v1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "anthropic"
+    name: "claude-sonnet-4-5"
+    prompt: "../assets/prompts/few-shot.yaml"

@@ -1,0 +1,14 @@
+name: "gpt-4.1"
+cluster: "OpenAI"
+version: "few-shot:v1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-4.1"
+    prompt: "../assets/prompts/few-shot.yaml"

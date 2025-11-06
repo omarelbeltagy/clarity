@@ -1,0 +1,14 @@
+name: "Llama-4-Maverick-17B-128E"
+cluster: "LLaMA"
+version: "few-shot:v1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+    prompt: "../assets/prompts/few-shot.yaml"

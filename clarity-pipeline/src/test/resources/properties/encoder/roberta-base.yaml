@@ -1,0 +1,9 @@
+name: "RoBERTa base"
+cluster: "RoBERTa"
+version: "v1"
+model: "local:http://localhost:8000/classify/roberta-base"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
