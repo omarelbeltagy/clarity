@@ -5,9 +5,11 @@ Generates dense vector representations using BERT embeddings.
 import torch
 import re
 import numpy as np
+from torch.compiler import disable
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
 from loguru import logger
+from math import ceil
 
 
 # Basic configuration
@@ -22,11 +24,24 @@ def mean_pooling(model_output, attention_mask):
     return (token_embeddings * mask_expanded).sum(1) / mask_expanded.sum(1).clamp(min=1e-9)
 
 
-def generate_bert_embeddings(texts, model, tokenizer, batch_size=8, max_length=256):
+def generate_bert_embeddings(
+        texts, model, tokenizer,
+        batch_size = 8,
+        max_length = 256,
+        desc: str | None = "Generating BERT summaries",
+        disable: bool = False,
+        device: str | None = None,
+        progress_cb = None,):
+
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     """Generate mean-pooled BERT embeddings for a list of texts."""
     embeddings = []
+    model.to(device)
     model.eval()
-    for i in tqdm(range(0, len(texts), batch_size), desc="Generating BERT summaries"):
+    rng = range(0, len(texts), batch_size)
+    for i in (tqdm(rng, desc = desc, disable=disable) if desc is not None else rng):
         batch = texts[i:i + batch_size]
         encoded = tokenizer(
             batch,
@@ -35,11 +50,14 @@ def generate_bert_embeddings(texts, model, tokenizer, batch_size=8, max_length=2
             max_length=max_length,
             return_tensors="pt"
         )
+        encoded = {k : v.to(device) for k, v in encoded.items()}
         with torch.no_grad():
             outputs = model(**encoded)
             pooled = mean_pooling(outputs, encoded["attention_mask"])
         embeddings.append(pooled.cpu().numpy())
-    return np.vstack(embeddings)
+        if progress_cb:
+            progress_cb(len(batch))
+    return np.vstack(embeddings) if embeddings else np.zeros((0, model.config.hidden_size))
 
 # Use BERT to select (MMR)
 _SENT_SPLIT = re.compile(r'(?<=[.!?])\s+')
@@ -55,7 +73,7 @@ def select_topk_mmr(text, bert_model, bert_token, k = 6, lam = 0.65):
     if not sents:
         return []
 
-    emb = generate_bert_embeddings(sents, bert_model, bert_token)
+    emb = generate_bert_embeddings(sents, bert_model, bert_token, desc = None, disable = True)
     centroids = emb.mean(axis=0)
 
     chosen, picked = [], set()
@@ -176,17 +194,27 @@ def generate_bart_summary(data, source_field = "context_clean", target_field = "
     bart_tok = AutoTokenizer.from_pretrained(BART_NAME)
     bart_model = AutoModelForSeq2SeqLM.from_pretrained(BART_NAME).to(device).eval()
 
-    for item in tqdm(data, desc="Generating summaries ..."):
-        source = item.get(source_field, "") or ""
+    summaries = []
+    total = len(data) * 2
+    with tqdm(total=total, desc="BART summarize + embed", unit="item") as bar:
+        for item in data:
+            source = item.get(source_field, "") or ""
+            key_sents = select_topk_mmr(source, bert_model, bert_tok, k=6, lam=0.65)
+            selected = " ".join(key_sents) if key_sents else source
+            summary = bart_summarize_text(selected, bart_tok, bart_model, device=device)
+            item[target_field] = summary
+            summaries.append(summary)
+            bar.update(1)
 
-        key_sentences = select_topk_mmr(source, bert_model, bert_tok, k = 6, lam = 0.65)
-        selected_text = " ".join(key_sentences)
-
-        summary = bart_summarize_text(selected_text, bart_tok, bart_model, device = device)
-        item[target_field] = summary
-
-        emb = generate_bert_embeddings([summary], bert_model, bert_tok)
-        item["summary_bert"] = emb[0].tolist()
+        '''def _cb(n):
+            bar.update(n)
+        emb = generate_bert_embeddings(
+            summaries, bert_model, bert_tok,
+            desc=None, disable=True,
+            progress_cb=_cb
+        )
+        for item, vec in zip(data, emb):
+            item["summary_bert"] = vec.tolist()'''
 
     logger.info("BART summaries generated successfully.")
     return data
@@ -203,4 +231,4 @@ if __name__ == "__main__":
     for d in data:
         print("\n---SUMMARY---")
         print(d["summary_bart"])
-        print("Vector dim:", len(d["summary_bert"]))
+        # print("Vector dim:", len(d["summary_bert"]))
