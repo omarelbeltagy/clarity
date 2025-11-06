@@ -195,7 +195,7 @@ def generate_bart_summary(data, source_field="context_clean", target_field="summ
     bart_model = AutoModelForSeq2SeqLM.from_pretrained(BART_NAME).to(device).eval()
 
     summaries = []
-    total = len(data) * 2
+    total = len(data)
     with tqdm(total=total, desc="BART summarize + embed", unit="item") as bar:
         for item in data:
             source = item.get(source_field, "") or ""
