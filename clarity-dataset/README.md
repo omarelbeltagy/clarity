@@ -117,8 +117,18 @@ docker compose run --rm dataset python app.py --use-bert
 ```
 
 ```bash
-# Full processing: clean everything + BERT summaries
+# Generate BART summaries (without cleaning)
+docker compose run --rm dataset python app.py --use-bart
+```
+
+```bash
+# Full processing(a): clean everything + BERT summaries 
 docker compose run --rm dataset python app.py --clean-all --use-bert
+```
+
+```bash
+# Full processing(b): clean everything + BART summaries 
+docker compose run --rm dataset python app.py --clean-all --use-bart
 ```
 
 ```bash

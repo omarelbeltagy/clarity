@@ -2,13 +2,13 @@
 BERT-based summary generation for QA pairs.
 Generates dense vector representations using BERT embeddings.
 """
-import numpy as np
-import re
 import torch
+import re
+import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
-
-from utils.logger import logger
+from loguru import logger
+#from utils.logger import logger
 
 # Basic configuration
 BERT_NAME = "bert-base-uncased"
@@ -22,11 +22,24 @@ def mean_pooling(model_output, attention_mask):
     return (token_embeddings * mask_expanded).sum(1) / mask_expanded.sum(1).clamp(min=1e-9)
 
 
-def generate_bert_embeddings(texts, model, tokenizer, batch_size=8, max_length=256):
+def generate_bert_embeddings(
+        texts, model, tokenizer,
+        batch_size = 8,
+        max_length = 256,
+        desc: str | None = "Generating BERT summaries",
+        disable: bool = False,
+        device: str | None = None,
+        progress_cb = None,):
+
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     """Generate mean-pooled BERT embeddings for a list of texts."""
     embeddings = []
+    model.to(device)
     model.eval()
-    for i in tqdm(range(0, len(texts), batch_size), desc="Generating BERT summaries"):
+    rng = range(0, len(texts), batch_size)
+    for i in (tqdm(rng, desc = desc, disable=disable) if desc is not None else rng):
         batch = texts[i:i + batch_size]
         encoded = tokenizer(
             batch,
@@ -35,20 +48,20 @@ def generate_bert_embeddings(texts, model, tokenizer, batch_size=8, max_length=2
             max_length=max_length,
             return_tensors="pt"
         )
+        encoded = {k : v.to(device) for k, v in encoded.items()}
         with torch.no_grad():
             outputs = model(**encoded)
             pooled = mean_pooling(outputs, encoded["attention_mask"])
         embeddings.append(pooled.cpu().numpy())
-    return np.vstack(embeddings)
-
+        if progress_cb:
+            progress_cb(len(batch))
+    return np.vstack(embeddings) if embeddings else np.zeros((0, model.config.hidden_size))
 
 # Use BERT to select (MMR)
 _SENT_SPLIT = re.compile(r'(?<=[.!?])\s+')
 
-
 def split_sentences(text: str):
     return [s.strip() for s in _SENT_SPLIT.split(text or "") if s.strip()]
-
 
 def cos(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-9))
@@ -59,7 +72,7 @@ def select_topk_mmr(text, bert_model, bert_token, k=6, lam=0.65):
     if not sents:
         return []
 
-    emb = generate_bert_embeddings(sents, bert_model, bert_token)
+    emb = generate_bert_embeddings(sents, bert_model, bert_token, desc = None, disable = True)
     centroids = emb.mean(axis=0)
 
     chosen, picked = [], set()
@@ -74,7 +87,6 @@ def select_topk_mmr(text, bert_model, bert_token, k=6, lam=0.65):
         picked.add(idx)
         chosen.append(sents[idx])
     return chosen
-
 
 # Use BART to generate summaries
 def _chunk_by_tokens(text, tokenizer, max_tokens=900):
@@ -134,7 +146,6 @@ def bart_summarize_text(text: str, tokenizer, model, device="cpu", max_input_tok
 
     return tokenizer.decode(ids[0], skip_special_tokens=True)
 
-
 def generate_bert_summary(data, **kwargs):
     """
     Given a list of dicts (dataset entries),
@@ -170,7 +181,6 @@ def generate_bert_summary(data, **kwargs):
     logger.info("BERT summaries added to dataset")
     return data
 
-
 def generate_bart_summary(data, source_field="context_clean", target_field="summary_bart"):
     if not data:
         logger.warning("Empty dataset received, skipping summarization.")
@@ -184,21 +194,30 @@ def generate_bart_summary(data, source_field="context_clean", target_field="summ
     bart_tok = AutoTokenizer.from_pretrained(BART_NAME)
     bart_model = AutoModelForSeq2SeqLM.from_pretrained(BART_NAME).to(device).eval()
 
-    for item in tqdm(data, desc="Generating summaries ..."):
-        source = item.get(source_field, "") or ""
+    summaries = []
+    total = len(data)
+    with tqdm(total=total, desc="BART summarize + embed", unit="item") as bar:
+        for item in data:
+            source = item.get(source_field, "") or ""
+            key_sents = select_topk_mmr(source, bert_model, bert_tok, k=6, lam=0.65)
+            selected = " ".join(key_sents) if key_sents else source
+            summary = bart_summarize_text(selected, bart_tok, bart_model, device=device)
+            item[target_field] = summary
+            summaries.append(summary)
+            bar.update(1)
 
-        key_sentences = select_topk_mmr(source, bert_model, bert_tok, k=6, lam=0.65)
-        selected_text = " ".join(key_sentences)
-
-        summary = bart_summarize_text(selected_text, bart_tok, bart_model, device=device)
-        item[target_field] = summary
-
-        emb = generate_bert_embeddings([summary], bert_model, bert_tok)
-        item["summary_bert"] = emb[0].tolist()
+        '''def _cb(n):
+            bar.update(n)
+        emb = generate_bert_embeddings(
+            summaries, bert_model, bert_tok,
+            desc=None, disable=True,
+            progress_cb=_cb
+        )
+        for item, vec in zip(data, emb):
+            item["summary_bert"] = vec.tolist()'''
 
     logger.info("BART summaries generated successfully.")
     return data
-
 
 # Tests
 if __name__ == "__main__":
@@ -214,4 +233,4 @@ if __name__ == "__main__":
     for d in data:
         print("\n---SUMMARY---")
         print(d["summary_bart"])
-        print("Vector dim:", len(d["summary_bert"]))
+        # print("Vector dim:", len(d["summary_bert"]))

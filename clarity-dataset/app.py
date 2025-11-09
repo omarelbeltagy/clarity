@@ -21,8 +21,9 @@ from clean import (
     remove_fillers,
     remove_names
 )
-from summarize import generate_bert_summary
-from utils.logger import logger
+from summarize import generate_bert_summary, generate_bart_summary
+#from utils.logger import logger
+from loguru import logger
 
 
 def get_data_path():
@@ -304,6 +305,8 @@ def main():
                         help="Apply all cleaning (fillers + names)")
     parser.add_argument("--use-bert", action="store_true",
                         help="Generate BERT-based summaries")
+    parser.add_argument("--use-bart", action="store_true",
+                        help="Generate BART-based summaries")
 
     args = parser.parse_args()
 
@@ -324,6 +327,7 @@ def main():
     logger.info(f"  - Clean fillers: {args.clean_fillers}")
     logger.info(f"  - Clean names: {args.clean_names}")
     logger.info(f"  - Use BERT: {args.use_bert}")
+    logger.info(f"  - Use BART: {args.use_bart}")
 
     logger.info("Loading QEvasion datasets...")
     ds_train = load_dataset("ailsntua/QEvasion", split="train")
@@ -349,7 +353,6 @@ def main():
     for name, data in {"train": train_data, "valid": valid_data, "test": test_data}.items():
         save_json(data, os.path.join(full_dir, f"{name}.json"))
 
-    logger.info("Saving cleaned datasets...")
     train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
     valid_cleaned = clean_dataset(valid_data, clean_fillers=args.clean_fillers,
@@ -359,6 +362,7 @@ def main():
 
     # Apply BERT summaries if requested (after cleaning)
     if args.use_bert:
+        logger.info("Saving processed datasets...")
         logger.info("Generating BERT summaries for train set...")
         train_cleaned = generate_bert_summary(train_cleaned)
 
@@ -368,9 +372,21 @@ def main():
         logger.info("Generating BERT summaries for test set...")
         test_cleaned = generate_bert_summary(test_cleaned)
 
-    logger.info("Saving processed datasets...")
+        # Apply BART summaries if requested (after cleaning)
+    if args.use_bart:
+        logger.info("Saving processed datasets with BART summaries...")
+        logger.info("Generating BART summaries for train set...")
+        train_cleaned = generate_bart_summary(train_cleaned)
+
+        logger.info("Generating BART summaries for validation set...")
+        valid_cleaned = generate_bart_summary(valid_cleaned)
+
+        logger.info("Generating BART summaries for test set...")
+        test_cleaned = generate_bart_summary(test_cleaned)
+
+    logger.info("Saving cleaned datasets...")
     for name, data in {"train": train_cleaned, "valid": valid_cleaned, "test": test_cleaned}.items():
-        save_json(clean_dataset(data), os.path.join(clean_dir, f"{name}.json"))
+        save_json(data, os.path.join(clean_dir, f"{name}.json"))
 
     logger.info("Converting datasets for Together format...")
     convert_for_together(train_data, valid_data, data_dir)

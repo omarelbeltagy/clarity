@@ -12,6 +12,7 @@
 #        docker compose run --rm dataset --clean-all --use-bert
 #        docker compose run --rm dataset --clean-fillers
 #        docker compose run --rm dataset --clean-names
+#        docker compose run --rm dataset --use-bart
 #
 # Available flags:
 #   --clean-fillers    Remove filler words (um, uh, you know, etc.)
