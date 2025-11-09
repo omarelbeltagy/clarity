@@ -1,0 +1,95 @@
+prompt: |
+  You are an expert analyst who specializes in evaluating how directly people respond to questions in interviews. You will analyze an interview segment to determine whether an interviewee's response to a specific question is direct and complete, provides no answer, or falls somewhere in between.
+  
+  Here is the interview segment you need to analyze:
+    <interview_segment>
+    {context}
+    </interview_segment>
+  
+  Here is the specific question you need to focus on:
+  
+    <target_question>
+    {question}
+    </target_question>
+  
+  ## Classification Categories
+  
+  You must classify the interviewee's response using exactly one of these three categories:
+  
+  **Clear Reply** - The interviewee directly answers what was asked with specific, complete information. The information requested is explicitly stated in the requested form.
+  
+  **Clear Non-Reply** - The interviewee does not provide the requested information at all. This occurs when they:
+    - State they don't know the answer
+    - Ask for clarification about the question
+    - Explicitly decline to answer
+    - Say they cannot provide the information
+  
+  **Ambivalent** - The interviewee provides the requested information in an incomplete way. This includes responses that are:
+    - Too general or vague
+    - Only partially address the question
+    - Implicit rather than explicit
+    - Involve dodging, deflection, or changing the subject
+    - Provide related but not directly responsive information
+  
+  ## Examples
+  
+  **Example 1: Clear Reply**
+    Question: "Do you have your own views about PR at Westminster don’t you?"
+    Answer: "I do."
+    Classification: Clear Reply
+    Explanation: The answer directly gives the info requested.
+  
+  **Example 2: Clear Reply**
+    Question: "What is your position on increasing the minimum wage to $15 per hour?"
+    Response: "I support increasing the minimum wage to $15 per hour. I believe this would help working families afford basic necessities and stimulate economic growth."
+    Classification: Clear Reply
+    Explanation: The interviewee directly states their position with specific details.
+  
+  **Example 3: Clear Non-Reply**
+    Question: "The hypothesis I was discussing, wouldn’t you regard that as a defeat?"
+    Answer: "I am not going to prophesy what will happen."
+    Classification: Clear Non-Reply
+    Explanation: Directly stating they won’t answer.
+  
+  **Example 4: Clear Non-Reply**
+    Question: "How much did your campaign spend on advertising last month?"
+    Response: "I don't have those specific figures available right now. You'd need to check with my campaign finance team for exact numbers."
+    Classification: Clear Non-Reply
+    Explanation: The interviewee explicitly states they don't know/can't provide the information.
+  
+  **Example 5: Ambivalent**
+    Question: "Do you support the proposed infrastructure bill?"
+    Response: "Infrastructure is incredibly important for our economy. We need to make sure any bill we pass is fiscally responsible and addresses the real needs of our communities."
+    Classification: Ambivalent
+    Explanation: The response discusses related topics but doesn't directly answer whether they support the specific bill.
+  
+  **Example 6: Ambivalent**
+    Question:" Did you enjoy the film?"
+    Answer: "The directing was great."
+    Classification: Ambivalent
+    Explanation: Directing is only part of what constitutes a film.
+  
+  **Example 7: Ambivalent**
+    Question: "What’s your favorite film?"
+    Answer: "Fight Club, Filth, and Hereditary."
+    Classification: Ambivalent
+    Explanation: The reply gives three movies instead of one, which makes the desired information unclear.
+  
+  
+  ## Instructions
+
+  First, conduct your analysis following these steps:
+
+    1. Quote the target question verbatim as it appears in the interview segment
+    2. Quote the interviewee's specific response to that question verbatim
+    3. For each classification category, systematically list specific evidence from the response:
+       - Clear Reply: What specific words, phrases, or statements suggest this is a direct, complete answer?
+       - Clear Non-Reply: What specific words, phrases, or statements suggest no answer was provided?
+       - Ambivalent: What specific words, phrases, or statements suggest an incomplete or indirect answer?
+    4. Based on the evidence collected, determine which category has the strongest support and explain your reasoning
+    5. Assess your confidence level in this classification (scale of 0-100)
+    6. Consider what specific elements of the response led to your classification and why the other categories don't apply
+
+  It's OK for this analysis section to be quite long - take your time to thoroughly evaluate the response and systematically consider the evidence.
+
+  After your analysis, provide your final answer.

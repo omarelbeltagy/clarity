@@ -55,6 +55,23 @@ It provides an extensible runtime that connects data, ontology, model inference,
 
 ---
 
+## Requirements
+
+- **R1 – End-to-End Classification Flow**
+    - The system shall perform full inference runs from dataset loading to evaluation output in a single orchestrated
+      process.
+- **R2 - Persistence in Database**
+    - The system shall store datasets, taxonomies, model configurations, predictions, and evaluations in database for
+      future retrieval and analysis.
+- **R3 - Multi-Provider LLM Support**
+    - The system shall support multiple LLM providers (e.g., OpenAI, Anthropic, Together, locally hosted) through a
+      unified client interface.
+- **R4 - Config Driven Execution**
+    - The system shall allow all aspects of the classification pipeline to be configured via external YAML files,
+      enabling reproducible experiments and dynamic adjustments without code changes.
+
+---
+
 ## Architecture
 
 ![Pipeline Diagram](assets/pipeline.png)

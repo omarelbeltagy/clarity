@@ -45,7 +45,7 @@ public class DatabaseExporterTest {
      */
     @Test
     public void testExportDatabase() throws IOException {
-        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/11_04_2025_INITIAL_EXPERIMENTS.json");
+        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/11_06_2025_INITIAL_EXPERIMENTS.json");
     }
 
     /**
@@ -58,6 +58,6 @@ public class DatabaseExporterTest {
      */
     @Test
     public void testImportDatabase() throws IOException {
-        neo4jExporter.importFromJson("src/test/resources/neo4j-export/11_04_2025_INITIAL_EXPERIMENTS.json");
+        neo4jExporter.importFromJson("src/test/resources/neo4j-export/11_06_2025_INITIAL_EXPERIMENTS.json");
     }
 }
