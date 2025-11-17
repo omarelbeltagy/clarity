@@ -3,6 +3,7 @@
 - [📊 SemEval 2026 Task](https://konstantinosftw.github.io/CLARITY-SemEval-2026/)
 - [🤗 Dataset](https://huggingface.co/datasets/ailsntua/QEvasion)
 - [📄 A dataset, taxonomy and baselines on response clarity classification](https://arxiv.org/abs/2409.13879)
+- [:octocat: GitHub Repository](https://github.com/omarelbeltagy/clarity)
 
 > A repository for the SemEval 2026 Task on Unmasking Political Question Evasions.
 
@@ -83,12 +84,12 @@ Both tasks use macro F1‐score evaluated on a test set.
 
 1. Clone the repository:
     ```bash
-    git clone <REPOSITORY_URL>
+    git clone https://github.com/omarelbeltagy/clarity.git
     ```
 
 2. Build the java project with Maven:
     ```bash
-    cd <PROJECT_DIRECTORY>
+    cd clarity
     mvn clean install -U -DskipTests
     ```
 
@@ -106,7 +107,7 @@ TOGETHER_API_KEY=your_together_api_key
 ### Database Setup
 
 The project uses a [Neo4j](https://neo4j.com) graph database to store and manage data. It already provides
-a [Neo4j docker-compose setup](clarity-neo4j/src/main/resources/docker-compose.yaml)for local development.
+a [Neo4j docker-compose setup](clarity-neo4j/src/main/resources/docker-compose.yaml) for local development.
 
 To start the Neo4j database locally in a Docker container:
 
