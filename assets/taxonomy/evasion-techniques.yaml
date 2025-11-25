@@ -1,31 +1,84 @@
 name: "Evasion Techniques"
+mapping:
+  enabled: false
+  label-property: "clarityLabel"
+  labels:
+    - "Clear Reply"
+    - "Ambivalent"
+    - "Clear Non-Reply"
+label-property: "evasionLabel"
 categories:
   - name: "Explicit"
+    map-to: "Clear Reply"
+    examples:
+      - question: Do you have your own views about PR at Westminster don’t you?
+        answer: I do.
+        explanation: The answer directly gives the info requested.
     description: >
       The information requested is explicitly stated (in the requested form)
   - name: "Implicit"
+    map-to: "Ambivalent"
+    examples:
+      - question: Are you going to watch television?
+        answer: What else is there to do?
+        explanation: They suggest planning to watch TV, despite not explicitly stating it.
     description: >
       The information requested is given, but without being explicitly stated
       (not in the expected form)
   - name: "General"
+    map-to: "Ambivalent"
+    examples:
+      - question: What’s your favorite film?
+        answer: Fight Club, Filth, and Hereditary.
+        explanation: The reply gives three movies instead of one, which makes the desired information unclear.
     description: >
       The information provided is too general/lacks the requested specificity
-  - name: "Partial"
+  - name: "Partial/half-answer"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you enjoy the film?
+        answer: The directing was great.
+        explanation: Directing is only part of what constitutes a film.
     description: >
       Offers only a specific component of the requested information
   - name: "Dodging"
+    map-to: "Ambivalent"
+    examples:
+      - question: Do you like my new dress?
+        answer: We are late.
+        explanation: Does not even acknowledge the question and goes straight to another topic.
     description: >
       Ignoring the question altogether
   - name: "Deflection"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you eat the last piece of pie?
+        answer: I have to admit that this was a great recipe, I always like it when there are chocolate chips in the dough.
+        explanation: Acknowledges the question but goes on a tangent about the chips, without answering.
     description: >
       Starts on topic but shifts the focus and makes a different point than what is asked
   - name: "Declining to answer"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+        answer: I am not going to prophesy what will happen.
+        explanation: Directly stating they won’t answer.
     description: >
       Acknowledge the question but directly or indirectly refusing to answer
       at the moment
   - name: "Claims ignorance"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+        answer: I do not know that date. I will find out and let the House know.
+        explanation: Claims or admits they don’t have the information.
     description: >
       The answerer claims/admits not to know the answer themselves
   - name: "Clarification"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Was it your decision to release the fund?
+        answer: You mean the public fund?
+        explanation: Gives no data, asks for clarification.
     description: >
       Does not provide the requested information and asks for clarification

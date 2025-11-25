@@ -50,7 +50,7 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
      */
     @JsonProperty("confidence")
     @JsonPropertyDescription("Confidence score of the classification")
-    private double confidence;
+    private Double confidence;
 
     /**
      * Optional map of category -> score for all considered categories.
@@ -77,5 +77,5 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
      * <p>Ignored for persistence/serialization.
      */
     @JsonIgnore
-    private double judgementConfidence;
+    private Double judgementConfidence;
 }

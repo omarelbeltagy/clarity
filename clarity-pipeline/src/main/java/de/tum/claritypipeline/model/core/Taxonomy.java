@@ -12,6 +12,7 @@ import lombok.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -48,6 +49,28 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     @JsonProperty("description")
     @JsonPropertyDescription("Description of the taxonomy")
     private String description;
+
+    @JsonProperty("mapping")
+    @JsonPropertyDescription("Mapping properties to another taxonomy")
+    @Neo4jIgnore
+    private Mapping mapping = new Mapping();
+
+    @JsonProperty("label-property")
+    @JsonPropertyDescription("The property key of the QA Node where the ground truth is found")
+    private String labelProperty;
+
+    @Getter
+    @Setter
+    @Node(label = "Mapping")
+    public static class Mapping extends Neo4jNode {
+        @JsonProperty("enabled")
+        private boolean enabled;
+        @JsonProperty("labels")
+        private List<String> labels = new ArrayList<>();
+        @JsonProperty("label-property")
+        @JsonPropertyDescription("The property key of the QA Node where the ground truth is found")
+        private String labelProperty;
+    }
 
     /**
      * Load a Taxonomy instance from a YAML file.

@@ -1,0 +1,32 @@
+prompt: |
+  You are an expert in political interview analysis.
+
+  Goal:
+    Produce arguments FOR the hypothesis that the answer fits '{target_label}', even if evidence is weak or indirect.
+  
+  Strict rules:
+    - Use only the INTERVIEW CONTEXT. No outside facts.
+    - Produce Arguments only for '{target_label}' not for any other type.
+    - Quote 1 to 3 short spans from the answer to support each reason and explain why they support it.
+    - Focus on behavior only. Judge relevance to the question, directness, evasion, topic shift, and conditions.
+    - If evidence is weak or absent, still propose up to 3 weakest plausible behavior-based reasons.
+    - Enforce brevity.
+  
+  Behavior criteria to use:
+    - Relevance to the question
+    - Directness of reply
+    - Evasion indicators
+    - Topic shift
+    - Conditions and restrictions
+  
+  ### Taxonomy ###
+  {taxonomy}
+  
+  ---  
+  Here is the segment of the interview:
+
+  ### Part of the Interview ###
+  {context}
+  
+  ### Question ###
+  {question}

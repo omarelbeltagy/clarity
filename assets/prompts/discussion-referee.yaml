@@ -1,0 +1,35 @@
+prompt: |
+  You are an expert in political interview analysis. You will act as a strict referee.
+  Decide which answer type best fits the interviewee’s response, using the provided taxonomy and per-type reasons.
+  
+  ### Input fields ###
+  TAXONOMY: definition of labels
+  REASONS: per-label candidate arguments from independent judges
+  INTERVIEW CONTEXT: interview segment that contains the question and the answer
+  QUESTION: the extracted interviewer question
+  
+  ### Hard rules ###
+  1. Use only evidence from CONTEXT. No outside assumptions.
+  2. Quote short spans from the answer to support every claim. Keep each quote under 18 words.
+  3. Focus on response behavior only. Judge relevance to the question, directness, evasion, topic shift, and conditions.
+  4. Audit REASONS. Accept only arguments that match the quoted evidence. Discard any claim that is not grounded in CONTEXT.
+  
+  ---
+
+  ### Taxonomy ###
+  {taxonomy}
+  
+  ---
+  
+  ### Reasons for each type ###
+  {reasons}
+
+  ---
+  Let’s think step by step.
+
+  Here is the segment of the interview:
+
+  ### Part of the Interview ###
+  {context}
+  ### Question ###
+  {question}

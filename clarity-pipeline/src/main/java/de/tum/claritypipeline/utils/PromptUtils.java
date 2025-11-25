@@ -2,7 +2,6 @@ package de.tum.claritypipeline.utils;
 
 import de.tum.clarityneo4j.model.Neo4jEmbeddingSearchResult;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
-import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.config.RaqProperties;
 import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.model.core.Category;
@@ -24,7 +23,7 @@ public class PromptUtils {
     private static final String PLACEHOLDER_ONTOLOGY = "{ontology}";
     private static final String PLACEHOLDER_TAXONOMY = "{taxonomy}";
     private static final String PLACEHOLDER_RAQ_EXAMPLES = "{raq_examples}";
-    private static final String PLACEHOLDER_CLASSIFICATION_RESULT = "{classification_result}";
+    private static final String PLACEHOLDER_EXAMPLES = "{examples}";
 
     private static final String TEXT_FORMAT_SUFFIX = """
             
@@ -77,13 +76,13 @@ public class PromptUtils {
 
         String examplesString = similarExamples.stream()
                                                .map(Neo4jEmbeddingSearchResult::getNode)
-                                               .map(PromptUtils::buildExampleString)
+                                               .map(PromptUtils::buildRaqExampleString)
                                                .collect(Collectors.joining("\n"));
 
         return prompt.replace(PLACEHOLDER_RAQ_EXAMPLES, examplesString);
     }
 
-    private static String buildExampleString(QA qa) {
+    private static String buildRaqExampleString(QA qa) {
         StringBuilder sb = new StringBuilder();
         sb.append("Question: ").append(qa.getQuestion()).append("\n");
         sb.append("Answer: ").append(qa.getInterviewAnswer()).append("\n");
@@ -121,6 +120,21 @@ public class PromptUtils {
                         .collect(Collectors.joining());
     }
 
+    private static String buildExamplesString(List<Category> categories) {
+        StringBuilder sb = new StringBuilder();
+        for (Category category : categories) {
+            if (category.getExamples() != null) {
+                for (Category.TaxonomyExample example : category.getExamples()) {
+                    sb.append("Question: ").append(example.getQuestion()).append("\n");
+                    sb.append("Answer: ").append(example.getAnswer()).append("\n");
+                    sb.append("Label: ").append(category.getName()).append("\n");
+                    sb.append("Explanation: ").append(example.getExplanation()).append("\n\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     private static String formatCategory(int index, Category category) {
         return String.format("%d. %s - %s", index, category.getName(), category.getDescription());
     }
@@ -134,6 +148,7 @@ public class PromptUtils {
                 .replace(PLACEHOLDER_QUESTION, request.getQuestion())
                 .replace(PLACEHOLDER_CONTEXT, request.getContext())
                 .replace(PLACEHOLDER_ONTOLOGY, ontology)
+                .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()))
                 .replace(PLACEHOLDER_TAXONOMY, ontology);
     }
 
@@ -147,26 +162,5 @@ public class PromptUtils {
 
     private static <T> String getJsonSchema(Class<T> resultClass) {
         return new JsonScheme<>(resultClass).getPropertiesString();
-    }
-
-    public static <T> String replaceJudgementPrompt(
-            ClassificationRequest request, ClassificationResult initialResult, String prompt,
-            ResponseFormat responseFormat, boolean injectResponseFormat, Taxonomy taxonomy, RaqProperties raqProperties,
-            Class<T> resultClass
-    ) {
-        prompt = replacePrompt(request, prompt, responseFormat, injectResponseFormat, taxonomy, raqProperties,
-                               resultClass);
-        String classificationResultStr = buildClassificationResult(initialResult);
-        prompt = prompt.replace(PLACEHOLDER_CLASSIFICATION_RESULT, classificationResultStr);
-        return prompt;
-    }
-
-    private static String buildClassificationResult(ClassificationResult result) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Name: ").append(result.getName()).append("\n");
-        if (result.getExplanation() != null && !result.getExplanation().isEmpty()) {
-            sb.append("Explanation: ").append(result.getExplanation()).append("\n");
-        }
-        return sb.toString();
     }
 }

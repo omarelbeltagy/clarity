@@ -3,8 +3,16 @@ prompt: |
   Based on a segment of the interview in which the interviewer poses a series of questions, the type of response provided by the interviewee for the question has already been classified.
   Your task is to check the correctness of this classification using the provided taxonomy and provide a chain of thought explanation for your decision. If the classification is incorrect, provide the correct classification.
   
+  ---
+  
   ### This is the taxonomy used for classification:
   {taxonomy}
+  
+  ### Here is one small example for each term of the taxonomy:
+  
+  {examples}
+  
+  ---
   
   ### The answer has been classified as:
   {classification_result}

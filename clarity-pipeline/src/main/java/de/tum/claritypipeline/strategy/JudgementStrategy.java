@@ -1,5 +1,6 @@
 package de.tum.claritypipeline.strategy;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import de.tum.claritypipeline.client.LocalClient;
@@ -29,24 +30,13 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class JudgementStrategy implements ClassificationStrategy {
-    /**
-     * Model configuration used for the first classification step.
-     *
-     * This model must produce a JSON_OBJECT response that can be deserialized
-     * into a ClassificationResult so that the judgement model can see the
-     * explanation and other structured fields.
-     */
+    @JsonIgnore
+    private static final String PLACEHOLDER_CLASSIFICATION_RESULT = "{classification_result}";
+
     @JsonProperty("classification-model")
     @JsonPropertyDescription("The model configuration to use for the initial classification.")
     private ModelProperties classificationModel;
 
-    /**
-     * Model configuration used for the judgement step.
-     *
-     * The judgement model receives the initial classification result (including
-     * the explanation) and returns a JudgementResult indicating whether it
-     * confirms the initial classification or supplies an alternative.
-     */
     @JsonProperty("judgement-model")
     @JsonPropertyDescription("The model configuration to use for the judgement step.")
     private ModelProperties judgementModel;
@@ -54,75 +44,154 @@ public class JudgementStrategy implements ClassificationStrategy {
     /**
      * Execute the two-step judgement strategy.
      *
-     * The method performs validation of the provided model configurations and
-     * then sequentially calls the configured clients to obtain the initial
-     * ClassificationResult and the subsequent JudgementResult. Based on the
-     * judgement it returns either a merged ClassificationResult containing the
-     * original classification (with added judgement metadata) or the judgement's
-     * chosen class.
-     *
-     * Important behaviors and exceptions:
-     * - If the classificationModel uses a LocalClient, an UnsupportedOperationException
-     *   is thrown because local models are not supported for this strategy.
-     * - If the classificationModel.responseFormat is not JSON_OBJECT, an
-     *   UnsupportedOperationException is thrown because the judgement step
-     *   requires structured explanation content.
-     *
-     * @param request the classification request containing input text and taxonomy;
-     *                must not be null.
-     * @return a ClassificationResult representing the final chosen label and
-     *         associated metadata (confidence, explanations, judgement fields).
-     * @throws UnsupportedOperationException if configuration is incompatible
-     *                                       with the judgement workflow.
+     * @param request the classification request containing input text and taxonomy.
+     * @return a ClassificationResult representing the final chosen label and metadata.
+     * @throws UnsupportedOperationException if configuration is incompatible.
      */
     @Override
     public ClassificationResult execute(ClassificationRequest request) {
+        validateConfiguration();
+
+        ClassificationResult initialResult = performInitialClassification(request);
+        JudgementResult judgementResult = performJudgement(request, initialResult);
+
+        return mergeResults(initialResult, judgementResult);
+    }
+
+    /**
+     * Validates that the model configuration is compatible with judgement strategy.
+     */
+    private void validateConfiguration() {
         if (classificationModel.getClient() instanceof LocalClient) {
-            throw new UnsupportedOperationException("LocalClient is not supported for JudgementStrategy");
+            throw new UnsupportedOperationException(
+                    "LocalClient is not supported for JudgementStrategy"
+            );
         }
+
         if (classificationModel.getResponseFormat() != ResponseFormat.JSON_OBJECT) {
             throw new UnsupportedOperationException(
-                    "Only ResponseFormat.JSON_OBJECT is supported for the Classification Model for the "
-                            + "JudgementStrategy, because the Judgement Model "
-                            + "needs to have an explanation from the Classification Model available.");
+                    "Only ResponseFormat.JSON_OBJECT is supported for the Classification Model in " +
+                            "JudgementStrategy, because the Judgement Model needs access to the explanation."
+            );
         }
-        String prompt = PromptUtils.replacePrompt(request, classificationModel.getPrompt(),
-                                                  classificationModel.getResponseFormat(),
-                                                  classificationModel.isInjectResponseFormat(),
-                                                  request.getTaxonomy(),
-                                                  classificationModel.getRaqProperties(),
-                                                  ClassificationResult.class
-        );
-        ClassificationResult initialResult = classificationModel.getClient()
-                                                                .makeRequest(prompt, ClassificationResult.class);
+    }
 
-        String judgementPrompt = PromptUtils.replaceJudgementPrompt(request,
-                                                                    initialResult,
-                                                                    judgementModel.getPrompt(),
-                                                                    judgementModel.getResponseFormat(),
-                                                                    judgementModel.isInjectResponseFormat(),
-                                                                    request.getTaxonomy(),
-                                                                    judgementModel.getRaqProperties(),
-                                                                    JudgementResult.class
+    /**
+     * Performs the initial classification step.
+     */
+    private ClassificationResult performInitialClassification(ClassificationRequest request) {
+        String prompt = PromptUtils.replacePrompt(
+                request,
+                classificationModel.getPrompt(),
+                classificationModel.getResponseFormat(),
+                classificationModel.isInjectResponseFormat(),
+                request.getTaxonomy(),
+                classificationModel.getRaqProperties(),
+                ClassificationResult.class
         );
 
-        JudgementResult judgementResult = judgementModel.getClient()
-                                                        .makeRequest(judgementPrompt, JudgementResult.class);
+        return classificationModel.getClient()
+                                  .makeRequest(prompt, ClassificationResult.class);
+    }
 
-        if (judgementResult.isConfirmed() || judgementResult.getName().equals(initialResult.getName())) {
-            return ClassificationResult.builder()
-                                       .name(initialResult.getName())
-                                       .explanation(initialResult.getExplanation())
-                                       .confidence(initialResult.getConfidence())
-                                       .judgementConfidence(judgementResult.getConfidence())
-                                       .judgementExplanation(initialResult.getJudgementExplanation())
-                                       .build();
+    /**
+     * Performs the judgement step to evaluate the initial classification.
+     */
+    private JudgementResult performJudgement(
+            ClassificationRequest request,
+            ClassificationResult initialResult
+    ) {
+
+        String judgementPrompt = buildJudgementPrompt(request, initialResult);
+
+        return judgementModel.getClient()
+                             .makeRequest(judgementPrompt, JudgementResult.class);
+    }
+
+    /**
+     * Builds the prompt for the judgement model, including the initial classification result.
+     */
+    private String buildJudgementPrompt(
+            ClassificationRequest request,
+            ClassificationResult initialResult
+    ) {
+
+        String prompt = PromptUtils.replacePrompt(
+                request,
+                judgementModel.getPrompt(),
+                judgementModel.getResponseFormat(),
+                judgementModel.isInjectResponseFormat(),
+                request.getTaxonomy(),
+                judgementModel.getRaqProperties(),
+                JudgementResult.class
+        );
+
+        String classificationResultStr = formatClassificationResult(initialResult);
+        return prompt.replace(PLACEHOLDER_CLASSIFICATION_RESULT, classificationResultStr);
+    }
+
+    /**
+     * Formats the classification result for inclusion in the judgement prompt.
+     */
+    private String formatClassificationResult(ClassificationResult result) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Name: ").append(result.getName()).append("\n");
+
+        if (result.getExplanation() != null && !result.getExplanation().isEmpty()) {
+            sb.append("Explanation: ").append(result.getExplanation()).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Merges initial classification and judgement results into final output.
+     * Returns the confirmed initial result with judgement metadata, or the overridden result.
+     */
+    private ClassificationResult mergeResults(
+            ClassificationResult initialResult,
+            JudgementResult judgementResult
+    ) {
+
+        if (isConfirmed(initialResult, judgementResult)) {
+            return buildConfirmedResult(initialResult, judgementResult);
         } else {
-            return ClassificationResult.builder()
-                                       .name(judgementResult.getName())
-                                       .explanation(judgementResult.getExplanation())
-                                       .confidence(judgementResult.getConfidence())
-                                       .build();
+            return buildOverriddenResult(judgementResult);
         }
+    }
+
+    /**
+     * Checks if the judgement confirms the initial classification.
+     */
+    private boolean isConfirmed(ClassificationResult initial, JudgementResult judgement) {
+        return judgement.isConfirmed() || judgement.getName().equals(initial.getName());
+    }
+
+    /**
+     * Builds result when judgement confirms initial classification.
+     */
+    private ClassificationResult buildConfirmedResult(
+            ClassificationResult initial,
+            JudgementResult judgement
+    ) {
+
+        return ClassificationResult.builder()
+                                   .name(initial.getName())
+                                   .explanation(initial.getExplanation())
+                                   .confidence(initial.getConfidence())
+                                   .judgementConfidence(judgement.getConfidence())
+                                   .judgementExplanation(judgement.getExplanation())
+                                   .build();
+    }
+
+    /**
+     * Builds result when judgement overrides initial classification.
+     */
+    private ClassificationResult buildOverriddenResult(JudgementResult judgement) {
+        return ClassificationResult.builder()
+                                   .name(judgement.getName())
+                                   .explanation(judgement.getExplanation())
+                                   .confidence(judgement.getConfidence())
+                                   .build();
     }
 }

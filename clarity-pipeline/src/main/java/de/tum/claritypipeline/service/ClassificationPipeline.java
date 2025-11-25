@@ -237,7 +237,50 @@ public class ClassificationPipeline {
                                         result.getElementId());
                                return null;
                            }
-                           return new String[]{result.getName(), qa.getClarityLabel()};
+                           String predictedLabel;
+                           if (properties.getTaxonomy().getMapping().isEnabled()) {
+                               Category category = properties.getTaxonomy().getCategories().stream()
+                                                             .filter(c ->
+                                                                             c.getName().equals(result.getName()))
+                                                             .findFirst()
+                                                             .orElse(null);
+                               if (category != null) {
+                                   predictedLabel = category.getMapTo();
+                               } else {
+                                   return null;
+                               }
+                           } else {
+                               predictedLabel = result.getName();
+                           }
+                           String expectedLabel = switch (properties.getTaxonomy().getMapping().isEnabled()
+                                   ? properties.getTaxonomy().getMapping().getLabelProperty().toLowerCase()
+                                   : properties.getTaxonomy().getLabelProperty().toLowerCase()) {
+                               case "claritylabel", "clarity-label", "clarity_label" -> qa.getClarityLabel();
+                               case "annotator1" -> qa.getAnnotator1();
+                               case "annotator2" -> qa.getAnnotator2();
+                               case "annotator3" -> qa.getAnnotator3();
+                               case "evasionlabel", "evasion-label", "evasion_label" -> {
+                                   if (qa.getEvasionLabel() != null && !qa.getEvasionLabel().isEmpty()) {
+                                       yield qa.getEvasionLabel();
+                                   }
+                                   if (result.getName().equals(qa.getAnnotator1())) {
+                                       yield qa.getAnnotator1();
+                                   }
+                                   if (result.getName().equals(qa.getAnnotator2())) {
+                                       yield qa.getAnnotator2();
+                                   }
+                                   if (result.getName().equals(qa.getAnnotator3())) {
+                                       yield qa.getAnnotator3();
+                                   }
+                                   yield qa.getAnnotator1();
+                               }
+                               default -> throw new RuntimeException("Label Property %s is not supported".formatted(
+                                       properties.getTaxonomy().getLabelProperty()));
+                           };
+                           if (predictedLabel != null && expectedLabel != null) {
+                               return new String[]{predictedLabel, expectedLabel};
+                           }
+                           return null;
                        })
                        .filter(Objects::nonNull)
                        .toList();
@@ -250,10 +293,15 @@ public class ClassificationPipeline {
                                                       .map(arr -> arr[1])
                                                       .toList();
 
-        List<String> labels = properties.getTaxonomy().getCategories()
-                                        .stream()
-                                        .map(Category::getName)
-                                        .toList();
+        List<String> labels;
+        if (properties.getTaxonomy().getMapping().isEnabled()) {
+            labels = properties.getTaxonomy().getMapping().getLabels();
+        } else {
+            labels = properties.getTaxonomy().getCategories()
+                               .stream()
+                               .map(Category::getName)
+                               .toList();
+        }
 
         ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
         log.info("Evaluation Results:");
@@ -353,11 +401,21 @@ public class ClassificationPipeline {
     private ClassificationRequest buildRequest(QA qa) {
         return ClassificationRequest.builder()
                                     .question(qa.getQuestion())
-                                    .context(qa.getInterviewQuestion() + "\n"
-                                                     + qa.getInterviewAnswer())
+                                    .context(buildContext(qa.getInterviewQuestion(),
+                                                          qa.getInterviewAnswer()))
                                     .taxonomy(properties.getTaxonomy())
                                     .answer(qa.getInterviewAnswer())
                                     .build();
+    }
+
+    private String buildContext(String interviewQuestion, String interviewAnswer) {
+        StringBuilder contextBuilder = new StringBuilder();
+        if (interviewQuestion.startsWith("Q. ")) {
+            interviewQuestion = interviewQuestion.substring(3);
+        }
+        contextBuilder.append("Interviewer: ").append(interviewQuestion).append("\n");
+        contextBuilder.append("Answer: ").append(interviewAnswer).append("\n");
+        return contextBuilder.toString();
     }
 
     /**

@@ -1,11 +1,34 @@
 name: "Clarity Category"
+label-property: "clarityLabel"
+
 categories:
   - name: "Clear Reply"
+    examples:
+      - question: Do you have your own views about PR at Westminster don’t you?
+        answer: I do.
+        explanation: The answer directly gives the info requested.
     description: |
       The information requested is explicitly stated (in the requested form)
   - name: "Ambivalent"
+    examples:
+      - question: Did you enjoy the film?
+        answer: The directing was great.
+        explanation: Directing is only part of what constitutes a film.
+      - question: Are you going to watch television?
+        answer: What else is there to do?
+        explanation: They suggest planning to watch TV, despite not explicitly stating it.
+      - question: Do you like my new dress?
+        answer: We are late.
+        explanation: Does not even acknowledge the question and goes straight to another topic.
+      - question: What’s your favorite film?
+        answer: Fight Club, Filth, and Hereditary.
+        explanation: The reply gives three movies instead of one, which makes the desired information unclear.
     description: |
       The information requested is given in an incomplete way e.g. the answer is too general, partial, implicit, dodging or deflection
   - name: "Clear Non-Reply"
+    examples:
+      - question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+        answer: I am not going to prophesy what will happen.
+        explanation: Directly stating they won’t answer.
     description: |
       The information requested is not given at all due to ignorance, need for clarification or declining to answer

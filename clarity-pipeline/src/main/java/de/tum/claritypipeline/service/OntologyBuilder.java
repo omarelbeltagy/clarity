@@ -9,10 +9,7 @@ import de.tum.claritypipeline.model.config.ClassificationProperties;
 import de.tum.claritypipeline.model.core.Category;
 import de.tum.claritypipeline.model.core.Cluster;
 import de.tum.claritypipeline.model.core.Taxonomy;
-import de.tum.claritypipeline.model.relation.BelongsTo;
-import de.tum.claritypipeline.model.relation.HasCategory;
-import de.tum.claritypipeline.model.relation.HasRun;
-import de.tum.claritypipeline.model.relation.HasTaxonomy;
+import de.tum.claritypipeline.model.relation.*;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -199,57 +196,109 @@ public class OntologyBuilder {
      */
     private synchronized void ensureTaxonomy(ClassificationProperties properties) {
         ensureTaxonomyRootNode(properties);
-        try {
-            String query = String.format("""
-                                                 MATCH (cs:%s)-[r:%s]->(n:%s)
-                                                 WHERE cs.name = '%s'
-                                                 RETURN n
-                                                 """,
-                                         Neo4jNode.getLabel(Taxonomy.class),
-                                         Neo4jRelation.getType(HasCategory.class),
-                                         Neo4jNode.getLabel(Category.class),
-                                         properties.getTaxonomy().getName()
-            );
-            List<Category> existingInGraph = client.executeQuery(query, Category.class);
-            List<Category> ontologyCategories = new ArrayList<>(List.copyOf(properties.getTaxonomy().getCategories()));
+        String query = String.format("""
+                                             MATCH (cs:%s)-[r:%s]->(n:%s)
+                                             WHERE cs.name = '%s'
+                                             RETURN n
+                                             """,
+                                     Neo4jNode.getLabel(Taxonomy.class),
+                                     Neo4jRelation.getType(HasCategory.class),
+                                     Neo4jNode.getLabel(Category.class),
+                                     properties.getTaxonomy().getName()
+        );
+        List<Category> existingInGraph = client.executeQuery(query, Category.class);
+        List<Category> ontologyCategories = new ArrayList<>(List.copyOf(properties.getTaxonomy().getCategories()));
 
-            for (Category node : existingInGraph) {
-                Category inOntologyFile = ontologyCategories.stream().filter(category -> category.getName()
-                                                                                                 .equals(node.getName()))
-                                                            .findFirst().orElse(null);
-                if (inOntologyFile != null) {
-                    if (!inOntologyFile.getDescription().equals(node.getDescription())) {
-                        log.info("Description was updated for category: {} from {} to  {}", node.getName(),
-                                 node.getDescription(), inOntologyFile.getDescription());
-                        node.setDescription(inOntologyFile.getDescription());
-                        client.updateNode(node);
-                    }
-                    properties.getTaxonomy().getCategories().stream()
-                              .filter(category -> category.getName().equals(node.getName()))
-                              .findFirst().ifPresent(category ->
-                                                             category.setElementId(node.getElementId()));
-                    log.info("Cached existing category node for {} with elementId {}", node.getName(),
-                             node.getElementId());
-                    ontologyCategories.remove(inOntologyFile);
+        if (properties.getTaxonomy().getMapping() != null) {
+            String mappingQuery = """
+                    MATCH(taxonomy:%s)-[:%s]->(n:%s)
+                    WHERE elementId(taxonomy) = $taxonomyId
+                    RETURN n
+                    """.formatted(
+                    Neo4jNode.getLabel(Taxonomy.class),
+                    Neo4jRelation.getType(HasMapping.class),
+                    Neo4jNode.getLabel(Taxonomy.Mapping.class)
+            );
+            Map<String, Object> params = Map.of("taxonomyId", properties.getTaxonomy().getElementId());
+            Taxonomy.Mapping mapping = client.executeQuery(mappingQuery, params,
+                                                           Taxonomy.Mapping.class).stream()
+                                             .findFirst().orElse(null);
+            if (mapping != null) {
+                log.info("Mapping node for Taxonomy already exists. Updating it.");
+                properties.getTaxonomy().getMapping().setElementId(mapping.getElementId());
+                client.updateNode(properties.getTaxonomy().getMapping());
+            } else {
+                log.info("Mapping node for Taxonomy is missing. Creating it.");
+                client.saveNode(properties.getTaxonomy().getMapping());
+                HasMapping hasMapping = new HasMapping();
+                hasMapping.setStartNodeId(properties.getTaxonomy().getElementId());
+                hasMapping.setEndNodeId(properties.getTaxonomy().getMapping().getElementId());
+                client.createRelation(hasMapping);
+            }
+        }
+
+        for (Category node : existingInGraph) {
+            Category inOntologyFile = ontologyCategories.stream().filter(category -> category.getName()
+                                                                                             .equals(node.getName()))
+                                                        .findFirst().orElse(null);
+            if (inOntologyFile != null) {
+                if (!inOntologyFile.getDescription().equals(node.getDescription())) {
+                    log.info("Description was updated for category: {} from {} to  {}", node.getName(),
+                             node.getDescription(), inOntologyFile.getDescription());
+                    node.setDescription(inOntologyFile.getDescription());
+                    client.updateNode(node);
+                }
+                properties.getTaxonomy().getCategories().stream()
+                          .filter(category -> category.getName().equals(node.getName()))
+                          .findFirst().ifPresent(category ->
+                                                         category.setElementId(node.getElementId()));
+                log.info("Cached existing category node for {} with elementId {}", node.getName(),
+                         node.getElementId());
+                ontologyCategories.remove(inOntologyFile);
+            }
+        }
+
+        for (Category missing : ontologyCategories) {
+            log.info("Category node {} is missing. Creating it.", missing.getName());
+            client.saveNode(missing);
+            properties.getTaxonomy().getCategories().stream()
+                      .filter(category -> category.getName().equals(missing.getName()))
+                      .findFirst().ifPresent(
+                              category -> category.setElementId(missing.getElementId())
+                      );
+            HasCategory hasCategory = new HasCategory();
+            hasCategory.setStartNodeId(properties.getTaxonomy().getElementId());
+            hasCategory.setEndNodeId(missing.getElementId());
+            client.createRelation(hasCategory);
+        }
+
+        for (Category category : properties.getTaxonomy().getCategories()) {
+            String exampleQuery = """
+                    MATCH(category:%s)-[:%s]->(n:%s)
+                    WHERE elementId(category) = $categoryId
+                    RETURN n
+                    """.formatted(
+                    Neo4jNode.getLabel(Category.class),
+                    Neo4jRelation.getType(HasExample.class),
+                    Neo4jNode.getLabel(Category.TaxonomyExample.class)
+            );
+            Map<String, Object> params = Map.of("categoryId", category.getElementId());
+            List<Category.TaxonomyExample> examples = client.executeQuery(exampleQuery, params,
+                                                                          Category.TaxonomyExample.class);
+            if (!examples.isEmpty()) {
+                log.info("Removing {} existing examples nodes for {}", examples.size(), category.getName());
+                examples.forEach(client::deleteNode);
+            }
+            if (category.getExamples() != null && !category.getExamples().isEmpty()) {
+                log.info("Creating {} example nodes for {}.", category.getExamples().size(), category.getName());
+                for (Category.TaxonomyExample example : category.getExamples()) {
+                    client.saveNode(example);
+                    HasExample hasExample = new HasExample();
+                    hasExample.setStartNodeId(category.getElementId());
+                    hasExample.setEndNodeId(example.getElementId());
+                    client.createRelation(hasExample);
                 }
             }
-
-            for (Category missing : ontologyCategories) {
-                log.info("Category node {} is missing. Creating it.", missing.getName());
-                client.saveNode(missing);
-                properties.getTaxonomy().getCategories().stream()
-                          .filter(category -> category.getName().equals(missing.getName()))
-                          .findFirst().ifPresent(
-                                  category -> category.setElementId(missing.getElementId())
-                          );
-                HasCategory hasCategory = new HasCategory();
-                hasCategory.setStartNodeId(properties.getTaxonomy().getElementId());
-                hasCategory.setEndNodeId(missing.getElementId());
-                client.createRelation(hasCategory);
-            }
-        } catch (Exception e) {
-            log.error("Error while creating classification category nodes for {}", properties.getName(), e);
-            throw new RuntimeException(e);
         }
     }
 

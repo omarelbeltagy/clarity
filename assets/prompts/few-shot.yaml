@@ -10,35 +10,7 @@ prompt: |
   
   Here is one small example for each term of the taxonomy:
   
-  Question: Do you have your own views about PR at Westminster don’t you?
-  Answer: I do.
-  Label: Clear Reply
-  Explanation: The answer directly gives the info requested.
-  
-  Question: Are you going to watch television?
-  Answer: What else is there to do?
-  Label: Ambivalent
-  Explanation: They suggest planning to watch TV, despite not explicitly stating it.
-  
-  Question: Do you like my new dress?
-  Answer: We are late.
-  Label: Ambivalent
-  Explanation: Does not even acknowledge the question and goes straight to another topic.
-  
-  Question: Did you enjoy the film?
-  Answer: The directing was great.
-  Label: Ambivalent
-  Explanation: Directing is only part of what constitutes a film.
-  
-  Question: What’s your favorite film?
-  Answer: Fight Club, Filth, and Hereditary.
-  Label: Ambivalent
-  Explanation: The reply gives three movies instead of one, which makes the desired information unclear.
-  
-  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
-  Answer: I am not going to prophesy what will happen.
-  Label: Clear Non-Reply
-  Explanation: Directly stating they won’t answer.
+  {examples}
   
   ---
   Here is the segment of the interview that you should analyze:
