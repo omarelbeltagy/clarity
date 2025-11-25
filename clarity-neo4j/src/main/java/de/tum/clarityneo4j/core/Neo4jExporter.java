@@ -8,11 +8,7 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.slf4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +20,14 @@ import java.util.stream.Collectors;
  * as well as to clear the database.
  */
 public class Neo4jExporter {
-    private final Logger log = org.slf4j.LoggerFactory.getLogger(Neo4jExporter.class);
-
-    private final Driver driver;
-
     private static final int RELATIONSHIPS_BATCH_SIZE = 1000;
     private static final int NODES_BATCH_SIZE = 1000;
+
+    private static final int READ_BATCH_SIZE = 10000;
+    private static final int RELATIONSHIPS_BATCH_SIZE_EXPORT = 5000;
+    private static final int NODES_BATCH_SIZE_EXPORT = 5000;
+    private final Driver driver;
+    private final Logger log = org.slf4j.LoggerFactory.getLogger(Neo4jExporter.class);
 
     /**
      * Constructs a Neo4jExporter using default credentials.
@@ -68,16 +66,100 @@ public class Neo4jExporter {
      * @throws IOException if writing to the file fails
      */
     public void exportAsJson(String outputFile) throws IOException {
-        try (Session session = driver.session()) {
-            Result result = session.run(
-                    "CALL apoc.export.json.all(null, {stream:true}) YIELD data RETURN data"
-            );
-            StringBuilder sb = new StringBuilder();
-            while (result.hasNext()) {
-                Record record = result.next();
-                sb.append(record.get("data").asString());
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+
+            try (Session session = driver.session()) {
+                long totalNodes = session.run("MATCH (n) RETURN count(n) as count")
+                                         .single().get("count").asLong();
+
+                log.info("Starting export of {} nodes.", totalNodes);
+                Duration startDurationExport = Duration.ofMillis(System.currentTimeMillis());
+
+                exportNodesInBatches(session, writer, totalNodes);
+                Duration endDurationExport = Duration.ofMillis(System.currentTimeMillis()).minus(startDurationExport);
+                log.info("Node export completed in {} ms.", endDurationExport.toMillis());
+
+                long totalRels = session.run("MATCH ()-[r]->() RETURN count(r) as count")
+                                        .single().get("count").asLong();
+
+                log.info("Starting export of {} relationships.", totalRels);
+                startDurationExport = Duration.ofMillis(System.currentTimeMillis());
+
+                exportRelationshipsInBatches(session, writer, totalRels);
+
+                endDurationExport = Duration.ofMillis(System.currentTimeMillis()).minus(startDurationExport);
+                log.info("Relationship export completed in {} ms.", endDurationExport.toMillis());
+
+                log.info("Export completed in {} ms.",
+                         Duration.ofMillis(System.currentTimeMillis()).minus(startDurationExport).toMillis());
+
             }
-            Files.write(Paths.get(outputFile), sb.toString().getBytes());
+        }
+    }
+
+    private void exportNodesInBatches(
+            Session session, BufferedWriter writer,
+            long totalNodes
+    ) throws IOException {
+        long processed = 0;
+
+        while (processed < totalNodes) {
+            Result result = session.run(
+                    "MATCH (n) " +
+                            "WITH n " +
+                            "SKIP $skip LIMIT $limit " +
+                            "CALL apoc.export.json.data([n], [], null, {stream: true}) " +
+                            "YIELD data " +
+                            "RETURN data",
+                    Map.of("skip", processed, "limit", NODES_BATCH_SIZE_EXPORT)
+            );
+
+            while (result.hasNext()) {
+                String data = result.next().get("data").asString().trim();
+                if (!data.isEmpty()) {
+                    writer.write(data);
+                    writer.newLine();
+                }
+            }
+
+            processed += NODES_BATCH_SIZE_EXPORT;
+            if (processed > totalNodes) {
+                processed = totalNodes;
+            }
+            log.info("Nodes: {} / {}", processed, totalNodes);
+        }
+    }
+
+    private void exportRelationshipsInBatches(
+            Session session, BufferedWriter writer,
+            long totalRels
+    ) throws IOException {
+        long processed = 0;
+
+        while (processed < totalRels) {
+            Result result = session.run(
+                    "MATCH ()-[r]->() " +
+                            "WITH r " +
+                            "SKIP $skip LIMIT $limit " +
+                            "CALL apoc.export.json.data([], [r], null, {stream: true}) " +
+                            "YIELD data " +
+                            "RETURN data",
+                    Map.of("skip", processed, "limit", RELATIONSHIPS_BATCH_SIZE_EXPORT)
+            );
+
+            while (result.hasNext()) {
+                String data = result.next().get("data").asString().trim();
+                if (!data.isEmpty()) {
+                    writer.write(data);
+                    writer.newLine();
+                }
+            }
+
+            processed += RELATIONSHIPS_BATCH_SIZE_EXPORT;
+            if (processed > totalRels) {
+                processed = totalRels;
+            }
+            log.info("Relationships: {} / {}", processed, totalRels);
         }
     }
 
@@ -103,65 +185,85 @@ public class Neo4jExporter {
      */
     public void importFromJson(String inputFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-
         log.info("Reading JSON data from file: {}", inputFile);
 
         Duration durationStart = Duration.ofMillis(System.currentTimeMillis());
 
-        int lineCount = 0;
-        List<JsonNode> nodeBatch = new ArrayList<>();
-        List<JsonNode> relationshipBatch = new ArrayList<>();
+        int totalNodes = 0;
+        int totalRelationships = 0;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile), 1024 * 1024)) {
             String line;
+            List<JsonNode> nodeBatch = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
                 if (line.isBlank()) continue;
-                lineCount++;
+
                 JsonNode node = mapper.readTree(line);
                 if (!node.has("properties") || node.get("properties").isNull()) {
                     ((ObjectNode) node).set("properties", mapper.createObjectNode());
                 }
+
                 if ("node".equals(node.get("type").asText())) {
-                    nodeBatch.add(node);
                     Object id = node.get("id").asLong();
                     ((ObjectNode) node.get("properties")).put("tempId", id.toString());
-                } else if ("relationship".equals(node.get("type").asText())) {
+                    nodeBatch.add(node);
+
+                    if (nodeBatch.size() >= READ_BATCH_SIZE) {
+                        Record record = importNodeBatch(nodeBatch, mapper);
+                        totalNodes += record.get("total").asInt();
+                        nodeBatch.clear();
+                        log.info("Imported {} nodes so far...", totalNodes);
+                    }
+                }
+            }
+
+            if (!nodeBatch.isEmpty()) {
+                Record record = importNodeBatch(nodeBatch, mapper);
+                totalNodes += record.get("total").asInt();
+            }
+        }
+
+        log.info("Node import completed. Total nodes: {}", totalNodes);
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile), 1024 * 1024)) {
+            String line;
+            List<JsonNode> relationshipBatch = new ArrayList<>();
+
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) continue;
+
+                JsonNode node = mapper.readTree(line);
+
+                if ("relationship".equals(node.get("type").asText())) {
                     Object startId = node.get("start").get("id").asLong();
                     Object endId = node.get("end").get("id").asLong();
                     ((ObjectNode) node).put("start", startId.toString());
                     ((ObjectNode) node).put("end", endId.toString());
                     relationshipBatch.add(node);
+
+                    if (relationshipBatch.size() >= READ_BATCH_SIZE) {
+                        Record record = importRelationshipBatch(relationshipBatch, mapper);
+                        totalRelationships += record.get("total").asInt();
+                        relationshipBatch.clear();
+                        log.info("Imported {} relationships so far...", totalRelationships);
+                    }
                 }
             }
+
+            if (!relationshipBatch.isEmpty()) {
+                Record record = importRelationshipBatch(relationshipBatch, mapper);
+                totalRelationships += record.get("total").asInt();
+            }
         }
-        Duration readDuration = Duration.ofMillis(System.currentTimeMillis()).minus(durationStart);
 
-        log.info("Total lines read: {} in {} ms.", lineCount, readDuration.toMillis());
-
-        log.info("Importing {} nodes with batch size {}.", nodeBatch.size(), NODES_BATCH_SIZE);
-
-        Record nodesRecord = importNodeBatch(nodeBatch, mapper);
-        Duration nodeImportDuration = Duration.ofMillis(System.currentTimeMillis()).minus(durationStart)
-                                              .minus(readDuration);
-        log.info("Node import completed in {} ms.", nodeImportDuration.toMillis());
-
-        log.info("Importing {} relationships with batch size {}.", relationshipBatch.size(),
-                 RELATIONSHIPS_BATCH_SIZE);
-
-        Record relationshipsRecord = importRelationshipBatch(relationshipBatch, mapper);
-        Duration relImportDuration = Duration.ofMillis(System.currentTimeMillis()).minus(durationStart)
-                                             .minus(readDuration).minus(nodeImportDuration);
-        log.info("Relationship import completed in {} ms.", relImportDuration.toMillis());
-
-        log.info("Imported {} nodes and {} relationships.", nodesRecord.get("total").asInt(),
-                 relationshipsRecord.get("total").asInt()); ;
+        log.info("Relationship import completed. Total relationships: {}", totalRelationships);
 
         Record removeTempIdsRecord = removeTempIds();
-        Duration cleanupDuration = Duration.ofMillis(System.currentTimeMillis()).minus(durationStart)
-                                           .minus(readDuration).minus(nodeImportDuration).minus(relImportDuration);
-        log.info("Removed temporary IDs from {} nodes in {} ms.", removeTempIdsRecord.get("nodesUpdated").asInt(),
-                 cleanupDuration.toMillis());
+        log.info("Removed temporary IDs from {} nodes.", removeTempIdsRecord.get("nodesUpdated").asInt());
+
+        Duration durationEnd = Duration.ofMillis(System.currentTimeMillis()).minus(durationStart);
+        log.info("Import completed in {} ms.", durationEnd.toMillis());
     }
 
     /**
