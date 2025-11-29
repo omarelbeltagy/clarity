@@ -1,5 +1,6 @@
 package de.tum.clarityneo4j.core;
 
+import de.tum.clarityneo4j.annotations.Neo4jProperty;
 import de.tum.clarityneo4j.annotations.Relation;
 import lombok.Getter;
 import lombok.Setter;
@@ -61,7 +62,7 @@ public abstract class Neo4jRelation {
             instance.setEndNodeId(rel.endNodeElementId());
 
             for (Field f : getMappableFields(clazz)) {
-                String key = f.getName();
+                String key = resolvePropertyName(f);
                 if (rel.containsKey(key)) {
                     Object val = convertValue(rel.get(key), f.getType());
                     setFieldValue(instance, f, val);
@@ -107,6 +108,9 @@ public abstract class Neo4jRelation {
         if (target == long.class || target == Long.class) return val.asLong();
         if (target == double.class || target == Double.class) return val.asDouble();
         if (target == boolean.class || target == Boolean.class) return val.asBoolean();
+        if (target.isEnum()) {
+            return convertToEnum(val, (Class<? extends Enum>) target);
+        }
 
         if (target.isArray()) {
             Class<?> componentType = target.getComponentType();
@@ -123,6 +127,19 @@ public abstract class Neo4jRelation {
         }
 
         return val.asObject();
+    }
+
+    private static <E extends Enum<E>> E convertToEnum(Value val, Class<E> enumClass) {
+        if (val.isNull()) return null;
+
+        try {
+            String strValue = val.asString();
+            return Enum.valueOf(enumClass, strValue);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Failed to convert value '" + val + "' to enum " + enumClass.getName(), e
+            );
+        }
     }
 
     /**
@@ -165,6 +182,11 @@ public abstract class Neo4jRelation {
         return ann != null ? ann.direction() : Relation.Direction.OUTGOING;
     }
 
+    private static String resolvePropertyName(Field f) {
+        Neo4jProperty ann = f.getAnnotation(Neo4jProperty.class);
+        return ann != null ? ann.value() : f.getName();
+    }
+
     /**
      * Returns properties as a Map suitable for use as Cypher parameters.
      * This is the SAFE way to pass properties to Neo4j.
@@ -174,7 +196,12 @@ public abstract class Neo4jRelation {
         for (Field f : getMappableFields(this.getClass())) {
             Object value = getFieldValue(this, f);
             if (value != null) {
-                map.put(f.getName(), value);
+                String key = resolvePropertyName(f);
+                if (value instanceof Enum) {
+                    map.put(key, value.toString());
+                } else {
+                    map.put(key, value);
+                }
             }
         }
         return map;
@@ -284,6 +311,10 @@ public abstract class Neo4jRelation {
     @Deprecated
     private String toLiteral(Object v) {
         if (v == null) return "null";
+        if (v instanceof Enum<?> enumValue) {
+            String escaped = enumValue.name().replace("\\", "\\\\").replace("'", "\\'");
+            return "'" + escaped + "'";
+        }
         if (v instanceof Number || v instanceof Boolean) return v.toString();
         if (v instanceof Collection<?> col) {
             StringBuilder sb = new StringBuilder("[");

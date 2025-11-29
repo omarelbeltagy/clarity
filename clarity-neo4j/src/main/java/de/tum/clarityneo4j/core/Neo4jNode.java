@@ -101,6 +101,9 @@ public abstract class Neo4jNode implements Serializable {
         if (target == Long.class || target == long.class) return neo4jValue.asLong();
         if (target == Double.class || target == double.class) return neo4jValue.asDouble();
         if (target == Boolean.class || target == boolean.class) return neo4jValue.asBoolean();
+        if (target.isEnum()) {
+            return convertToEnum(neo4jValue, (Class<? extends Enum>) target);
+        }
 
         if (target.isArray()) {
             Class<?> componentType = target.getComponentType();
@@ -117,6 +120,18 @@ public abstract class Neo4jNode implements Serializable {
         }
 
         return neo4jValue.asObject();
+    }
+
+    private static <E extends Enum<E>> E convertToEnum(Value neo4jValue, Class<E> enumClass) {
+        if (neo4jValue.isNull()) return null;
+        try {
+            String strValue = neo4jValue.asString();
+            return Enum.valueOf(enumClass, strValue);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Failed to convert value '" + neo4jValue + "' to enum " + enumClass.getName(), e
+            );
+        }
     }
 
     private static Object getFieldValueQuiet(Object obj, Field f) {
@@ -151,7 +166,11 @@ public abstract class Neo4jNode implements Serializable {
             Object val = getFieldValueQuiet(this, f);
             if (val != null) {
                 String key = resolvePropertyName(f);
-                map.put(key, val);
+                if (val instanceof Enum) {
+                    map.put(key, val.toString());
+                } else {
+                    map.put(key, val);
+                }
             }
         }
         return map;
@@ -251,6 +270,9 @@ public abstract class Neo4jNode implements Serializable {
     @Deprecated
     protected String toCypherLiteral(Object v) {
         if (v == null) return "";
+        if (v instanceof Enum<?> enumValue) {
+            return "'" + enumValue.name().replace("\\", "\\\\").replace("'", "\\'") + "'";
+        }
         if (v instanceof Number || v instanceof Boolean) return String.valueOf(v);
         if (v instanceof Collection<?> col) {
             StringBuilder sb = new StringBuilder("[");
