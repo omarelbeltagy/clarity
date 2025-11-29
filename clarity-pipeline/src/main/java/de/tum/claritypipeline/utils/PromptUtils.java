@@ -2,27 +2,25 @@ package de.tum.claritypipeline.utils;
 
 import de.tum.clarityneo4j.model.Neo4jEmbeddingSearchResult;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
-import de.tum.claritypipeline.model.config.RaqProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
-import de.tum.claritypipeline.model.core.Category;
+import de.tum.claritypipeline.model.config.GlobalConfig;
+import de.tum.claritypipeline.model.config.ModelProperties;
 import de.tum.claritypipeline.model.core.QA;
 import de.tum.claritypipeline.model.core.Taxonomy;
-import de.tum.claritypipeline.service.EmbeddingService;
-import de.tum.clarityutils.JsonScheme;
-import jdk.jfr.Description;
 
+import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
 public class PromptUtils {
-    private static final String PLACEHOLDER_QUESTION = "{question}";
     private static final String PLACEHOLDER_CONTEXT = "{context}";
     private static final String PLACEHOLDER_ONTOLOGY = "{ontology}";
     private static final String PLACEHOLDER_TAXONOMY = "{taxonomy}";
-    private static final String PLACEHOLDER_RAQ_EXAMPLES = "{raq_examples}";
     private static final String PLACEHOLDER_EXAMPLES = "{examples}";
 
     private static final String TEXT_FORMAT_SUFFIX = """
@@ -34,97 +32,64 @@ public class PromptUtils {
 
     private static final String JSON_FORMAT_TEMPLATE = """
             
-            ---
-            
-            Respond ONLY with valid minified JSON that strictly follows this schema. Do not include any text, comments, explanations, or markdown.
+            **Output**
+            Respond with a JSON that strictly follows this schema:
             %s
             """;
 
-    @Description("Experimental. Not generic.")
-    private static String injectExamplesWithRaq(
-            String prompt, RaqProperties raqProperties, ClassificationRequest request) {
-        if (prompt == null || raqProperties == null) {
-            throw new IllegalArgumentException("Arguments must not be null");
+    private static String buildRaqExampleString(QA qa, Taxonomy taxonomy) {
+        try {
+            Field field = qa.getClass().getDeclaredField(
+                    taxonomy.getLabelProperty());
+            field.setAccessible(true);
+            Object value = field.get(qa);
+            String label = value.toString();
+            StringBuilder sb = new StringBuilder();
+            sb.append("Question: ").append(qa.getQuestion()).append("\n");
+            sb.append("Answer: ").append(qa.getInterviewAnswer()).append("\n");
+            sb.append("Label: ").append(label).append("\n");
+            return sb.toString();
+        } catch (NoSuchFieldException |
+                 IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
-        if (!raqProperties.isEnabled()) {
-            return prompt;
-        }
-        EmbeddingService service = EmbeddingService.getInstance();
-        double[] requestEmbedding;
-        switch (raqProperties.getEmbeddingIndex()) {
-            case QA_ANSWER -> requestEmbedding = service.generateEmbeddings(request.getAnswer());
-            case QA_QUESTION -> requestEmbedding = service.generateEmbeddings(request.getQuestion());
-            case QA_QUESTION_AND_ANSWER ->
-                    requestEmbedding = service.generateEmbeddings(request.getQuestion() + "\n" + request.getAnswer());
-            default -> throw new IllegalArgumentException(
-                    "Unsupported embedding index: " + raqProperties.getEmbeddingIndex());
-        }
-        List<Neo4jEmbeddingSearchResult<QA>> similarExamples = service.searchSimilar(
-                raqProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 128,
-                QA.class);
-
-        similarExamples = similarExamples.stream()
-                                         .collect(Collectors.groupingBy(
-                                                 result -> result.getNode().getClarityLabel(),
-                                                 LinkedHashMap::new,
-                                                 Collectors.toList()
-                                         ))
-                                         .values().stream()
-                                         .flatMap(list -> list.stream().limit(raqProperties.getK()))
-                                         .toList();
-
-
-        String examplesString = similarExamples.stream()
-                                               .map(Neo4jEmbeddingSearchResult::getNode)
-                                               .map(PromptUtils::buildRaqExampleString)
-                                               .collect(Collectors.joining("\n"));
-
-        return prompt.replace(PLACEHOLDER_RAQ_EXAMPLES, examplesString);
     }
 
-    private static String buildRaqExampleString(QA qa) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Question: ").append(qa.getQuestion()).append("\n");
-        sb.append("Answer: ").append(qa.getInterviewAnswer()).append("\n");
-        sb.append("Label: ").append(qa.getClarityLabel()).append("\n");
-        return sb.toString();
-    }
-
-    public static <T> String replacePrompt(
+    public static String replacePrompt(
             ClassificationRequest classificationRequest,
-            String prompt,
-            ResponseFormat responseFormat,
-            boolean injectResponseFormat,
-            Taxonomy taxonomy,
-            RaqProperties raqProperties,
-            Class<T> resultClass
+            ModelProperties modelProperties,
+            String jsonScheme
     ) {
-        if (prompt == null || classificationRequest == null) {
-            throw new IllegalArgumentException("Arguments must not be null");
+        if (modelProperties == null || classificationRequest == null) {
+            throw new IllegalArgumentException("Arguments must not be null.");
+        }
+        if (modelProperties.getPrompt() == null || modelProperties.getPrompt().isEmpty()) {
+            throw new IllegalArgumentException("Prompt is not set.");
+        }
+        if (classificationRequest.getTaxonomy() == null || classificationRequest.getTaxonomy().getCategories()
+                                                                                .isEmpty()) {
+            throw new IllegalArgumentException("Taxonomy is empty.");
         }
 
-        String ontology = buildOntologyString(taxonomy.getCategories());
-        prompt = replacePlaceholders(prompt, classificationRequest, ontology);
-        if (injectResponseFormat) {
-            prompt = appendResponseFormatInstructions(prompt, responseFormat, resultClass);
-        }
-        if (raqProperties.isEnabled()) {
-            prompt = injectExamplesWithRaq(prompt, raqProperties, classificationRequest);
+        String prompt = replacePlaceholders(modelProperties.getPrompt(), modelProperties.getRagProperties(),
+                                            classificationRequest);
+        if (modelProperties.isInjectResponseFormat()) {
+            prompt = appendResponseFormatInstructions(prompt, modelProperties.getResponseFormat(), jsonScheme);
         }
         return prompt;
     }
 
-    private static String buildOntologyString(List<Category> categories) {
+    private static String buildOntologyString(List<Taxonomy.Category> categories) {
         return IntStream.range(0, categories.size())
                         .mapToObj(i -> formatCategory(i + 1, categories.get(i)))
                         .collect(Collectors.joining());
     }
 
-    private static String buildExamplesString(List<Category> categories) {
+    private static String buildExamplesString(List<Taxonomy.Category> categories) {
         StringBuilder sb = new StringBuilder();
-        for (Category category : categories) {
+        for (Taxonomy.Category category : categories) {
             if (category.getExamples() != null) {
-                for (Category.TaxonomyExample example : category.getExamples()) {
+                for (Taxonomy.Category.TaxonomyExample example : category.getExamples()) {
                     sb.append("Question: ").append(example.getQuestion()).append("\n");
                     sb.append("Answer: ").append(example.getAnswer()).append("\n");
                     sb.append("Label: ").append(category.getName()).append("\n");
@@ -135,32 +100,120 @@ public class PromptUtils {
         return sb.toString();
     }
 
-    private static String formatCategory(int index, Category category) {
+    private static String formatCategory(int index, Taxonomy.Category category) {
         return String.format("%d. %s - %s", index, category.getName(), category.getDescription());
     }
 
     private static String replacePlaceholders(
             String prompt,
-            ClassificationRequest request,
-            String ontology
+            ModelProperties.RagProperties ragProperties,
+            ClassificationRequest request
     ) {
-        return prompt
-                .replace(PLACEHOLDER_QUESTION, request.getQuestion())
-                .replace(PLACEHOLDER_CONTEXT, request.getContext())
-                .replace(PLACEHOLDER_ONTOLOGY, ontology)
-                .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()))
-                .replace(PLACEHOLDER_TAXONOMY, ontology);
+        prompt = prompt
+                .replace(PLACEHOLDER_CONTEXT,
+                         buildContext(request.getQa().getInterviewQuestion(), request.getQa().getInterviewAnswer()))
+                .replace(PLACEHOLDER_ONTOLOGY, buildOntologyString(request.getTaxonomy().getCategories()))
+                .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()));
+        if (ragProperties != null && ragProperties.isEnabled()) {
+            prompt = prompt
+                    .replace(PLACEHOLDER_EXAMPLES, buildRagExamples(prompt, ragProperties, request));
+        } else {
+            prompt = prompt
+                    .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()));
+        }
+        prompt = replacePlaceholdersDynamic(prompt, request.getQa());
+        return prompt;
     }
+
+    private static String buildRagExamples(
+            String prompt, ModelProperties.RagProperties ragProperties, ClassificationRequest request) {
+        if (prompt == null || ragProperties == null) {
+            throw new IllegalArgumentException("Arguments must not be null");
+        }
+        if (!ragProperties.isEnabled()) {
+            return prompt;
+        }
+        double[] requestEmbedding = switch (ragProperties.getEmbeddingIndex()) {
+            case QA_ANSWER -> request.getQa().getAnswerEmbedding();
+            case QA_QUESTION -> request.getQa().getQuestionEmbedding();
+            case QA_QUESTION_AND_ANSWER -> request.getQa().getQuestionAnswerEmbedding();
+        };
+        List<Neo4jEmbeddingSearchResult<QA>> similarExamples = GlobalConfig.NEO4J_CLIENT.similaritySearch(
+                ragProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 256, QA.class);
+        similarExamples = similarExamples.stream()
+                                         .filter(example -> !example.getNode().isTest())
+                                         .collect(Collectors.groupingBy(
+                                                 r -> {
+                                                     try {
+                                                         Field field = r.getNode().getClass().getDeclaredField(
+                                                                 request.getTaxonomy().getLabelProperty());
+                                                         field.setAccessible(true);
+                                                         Object value = field.get(r.getNode());
+                                                         return value.toString();
+                                                     } catch (NoSuchFieldException |
+                                                              IllegalAccessException e) {
+                                                         throw new RuntimeException(e);
+                                                     }
+                                                 },
+                                                 LinkedHashMap::new,
+                                                 Collectors.toList()
+                                         ))
+                                         .values().stream()
+                                         .flatMap(list -> list.stream()
+                                                              .limit(ragProperties.getK()))
+                                         .filter(Objects::nonNull)
+                                         .toList();
+
+
+        return similarExamples.stream()
+                              .map(Neo4jEmbeddingSearchResult::getNode)
+                              .map(qa -> buildRaqExampleString(qa, request.getTaxonomy()))
+                              .collect(Collectors.joining("\n"));
+    }
+
+    private static String buildContext(String interviewQuestion, String interviewAnswer) {
+        StringBuilder contextBuilder = new StringBuilder();
+        if (interviewQuestion.startsWith("Q. ")) {
+            interviewQuestion = interviewQuestion.substring(3);
+        }
+        contextBuilder.append("Interviewer: ").append(interviewQuestion).append("\n");
+        contextBuilder.append("Answer: ").append(interviewAnswer).append("\n");
+        return contextBuilder.toString();
+    }
+
+    public static String replacePlaceholdersDynamic(String text, QA qa) {
+        Pattern p = Pattern.compile("\\{([^}]+)}");
+        Matcher m = p.matcher(text);
+
+        StringBuilder out = new StringBuilder();
+
+        while (m.find()) {
+            String name = m.group(1);
+            Object value = getFieldValue(qa, name);
+            String replacement = value != null ? value.toString() : m.group(0);
+            m.appendReplacement(out, Matcher.quoteReplacement(replacement));
+        }
+
+        m.appendTail(out);
+        return out.toString();
+    }
+
+    private static Object getFieldValue(Object obj, String fieldName) {
+        try {
+            Field f = obj.getClass().getDeclaredField(fieldName);
+            f.setAccessible(true);
+            return f.get(obj);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            return null;
+        }
+    }
+
 
     private static <T> String appendResponseFormatInstructions(
-            String prompt, ResponseFormat format, Class<T> resultClass) {
+            String prompt, ModelProperties.ResponseFormat format, String jsonScheme) {
         return switch (format) {
             case TEXT -> prompt + TEXT_FORMAT_SUFFIX;
-            case JSON_OBJECT -> prompt + JSON_FORMAT_TEMPLATE.formatted(getJsonSchema(resultClass));
+            case JSON_OBJECT -> prompt + JSON_FORMAT_TEMPLATE.formatted(jsonScheme);
         };
-    }
-
-    private static <T> String getJsonSchema(Class<T> resultClass) {
-        return new JsonScheme<>(resultClass).getPropertiesString();
     }
 }

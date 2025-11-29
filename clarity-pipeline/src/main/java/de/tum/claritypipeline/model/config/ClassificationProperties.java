@@ -14,12 +14,11 @@ import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
-import de.tum.claritypipeline.model.classification.Classification;
-import de.tum.claritypipeline.model.core.Cluster;
 import de.tum.claritypipeline.model.core.Taxonomy;
-import de.tum.claritypipeline.model.evaluation.Evaluation;
+import de.tum.claritypipeline.model.relation.HasClassificationStrategy;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
-import de.tum.claritypipeline.service.EmbeddingService;
+import de.tum.claritypipeline.model.relation.HasTaxonomy;
+import de.tum.claritypipeline.model.relation.IsPartOf;
 import de.tum.claritypipeline.strategy.ClassificationStrategy;
 import de.tum.clarityutils.AfterDeserialization;
 import de.tum.clarityutils.JacksonUtils;
@@ -31,6 +30,7 @@ import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents the configuration and runtime properties for a classification task.
@@ -45,8 +45,6 @@ import java.util.List;
  * <p>The class extends {@link Neo4jNode} and is annotated with {@link Node} for Neo4j mapping.
  */
 @Node(label = "ClassificationProperties")
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
 public class ClassificationProperties extends Neo4jNode implements Serializable {
@@ -56,8 +54,9 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
      *
      * <p>This is a required field and used to identify the classification run.
      */
-    @JsonProperty("name")
+    @JsonProperty(value = "name", index = 4)
     @JsonPropertyDescription("The name of the classification task.")
+    @Setter(AccessLevel.NONE)
     private String name;
 
     /**
@@ -79,15 +78,15 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     private String query;
 
     /**
-     * File path to the Neo4j credentials YAML file.
+     * The Neo4j Credentials
      *
-     * <p>Not persisted on the Neo4j node; used to load {@link #neo4jCredentials} at runtime.
+     * <p>Not persisted on the Neo4j node.
      */
-    @JsonProperty("neo4j-credentials")
-    @JsonPropertyDescription("The file path to the Neo4j credentials YAML file.")
-    @Getter(AccessLevel.NONE)
+    @JsonProperty(value = "neo4j-credentials", index = 0)
+    @JsonPropertyDescription("The neo4j credentials configuration.")
     @Neo4jIgnore
-    private String neo4jCredentialsFile;
+    @Setter(AccessLevel.NONE)
+    private Neo4jCredentials neo4jCredentials = Neo4jCredentials.getDefault();
 
     /**
      * Number of worker threads to use for parallel classification.
@@ -104,7 +103,7 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
      *
      * <p>Defines how the classification is performed (e.g., zero-shot, few-shot).
      */
-    @JsonProperty("strategy")
+    @JsonProperty(value = "strategy", index = 1)
     @JsonPropertyDescription("The classification strategy to use for this classification run.")
     @Neo4jIgnore
     private ClassificationStrategy strategy;
@@ -119,51 +118,19 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     private int attempts = 5;
 
     /**
-     * The name of the cluster to which this classification run belongs.
-     *
-     * <p>Used for organizing multiple classification runs under a common cluster.
-     */
-    @JsonProperty("cluster")
-    @JsonPropertyDescription("The cluster name for organizing classification runs.")
-    @Neo4jIgnore
-    @Getter(AccessLevel.NONE)
-    private String clusterName;
-
-    /**
-     * The embedding model to use for generating embeddings.
-     *
-     * <p>Default is "text-embedding-3-small".
-     */
-    @JsonProperty("embedding-model")
-    @JsonPropertyDescription("The embedding model to use for generating embeddings if it is used for the strategy.")
-    private String embeddingModel = "text-embedding-3-small";
-
-    /**
      * File path to the taxonomy YAML file used for mapping or validating labels.
-     *
-     * <p>Loaded at initialization into {@link #taxonomy}.
      */
-    @JsonProperty("taxonomy")
-    @JsonPropertyDescription("The file path to the taxonomy YAML file used for classification.")
+    @JsonProperty(value = "taxonomy", index = 2)
+    @JsonPropertyDescription("The taxonomy used for classification.")
     @Setter(AccessLevel.NONE)
-    @Getter(AccessLevel.NONE)
     @Neo4jIgnore
-    private String taxonomyFile;
+    private Taxonomy taxonomy;
 
-    /**
-     * Timestamp when this properties instance was created/loaded.
-     *
-     * <p>Stored as ISO-8601 string; initialized to current UTC time by default.
-     */
     @JsonIgnore
-    private String timestamp = String.valueOf(OffsetDateTime.now(ZoneOffset.UTC));
+    private String firstStartedAt = String.valueOf(OffsetDateTime.now(ZoneOffset.UTC));
 
-    /**
-     * Neo4j credentials object loaded from {@link #neo4jCredentialsFile} or defaults.
-     */
     @JsonIgnore
-    @Neo4jIgnore
-    private Neo4jCredentials neo4jCredentials;
+    private String lastStartedAt = String.valueOf(OffsetDateTime.now(ZoneOffset.UTC));
 
     /**
      * A {@link Classification} node instance used to group or identify this run in Neo4j.
@@ -175,22 +142,6 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     private Classification classification;
 
     /**
-     * The cluster information of the classification to organize multiple Classification runs.
-     *
-     * <p>Loaded from {@link #neo4jCredentials} at initialization.
-     */
-    @JsonIgnore
-    @Neo4jIgnore
-    private Cluster cluster;
-
-    /**
-     * The taxonomy loaded from {@link #taxonomyFile} used for mapping labels.
-     */
-    @JsonIgnore
-    @Neo4jIgnore
-    private Taxonomy taxonomy;
-
-    /**
      * The associated {@link Evaluation} node linked via a HasEvaluation relationship.
      *
      * <p>Loaded on-demand from Neo4j.
@@ -198,6 +149,32 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     @JsonIgnore
     @Neo4jIgnore
     private Evaluation evaluation;
+
+    public ClassificationProperties() throws IOException {}
+
+    private void createNode() {
+        Map<String, Object> props = Map.of("name", name, "version", version);
+        ClassificationProperties existingNode = GlobalConfig.NEO4J_CLIENT.findNode(props,
+                                                                                   ClassificationProperties.class);
+
+        if (existingNode == null) {
+            GlobalConfig.NEO4J_CLIENT.saveNode(this);
+            createRelationIfNeeded(classification, IsPartOf.builder().build());
+            createRelationIfNeeded(taxonomy, HasTaxonomy.builder().build());
+            createRelationIfNeeded(strategy.getClassificationStrategyNode(),
+                                   HasClassificationStrategy.builder().build());
+            return;
+        }
+        if (allRelationsExist(existingNode)) {
+            this.setElementId(existingNode.getElementId());
+            this.setFirstStartedAt(existingNode.getFirstStartedAt());
+            GlobalConfig.NEO4J_CLIENT.updateNode(this);
+        } else {
+            throw new RuntimeException(
+                    "The classification %s with version %s already exists but with different properties.".formatted(
+                            name, version));
+        }
+    }
 
     /**
      * Read YAML and map it into a {@link ClassificationProperties} instance.
@@ -219,29 +196,94 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
         return JacksonUtils.readAndInit(mapper, new File(path), ClassificationProperties.class);
     }
 
-    /**
-     * Set the taxonomy file path and load the taxonomy.
-     *
-     * @param taxonomyFile path to the taxonomy YAML file
-     */
+    @JsonSetter("name")
+    public void setName(Object raw) throws IOException {
+        if (raw instanceof String s) {
+            this.name = s;
+            this.classification = Classification.builder()
+                                                .name(name)
+                                                .build();
+            Classification existingNode = GlobalConfig.NEO4J_CLIENT.findNode(Map.of("name", this.name),
+                                                                             Classification.class);
+            if (existingNode != null) {
+                classification.setElementId(existingNode.getElementId());
+                return;
+            }
+            GlobalConfig.NEO4J_CLIENT.saveNode(classification);
+            return;
+        }
+        throw new IOException("Classification name must be a String");
+    }
+
     @JsonSetter("taxonomy")
-    public void setTaxonomyFile(String taxonomyFile) {
-        this.taxonomyFile = taxonomyFile;
-        if (taxonomyFile == null || taxonomyFile.isEmpty()) {
-            throw new IllegalArgumentException("Taxonomy file path must be provided.");
+    public void setTaxonomy(Object raw) throws IOException {
+        if (raw instanceof String s) {
+            this.taxonomy = Taxonomy.load(s);
+            return;
         }
-        try {
-            this.taxonomy = Taxonomy.load(taxonomyFile);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to load taxonomy file: " + taxonomyFile, e);
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        this.taxonomy = mapper.convertValue(raw, Taxonomy.class);
+    }
+
+    @JsonSetter("neo4j-credentials")
+    public void setNeo4jCredentials(Object raw) throws IOException {
+        if (raw instanceof String s) {
+            this.neo4jCredentials = Neo4jCredentials.load(s);
+            return;
         }
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        this.neo4jCredentials = mapper.convertValue(raw, Neo4jCredentials.class);
+        GlobalConfig.NEO4J_CREDENTIALS = this.neo4jCredentials;
+    }
+
+    /**
+     * Holds evaluation metrics for a classification experiment.
+     *
+     * <p>Metrics are typical classification measures such as accuracy, precision, recall and F1 scores.
+     */
+    @Node(label = "Evaluation")
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Evaluation extends Neo4jNode {
+
+        /**
+         * Overall accuracy of the classifier (correct / total).
+         */
+        private double accuracy;
+
+        /**
+         * Precision metric (positive predictive value).
+         */
+        private double precision;
+
+        /**
+         * Recall metric (sensitivity).
+         */
+        private double recall;
+
+        /**
+         * Macro-averaged F1 score across classes.
+         */
+        private double macroF1;
+
+        /**
+         * Macro-averaged F1 score across classes, rounded to 2 decimal places.
+         */
+        private double macroF1Rounded;
+
+        /**
+         * Micro-averaged F1 score across classes.
+         */
+        private double microF1;
     }
 
     /**
      * Initialize derived fields after deserialization.
      *
      * <p>This method validates required fields and constructs
-     * {@link #classification} and {@link #cluster} nodes.
      *
      * @throws IOException if required fields are missing
      */
@@ -253,6 +295,9 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
         if (version == null || version.isEmpty()) {
             throw new IOException("Missing version for classification properties");
         }
+        if (neo4jCredentials == null) {
+            throw new IOException("Missing neo4-credentials for classification properties");
+        }
         if (query == null || query.isEmpty()) {
             throw new IOException("Missing query for classification properties");
         }
@@ -262,24 +307,87 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
         if (taxonomy == null) {
             throw new IOException("Missing taxonomy for classification properties");
         }
+        createNode();
+    }
 
-        if (neo4jCredentialsFile == null || neo4jCredentialsFile.isEmpty()) {
-            neo4jCredentials = Neo4jCredentials.getDefault();
-        } else {
-            neo4jCredentials = Neo4jCredentials.load(neo4jCredentialsFile);
+    @Node(label = "Classification")
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Classification extends Neo4jNode {
+
+        /**
+         * The name of the classification.
+         *
+         * <p>Used as an identifier when creating run nodes in Neo4j.
+         */
+        private String name;
+
+        /**
+         * The classification runs connected to this classification.
+         */
+        @JsonIgnore
+        @Neo4jIgnore
+        private List<ClassificationProperties> runs;
+
+        /**
+         * Retrieves the classification properties connected to this classification via "IS_PART_OF" relationships.
+         *
+         * @param neo4jClient The Neo4j client used to execute the query.
+         * @return A list of ClassificationProperties nodes connected to this classification.
+         */
+        public List<ClassificationProperties> getRuns(Neo4jClient neo4jClient) {
+            if (this.runs != null) {
+                return this.runs;
+            } else {
+                if (getElementId() == null) {
+                    return List.of();
+                } else {
+                    String query = String.format("""
+                                                         MATCH (n:%s)-[:%s]->(u:%s)
+                                                         WHERE elementId(u) = '%s'
+                                                         RETURN n
+                                                         """,
+                                                 Neo4jNode.getLabel(ClassificationProperties.class),
+                                                 Neo4jRelation.getType(IsPartOf.class),
+                                                 Neo4jNode.getLabel(Classification.class),
+                                                 getElementId()
+                    );
+                    List<ClassificationProperties> children = neo4jClient.executeQuery(query,
+                                                                                       ClassificationProperties.class);
+                    this.runs = children;
+                    return children;
+                }
+            }
         }
+    }
 
-        EmbeddingService.initialize(neo4jCredentials, embeddingModel);
+    private boolean allRelationsExist(ClassificationProperties existingNode) {
+        boolean classificationRelationOk =
+                GlobalConfig.NEO4J_CLIENT.findRelation(existingNode.getElementId(), classification.getElementId(),
+                                                       IsPartOf.class)
+                        != null;
 
-        this.classification = Classification.builder()
-                                            .name(name)
-                                            .build();
+        boolean taxonomyRelationOk =
+                GlobalConfig.NEO4J_CLIENT.findRelation(existingNode.getElementId(), taxonomy.getElementId(),
+                                                       HasTaxonomy.class) != null;
 
-        if (clusterName != null && !clusterName.isEmpty()) {
-            this.cluster = Cluster.builder()
-                                  .name(clusterName)
-                                  .build();
-        }
+        boolean strategyRelationOk = strategy.getClassificationStrategyNode().getElementId() == null ||
+                GlobalConfig.NEO4J_CLIENT.findRelation(existingNode.getElementId(),
+                                                       strategy.getClassificationStrategyNode().getElementId(),
+                                                       HasClassificationStrategy.class) != null;
+
+        return classificationRelationOk && taxonomyRelationOk && strategyRelationOk;
+    }
+
+    private <T extends Neo4jRelation, N extends Neo4jNode> void createRelationIfNeeded(
+            N targetNode, T relation) {
+        if (targetNode == null || targetNode.getElementId() == null) return;
+        relation.setStartNodeId(this.getElementId());
+        relation.setEndNodeId(targetNode.getElementId());
+        GlobalConfig.NEO4J_CLIENT.createRelation(relation);
     }
 
 

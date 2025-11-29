@@ -1,0 +1,9 @@
+batches:
+  delete: 1000
+  import:
+    read: 300
+    nodes: 300
+    relationships: 300
+  export:
+    nodes: 5000
+    relationships: 5000

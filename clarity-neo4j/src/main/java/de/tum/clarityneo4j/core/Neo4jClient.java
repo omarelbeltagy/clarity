@@ -12,7 +12,10 @@ import org.neo4j.driver.types.MapAccessor;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -196,13 +199,8 @@ public class Neo4jClient {
                 if (value != null) {
                     String paramName = "param" + paramIndex++;
 
-                    if (value instanceof Collection<?>) {
-                        queryBuilder.append(String.format("n.%s IN $%s AND ", entry.getKey(), paramName));
-                        params.put(paramName, value);
-                    } else {
-                        queryBuilder.append(String.format("n.%s = $%s AND ", entry.getKey(), paramName));
-                        params.put(paramName, value);
-                    }
+                    queryBuilder.append(String.format("n.%s = $%s AND ", entry.getKey(), paramName));
+                    params.put(paramName, value);
                 }
             }
 

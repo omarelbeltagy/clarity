@@ -6,7 +6,6 @@ import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.Getter;
@@ -89,27 +88,28 @@ public class AnthropicClient implements Client {
     @Override
     public <T> T makeRequest(String prompt, Class<T> clazz) {
         try {
-            if (properties.getResponseFormat() != ResponseFormat.JSON_OBJECT && clazz != String.class) {
+            if (properties.getResponseFormat() != ModelProperties.ResponseFormat.JSON_OBJECT && clazz != String.class) {
                 throw new IllegalArgumentException(
                         "Unsupported class type for text response: " + clazz.getName()
                                 + ". Only String is supported for Response Format: "
                                 + properties.getResponseFormat());
             }
-            MessageCreateParams params = MessageCreateParams.builder()
-                                                            .model(properties.getName())
-                                                            .maxTokens(properties.getMaxTokens())
-                                                            .temperature(properties.getTemperature())
-                                                            .addUserMessage(prompt)
-                                                            .build();
+            MessageCreateParams.Builder paramsBuilder = MessageCreateParams.builder()
+                                                                           .model(properties.getName())
+                                                                           .maxTokens(properties.getMaxTokens())
+                                                                           .addUserMessage(prompt);
+            if (properties.getTemperature() != null) {
+                paramsBuilder.temperature(properties.getTemperature());
+            }
 
-            Message response = client.messages().create(params);
+            Message response = client.messages().create(paramsBuilder.build());
             if (response.content().isEmpty()) {
                 log.error("Received empty response from Anthropic for prompt: {}", prompt);
                 return null;
             }
 
             T result;
-            if (properties.getResponseFormat() == ResponseFormat.JSON_OBJECT) {
+            if (properties.getResponseFormat() == ModelProperties.ResponseFormat.JSON_OBJECT) {
                 result = parseStructuredResponse(response, clazz);
             } else {
                 result = clazz.cast(parseTextResponse(response));

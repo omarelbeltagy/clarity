@@ -78,4 +78,12 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
      */
     @JsonIgnore
     private Double judgementConfidence;
+
+    public static final String JSON_SCHEME = """
+            {
+                "name": <STRING | Name of the classified category>,
+                "explanation": <STRING | Explanation for the classification decision>,
+                "confidence": <DOUBLE | Confidence score of the classification>
+            }
+            """;
 }

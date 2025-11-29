@@ -3,12 +3,13 @@ package de.tum.claritypipeline.strategy;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import de.tum.clarityneo4j.annotations.Node;
+import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.classification.JudgementResult;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.utils.PromptUtils;
 import lombok.*;
 
@@ -24,12 +25,13 @@ import lombok.*;
  * output (ResponseFormat.JSON_OBJECT) because the judgement model receives the
  * classification explanation as part of its prompt.
  */
+@Node(label = "JudgementStrategy")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class JudgementStrategy implements ClassificationStrategy {
+public class JudgementStrategy extends Neo4jNode implements ClassificationStrategy {
     @JsonIgnore
     private static final String PLACEHOLDER_CLASSIFICATION_RESULT = "{classification_result}";
 
@@ -58,6 +60,12 @@ public class JudgementStrategy implements ClassificationStrategy {
         return mergeResults(initialResult, judgementResult);
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Neo4jNode> T getClassificationStrategyNode() {
+        return (T) this;
+    }
+
     /**
      * Validates that the model configuration is compatible with judgement strategy.
      */
@@ -68,7 +76,7 @@ public class JudgementStrategy implements ClassificationStrategy {
             );
         }
 
-        if (classificationModel.getResponseFormat() != ResponseFormat.JSON_OBJECT) {
+        if (classificationModel.getResponseFormat() != ModelProperties.ResponseFormat.JSON_OBJECT) {
             throw new UnsupportedOperationException(
                     "Only ResponseFormat.JSON_OBJECT is supported for the Classification Model in " +
                             "JudgementStrategy, because the Judgement Model needs access to the explanation."
@@ -82,12 +90,8 @@ public class JudgementStrategy implements ClassificationStrategy {
     private ClassificationResult performInitialClassification(ClassificationRequest request) {
         String prompt = PromptUtils.replacePrompt(
                 request,
-                classificationModel.getPrompt(),
-                classificationModel.getResponseFormat(),
-                classificationModel.isInjectResponseFormat(),
-                request.getTaxonomy(),
-                classificationModel.getRaqProperties(),
-                ClassificationResult.class
+                classificationModel,
+                ClassificationResult.JSON_SCHEME
         );
 
         return classificationModel.getClient()
@@ -118,12 +122,8 @@ public class JudgementStrategy implements ClassificationStrategy {
 
         String prompt = PromptUtils.replacePrompt(
                 request,
-                judgementModel.getPrompt(),
-                judgementModel.getResponseFormat(),
-                judgementModel.isInjectResponseFormat(),
-                request.getTaxonomy(),
-                judgementModel.getRaqProperties(),
-                JudgementResult.class
+                judgementModel,
+                JudgementResult.JSON_SCHEME
         );
 
         String classificationResultStr = formatClassificationResult(initialResult);

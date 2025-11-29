@@ -15,8 +15,8 @@ prompt: |
   ---
   Here is the segment of the interview that you should analyze:
   
-  ### Part of the Interview ###
+  **Part of the Interview**
   {context}
   
-  ### Question ###
+  **Question**
   {question}

@@ -3,23 +3,25 @@ package de.tum.claritypipeline.strategy;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import de.tum.clarityneo4j.annotations.Node;
+import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.utils.PromptUtils;
 import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Node(label = "DiscussionStrategy")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DiscussionStrategy implements ClassificationStrategy {
+public class DiscussionStrategy extends Neo4jNode implements ClassificationStrategy {
     @JsonIgnore
     private static final String TARGET_LABEL_PLACEHOLDER = "{target_label}";
     @JsonIgnore
@@ -37,19 +39,15 @@ public class DiscussionStrategy implements ClassificationStrategy {
         if (discussionModel.getClient() instanceof LocalClient) {
             throw new UnsupportedOperationException("LocalClient is not supported for DiscussionStrategy");
         }
-        if (discussionModel.getResponseFormat() != ResponseFormat.JSON_OBJECT) {
+        if (discussionModel.getResponseFormat() != ModelProperties.ResponseFormat.JSON_OBJECT) {
             throw new UnsupportedOperationException(
                     "Only ResponseFormat.JSON_OBJECT is supported for the Discussion Model for the "
                             + "DiscussionStrategy, because the Referee Model "
                             + "needs to have an explanation from the Discussion Model available.");
         }
 
-        String discussionPrompt = PromptUtils.replacePrompt(request, discussionModel.getPrompt(),
-                                                            discussionModel.getResponseFormat(),
-                                                            discussionModel.isInjectResponseFormat(),
-                                                            request.getTaxonomy(),
-                                                            discussionModel.getRaqProperties(),
-                                                            ClassificationResult.class
+        String discussionPrompt = PromptUtils.replacePrompt(request, discussionModel,
+                                                            ClassificationResult.JSON_SCHEME
         );
         List<ClassificationResult> discussions = new ArrayList<>();
         request.getTaxonomy().getCategories().parallelStream().forEach(category -> {
@@ -62,16 +60,18 @@ public class DiscussionStrategy implements ClassificationStrategy {
         });
 
         String refereePrompt = PromptUtils.replacePrompt(request,
-                                                         refereeModel.getPrompt(),
-                                                         refereeModel.getResponseFormat(),
-                                                         refereeModel.isInjectResponseFormat(),
-                                                         request.getTaxonomy(),
-                                                         refereeModel.getRaqProperties(),
-                                                         ClassificationResult.class
+                                                         refereeModel,
+                                                         ClassificationResult.JSON_SCHEME
         ).replace(REASONS_PLACEHOLDER, buildReasonsForEachType(discussions));
 
         return refereeModel.getClient()
                            .makeRequest(refereePrompt, ClassificationResult.class);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Neo4jNode> T getClassificationStrategyNode() {
+        return (T) this;
     }
 
     private String buildReasonsForEachType(List<ClassificationResult> discussions) {

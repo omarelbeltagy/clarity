@@ -2,21 +2,22 @@ package de.tum.claritypipeline.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import de.tum.claritypipeline.model.classification.ClassificationResult;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.credential.BearerTokenCredential;
+import com.openai.models.ReasoningEffort;
+import com.openai.models.ResponseFormatJsonObject;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
-import de.tum.clarityutils.JsonScheme;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.Getter;
 import lombok.Setter;
-import okhttp3.*;
+import okhttp3.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,14 +58,9 @@ public class TogetherClient implements Client {
     private final ModelProperties properties;
 
     /**
-     * OkHttp client used to perform HTTP calls.
+     * Client for API Calls
      */
-    private final OkHttpClient httpClient;
-
-    /**
-     * API key used for authorization with Together API.
-     */
-    private final String apiKey;
+    private final OpenAIClient client;
 
     /**
      * Thread-local ObjectMapper to avoid creating multiple mappers across threads.
@@ -74,47 +70,24 @@ public class TogetherClient implements Client {
 
     /**
      * Construct a TogetherClient with the given ModelConfig.
-     *
+     * <p>
      * The constructor validates the TOGETHER_API_KEY environment variable,
      * builds an OkHttpClient and prepares a thread-local ObjectMapper.
      *
      * @param properties model configuration to use for requests
      */
     public TogetherClient(ModelProperties properties) {
-        this.apiKey = validateApiKey();
-        this.properties = properties;
-        this.httpClient = buildHttpClient();
-        this.threadLocalMapper = ThreadLocal.withInitial(ObjectMapper::new);
-    }
-
-    /**
-     * Validate and return the Together API key from environment variables.
-     *
-     * @return the API key string
-     * @throws IllegalStateException if the TOGETHER_API_KEY is missing or blank
-     */
-    private String validateApiKey() {
-        String key = EnvLoader.get("TOGETHER_API_KEY");
-        if (key == null || key.isBlank()) {
+        String apiKey = EnvLoader.get("TOGETHER_API_KEY");
+        if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalStateException(
-                    "TOGETHER_API_KEY environment variable is not set. Please set it to use LlamaClassifier.");
+                    "TOGETHER_API_KEY environment variable is not set. Please set it to use OpenAIClassifier.");
         }
-        return key;
-    }
-
-    /**
-     * Build and configure the OkHttpClient used for requests.
-     *
-     * @return configured OkHttpClient
-     */
-    private OkHttpClient buildHttpClient() {
-        ConnectionPool pool = new ConnectionPool(20, 5, TimeUnit.MINUTES);
-        return new OkHttpClient.Builder()
-                .connectionPool(pool)
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build();
+        this.threadLocalMapper = ThreadLocal.withInitial(ObjectMapper::new);
+        this.properties = properties;
+        this.client = OpenAIOkHttpClient.builder()
+                                        .credential(BearerTokenCredential.create(apiKey))
+                                        .baseUrl("https://api.together.xyz/v1/") // Together AI Endpoint
+                                        .build();
     }
 
     /**
@@ -130,7 +103,7 @@ public class TogetherClient implements Client {
 
     /**
      * Make a request to the Together API and parse the response into the given class.
-     *
+     * <p>
      * If the configured response format is not JSON_OBJECT, only String.class is supported.
      *
      * @param prompt the input prompt
@@ -140,134 +113,40 @@ public class TogetherClient implements Client {
      */
     @Override
     public <T> T makeRequest(String prompt, Class<T> clazz) {
-        try {
-            if (properties.getResponseFormat() != ResponseFormat.JSON_OBJECT && clazz != String.class) {
-                throw new IllegalArgumentException(
-                        "Unsupported class type for text response: " + clazz.getName()
-                                + ". Only String is supported for Response Format: "
-                                + properties.getResponseFormat());
-            }
-            String requestBody = buildRequestBody(prompt);
-            Request request = buildHttpRequest(requestBody);
-
-            try (Response response = httpClient.newCall(request).execute()) {
-                return handleResponse(response, clazz);
-            }
-        } catch (IOException e) {
-            log.error("Together API request failed", e);
-            return null;
-        }
-    }
-
-    /**
-     * Build the OkHttp Request object for the provided JSON request body.
-     *
-     * @param requestBody serialized JSON request body
-     * @return OkHttp Request ready to be executed
-     */
-    private Request buildHttpRequest(String requestBody) {
-        return new Request.Builder()
-                .url(TOGETHER_API_URL)
-                .addHeader("Authorization", "Bearer " + apiKey)
-                .addHeader("Content-Type", "application/json")
-                .post(RequestBody.create(requestBody, JSON_MEDIA_TYPE))
-                .build();
-    }
-
-    /**
-     * Handle the HTTP response, checking success and parsing the body.
-     *
-     * @param response OkHttp Response object
-     * @param clazz    expected result class
-     * @param <T>      type of the expected result
-     * @return parsed result of type T or null on failure
-     * @throws IOException if reading the response body fails
-     */
-    private <T> T handleResponse(Response response, Class<T> clazz) throws IOException {
-        if (!response.isSuccessful()) {
-            logFailedResponse(response);
-            return null;
+        if (properties.getResponseFormat() != ModelProperties.ResponseFormat.JSON_OBJECT && clazz != String.class) {
+            throw new IllegalArgumentException(
+                    "Unsupported class type for text response: " + clazz.getName()
+                            + ". Only String is supported for Response Format: "
+                            + properties.getResponseFormat());
         }
 
-        ResponseBody body = response.body();
-        if (body == null) {
-            log.error("Empty response body from Together API");
-            return null;
+        return extractStructuredResponse(handleRequest(prompt, clazz), clazz);
+    }
+
+    private <T> String handleRequest(String prompt, Class<T> clazz) {
+        ChatCompletionCreateParams.Builder paramsBuilder = ChatCompletionCreateParams.builder()
+                                                                                     .model(properties.getName())
+                                                                                     .maxCompletionTokens(
+                                                                                             properties.getMaxTokens())
+                                                                                     .addUserMessage(prompt);
+        if (properties.getResponseFormat() == ModelProperties.ResponseFormat.JSON_OBJECT) {
+            paramsBuilder.responseFormat(ResponseFormatJsonObject.builder().build());
+        }
+        if (properties.getTemperature() != null) {
+            paramsBuilder.temperature(properties.getTemperature());
+        }
+        if (properties.getTopP() != null) {
+            paramsBuilder.topP(properties.getTopP());
+        }
+        if (properties.getReasoningEffort() != null) {
+            paramsBuilder.reasoningEffort(ReasoningEffort.of(properties.getReasoningEffort()));
         }
 
-        return extractStructuredResponse(body.string(), clazz);
-    }
-
-    /**
-     * Log details about a failed HTTP response.
-     *
-     * @param response the failed response
-     * @throws IOException if reading the error body fails
-     */
-    private void logFailedResponse(Response response) throws IOException {
-        String errorBody = response.body() != null ? response.body().string() : "No body";
-        log.error("Together API request failed with code {}: {}", response.code(), errorBody);
-    }
-
-    /**
-     * Build the JSON request body according to the ModelConfig and the provided prompt.
-     *
-     * @param prompt the user prompt content
-     * @return serialized JSON string for the request body
-     * @throws IOException if serialization fails
-     */
-    private String buildRequestBody(String prompt) throws IOException {
-        ObjectMapper objectMapper = threadLocalMapper.get();
-        ObjectNode node = objectMapper.createObjectNode();
-        node.put("model", properties.getName());
-        node.put("max_tokens", properties.getMaxTokens());
-        node.put("temperature", properties.getTemperature());
-        node.put("top_p", properties.getTopP());
-
-        ObjectNode messageNode = objectMapper.createObjectNode();
-        messageNode.put("role", "user");
-        messageNode.put("content", prompt);
-        node.set("messages", objectMapper.createArrayNode().add(messageNode));
-
-        addResponseFormat(node);
-
-        return objectMapper.writeValueAsString(node);
-    }
-
-    /**
-     * Add the response_format object to the request when JSON_OBJECT is requested.
-     *
-     * @param node root request object node to modify
-     * @throws IOException if schema serialization fails
-     */
-    private void addResponseFormat(ObjectNode node) throws IOException {
-        if (properties.getResponseFormat() != ResponseFormat.JSON_OBJECT) {
-            return;
-        }
-
-        ObjectMapper objectMapper = threadLocalMapper.get();
-        ObjectNode responseFormatNode = objectMapper.createObjectNode();
-        responseFormatNode.put("type", "json_object");
-
-        if (properties.isStructuredOutput()) {
-            addJsonSchema(responseFormatNode);
-        }
-
-        node.set("response_format", responseFormatNode);
-    }
-
-    /**
-     * Add a JSON schema for the expected structured output based on ClassificationResult.
-     *
-     * @param responseFormatNode node where the schema should be attached
-     * @throws IOException if building the schema nodes fails
-     */
-    private void addJsonSchema(ObjectNode responseFormatNode) throws IOException {
-        JsonScheme<ClassificationResult> jsonScheme = new JsonScheme<>(ClassificationResult.class);
-        ObjectMapper objectMapper = threadLocalMapper.get();
-        ObjectNode schemeNode = objectMapper.createObjectNode();
-        schemeNode.set("properties", objectMapper.readTree(jsonScheme.getPropertiesString()));
-        responseFormatNode.set("schema", schemeNode);
+        return client.chat().completions().create(paramsBuilder.build()).choices()
+                     .getFirst()
+                     .message()
+                     .content()
+                     .orElse(null);
     }
 
     /**
@@ -280,43 +159,14 @@ public class TogetherClient implements Client {
      */
     private <T> T extractStructuredResponse(String responseBody, Class<T> clazz) {
         try {
-            String content = extractContentFromResponse(responseBody);
-            if (content == null) {
+            if (responseBody == null) {
                 return null;
             }
-
-            return parseContent(content, clazz);
+            return parseContent(responseBody, clazz);
         } catch (Exception e) {
             log.error("Failed to extract structured response from Together API", e);
             return null;
         }
-    }
-
-    /**
-     * Read the JSON response and obtain the message content from the first choice.
-     *
-     * @param responseBody raw response body
-     * @return content string, trimmed, or null if not found
-     * @throws IOException if JSON parsing fails
-     */
-    private String extractContentFromResponse(String responseBody) throws IOException {
-        ObjectMapper objectMapper = threadLocalMapper.get();
-        JsonNode rootNode = objectMapper.readTree(responseBody);
-        JsonNode choicesNode = rootNode.path("choices");
-
-        if (!choicesNode.isArray() || choicesNode.isEmpty()) {
-            log.error("No choices found in Together API response");
-            return null;
-        }
-
-        String content = choicesNode.get(0).path("message").path("content").asText();
-
-        if (content == null || content.isBlank()) {
-            log.error("No content found in Together API response");
-            return null;
-        }
-
-        return content.trim();
     }
 
     /**

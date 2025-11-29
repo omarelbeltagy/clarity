@@ -1,6 +1,6 @@
 name: "Clarity Category"
+version: "v1"
 label-property: "clarityLabel"
-
 categories:
   - name: "Clear Reply"
     examples:

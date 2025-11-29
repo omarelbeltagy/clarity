@@ -2,11 +2,12 @@ package de.tum.claritypipeline.strategy;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import de.tum.clarityneo4j.annotations.Node;
+import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.claritypipeline.utils.PromptUtils;
 import de.tum.clarityutils.SerializationUtils;
 import lombok.*;
@@ -26,12 +27,13 @@ import java.util.stream.Collectors;
  * <p>
  * Supports both structured JSON responses and plain text responses.
  */
+@Node(label = "MultiStrategy")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class MultiStrategy implements ClassificationStrategy {
+public class MultiStrategy extends Neo4jNode implements ClassificationStrategy {
     @JsonProperty("models")
     @JsonPropertyDescription("The model configurations to use for classification.")
     private List<ModelProperties> models;
@@ -72,6 +74,12 @@ public class MultiStrategy implements ClassificationStrategy {
                                       "No valid decision could be made from the model results."));
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Neo4jNode> T getClassificationStrategyNode() {
+        return (T) this;
+    }
+
     /**
      * Collects classification results from all configured models.
      */
@@ -87,7 +95,7 @@ public class MultiStrategy implements ClassificationStrategy {
     private ClassificationResult executeModelRequest(ClassificationRequest request, ModelProperties model) {
         String prompt = buildPrompt(request, model);
 
-        if (model.getResponseFormat() == ResponseFormat.JSON_OBJECT) {
+        if (model.getResponseFormat() == ModelProperties.ResponseFormat.JSON_OBJECT) {
             return model.getClient().makeRequest(prompt, ClassificationResult.class);
         } else {
             String response = model.getClient().makeRequest(prompt);
@@ -103,12 +111,8 @@ public class MultiStrategy implements ClassificationStrategy {
             case LocalClient ignore -> SerializationUtils.serialize(request);
             default -> PromptUtils.replacePrompt(
                     request,
-                    model.getPrompt(),
-                    model.getResponseFormat(),
-                    model.isInjectResponseFormat(),
-                    request.getTaxonomy(),
-                    model.getRaqProperties(),
-                    ClassificationResult.class
+                    model,
+                    ClassificationResult.JSON_SCHEME
             );
         };
     }

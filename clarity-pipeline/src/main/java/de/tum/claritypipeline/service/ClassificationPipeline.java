@@ -3,13 +3,12 @@ package de.tum.claritypipeline.service;
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
-import de.tum.claritypipeline.model.classification.Classification;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.config.ClassificationProperties;
-import de.tum.claritypipeline.model.core.Category;
+import de.tum.claritypipeline.model.config.GlobalConfig;
 import de.tum.claritypipeline.model.core.QA;
-import de.tum.claritypipeline.model.evaluation.Evaluation;
+import de.tum.claritypipeline.model.core.Taxonomy;
 import de.tum.claritypipeline.model.relation.BelongsTo;
 import de.tum.claritypipeline.model.relation.GeneratedBy;
 import de.tum.claritypipeline.model.relation.HasClassification;
@@ -18,7 +17,11 @@ import de.tum.clarityutils.ModelEvaluator;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.*;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,10 +38,6 @@ public class ClassificationPipeline {
      */
     private final ClassificationProperties properties;
     /**
-     * Builder for constructing the graph ontology.
-     */
-    private final OntologyBuilder ontologyBuilder;
-    /**
      * Neo4j client for database interactions.
      */
     private final Neo4jClient client;
@@ -51,8 +50,7 @@ public class ClassificationPipeline {
      */
     public ClassificationPipeline(String propertiesFilePath) throws IOException {
         this.properties = ClassificationProperties.load(propertiesFilePath);
-        this.client = new Neo4jClient(properties.getNeo4jCredentials());
-        this.ontologyBuilder = new OntologyBuilder(client);
+        this.client = GlobalConfig.NEO4J_CLIENT;
     }
 
     // -------------------------------- Classification Logic --------------------------------
@@ -112,10 +110,8 @@ public class ClassificationPipeline {
      * The classifications are stored in the Neo4j database.
      */
     public void classify() {
-        ontologyBuilder.persistOntologyInGraph(properties);
-
-        List<QA> qas = fetchQAs();
-        Map<String, QA> unclassifiedQAs = filterUnclassifiedQAs(qas);
+        List<QA> allQAs = fetchQAs();
+        List<QA> unclassifiedQAs = filterUnclassifiedQAs(allQAs);
 
         List<ClassificationTask> tasks = executeParallelClassification(unclassifiedQAs);
         log.info("Classification completed. Classified {} / {} QAs.",
@@ -136,21 +132,22 @@ public class ClassificationPipeline {
      * @param unclassified A map of unclassified QAs with their element IDs as keys.
      * @return A list of classification tasks containing QAs, results, and categories.
      */
-    private List<ClassificationTask> executeParallelClassification(Map<String, QA> unclassified) {
+    private List<ClassificationTask> executeParallelClassification(List<QA> unclassified) {
         List<ClassificationTask> tasks;
 
-        log.info("Starting classification of {} unclassified QAs using {} threads.",
+        log.info("Starting classification for {} ({}) of {} unclassified QAs using {} threads.", properties.getName(),
+                 properties.getVersion(),
                  unclassified.size(), properties.getWorkerThreads());
 
         AtomicInteger counter = new AtomicInteger();
         try (ExecutorService executor = Executors.newFixedThreadPool(properties.getWorkerThreads())) {
             List<CompletableFuture<ClassificationTask>> futures =
-                    unclassified.values().stream()
+                    unclassified.stream()
                                 .map(qa -> CompletableFuture.supplyAsync(() -> {
                                     try {
                                         ClassificationRequest request = buildRequest(qa);
                                         ClassificationResult result = classifySingle(request);
-                                        Category category = findAssignedCategory(result.getName());
+                                        Taxonomy.Category category = findAssignedCategory(result.getName());
                                         log.info("Classified QA as {} ({}/{})",
                                                  category != null ? category.getName() : "UNKNOWN",
                                                  counter.incrementAndGet(),
@@ -200,7 +197,8 @@ public class ClassificationPipeline {
      * Generate evaluation metrics for the classification run and store them in the database.
      */
     private void generateEvaluation() {
-        log.info("Generating evaluation for classification run {}", properties.getVersion());
+        log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
+                 properties.getName());
         String query = String.format("""
                                              MATCH (n:%s)--(cr:%s)--(c:%s)
                                              WHERE cr.version = '%s'
@@ -209,7 +207,7 @@ public class ClassificationPipeline {
                                              """,
                                      Neo4jNode.getLabel(ClassificationResult.class),
                                      Neo4jNode.getLabel(ClassificationProperties.class),
-                                     Neo4jNode.getLabel(Classification.class),
+                                     Neo4jNode.getLabel(ClassificationProperties.Classification.class),
                                      properties.getVersion(),
                                      properties.getClassification().getName());
         List<ClassificationResult> results = client.executeQuery(query,
@@ -238,12 +236,14 @@ public class ClassificationPipeline {
                                return null;
                            }
                            String predictedLabel;
-                           if (properties.getTaxonomy().getMapping().isEnabled()) {
-                               Category category = properties.getTaxonomy().getCategories().stream()
-                                                             .filter(c ->
-                                                                             c.getName().equals(result.getName()))
-                                                             .findFirst()
-                                                             .orElse(null);
+                           if (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy().getMapping()
+                                                                                          .isEnabled()) {
+                               Taxonomy.Category category = properties.getTaxonomy().getCategories().stream()
+                                                                      .filter(c ->
+                                                                                      c.getName()
+                                                                                       .equals(result.getName()))
+                                                                      .findFirst()
+                                                                      .orElse(null);
                                if (category != null) {
                                    predictedLabel = category.getMapTo();
                                } else {
@@ -252,31 +252,24 @@ public class ClassificationPipeline {
                            } else {
                                predictedLabel = result.getName();
                            }
-                           String expectedLabel = switch (properties.getTaxonomy().getMapping().isEnabled()
-                                   ? properties.getTaxonomy().getMapping().getLabelProperty().toLowerCase()
-                                   : properties.getTaxonomy().getLabelProperty().toLowerCase()) {
-                               case "claritylabel", "clarity-label", "clarity_label" -> qa.getClarityLabel();
-                               case "annotator1" -> qa.getAnnotator1();
-                               case "annotator2" -> qa.getAnnotator2();
-                               case "annotator3" -> qa.getAnnotator3();
-                               case "evasionlabel", "evasion-label", "evasion_label" -> {
-                                   if (qa.getEvasionLabel() != null && !qa.getEvasionLabel().isEmpty()) {
-                                       yield qa.getEvasionLabel();
-                                   }
-                                   if (result.getName().equals(qa.getAnnotator1())) {
-                                       yield qa.getAnnotator1();
-                                   }
-                                   if (result.getName().equals(qa.getAnnotator2())) {
-                                       yield qa.getAnnotator2();
-                                   }
-                                   if (result.getName().equals(qa.getAnnotator3())) {
-                                       yield qa.getAnnotator3();
-                                   }
-                                   yield qa.getAnnotator1();
+                           String propertyLabel =
+                                   (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
+                                                                                               .getMapping()
+                                                                                               .isEnabled())
+                                           ? properties.getTaxonomy().getMapping().getLabelProperty()
+                                           : properties.getTaxonomy().getLabelProperty();
+                           String expectedLabel;
+                           try {
+                               Field field = qa.getClass().getDeclaredField(propertyLabel);
+                               field.setAccessible(true);
+                               Object value = field.get(qa);
+                               if (value == null) {
+                                   return null;
                                }
-                               default -> throw new RuntimeException("Label Property %s is not supported".formatted(
-                                       properties.getTaxonomy().getLabelProperty()));
-                           };
+                               expectedLabel = value.toString();
+                           } catch (NoSuchFieldException | IllegalAccessException e) {
+                               throw new RuntimeException(e);
+                           }
                            if (predictedLabel != null && expectedLabel != null) {
                                return new String[]{predictedLabel, expectedLabel};
                            }
@@ -294,49 +287,57 @@ public class ClassificationPipeline {
                                                       .toList();
 
         List<String> labels;
-        if (properties.getTaxonomy().getMapping().isEnabled()) {
+        if (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy().getMapping().isEnabled()) {
             labels = properties.getTaxonomy().getMapping().getLabels();
         } else {
             labels = properties.getTaxonomy().getCategories()
                                .stream()
-                               .map(Category::getName)
+                               .map(Taxonomy.Category::getName)
                                .toList();
         }
 
-        ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
-        log.info("Evaluation Results:");
-        double accuracy = evaluator.accuracy();
-        log.info("Accuracy: {}", String.format("%.2f", accuracy * 100));
-        double precision = evaluator.precision();
-        log.info("Precision: {}", String.format("%.2f", precision * 100));
-        double recall = evaluator.recall();
-        log.info("Recall: {}", String.format("%.2f", recall * 100));
-        double microF1 = evaluator.microF1();
-        log.info("Micro F1 Score: {}", String.format("%.2f", microF1 * 100));
-        double macroF1 = evaluator.macroF1();
-        log.info("Macro F1 Score: {}", String.format("%.2f", macroF1 * 100));
+        try {
+            ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
+            log.info("Evaluation Results:");
+            double accuracy = evaluator.accuracy();
+            log.info("Accuracy: {}", String.format("%.2f", accuracy * 100));
+            double precision = evaluator.precision();
+            log.info("Precision: {}", String.format("%.2f", precision * 100));
+            double recall = evaluator.recall();
+            log.info("Recall: {}", String.format("%.2f", recall * 100));
+            double microF1 = evaluator.microF1();
+            log.info("Micro F1 Score: {}", String.format("%.2f", microF1 * 100));
+            double macroF1 = evaluator.macroF1();
+            log.info("Macro F1 Score: {}", String.format("%.2f", macroF1 * 100));
 
-        Evaluation evaluation = Evaluation.builder()
-                                          .accuracy(accuracy)
-                                          .precision(precision)
-                                          .recall(recall)
-                                          .microF1(microF1)
-                                          .macroF1(macroF1)
-                                          .macroF1Rounded(Math.round(macroF1 * 100.0) / 100.0)
-                                          .build();
+            ClassificationProperties.Evaluation evaluation = ClassificationProperties.Evaluation.builder()
+                                                                                                .accuracy(accuracy)
+                                                                                                .precision(precision)
+                                                                                                .recall(recall)
+                                                                                                .microF1(microF1)
+                                                                                                .macroF1(macroF1)
+                                                                                                .macroF1Rounded(
+                                                                                                        Math.round(
+                                                                                                                macroF1
+                                                                                                                        * 100.0)
+                                                                                                                / 100.0)
+                                                                                                .build();
 
-        Evaluation existingEval = properties.getEvaluation(client);
+            ClassificationProperties.Evaluation existingEval = properties.getEvaluation(client);
 
-        if (existingEval == null) {
-            client.saveNode(evaluation);
-            HasEvaluation hasEvaluation = createRelationObject(new HasEvaluation(), properties.getElementId(),
-                                                               evaluation.getElementId());
-            client.createRelation(hasEvaluation);
-        } else {
-            log.info("Evaluation already exists for classification run {}. Updating values.",
-                     properties.getVersion());
-            evaluation.setElementId(existingEval.getElementId());
-            client.updateNode(evaluation);
+            if (existingEval == null) {
+                client.saveNode(evaluation);
+                HasEvaluation hasEvaluation = createRelationObject(new HasEvaluation(), properties.getElementId(),
+                                                                   evaluation.getElementId());
+                client.createRelation(hasEvaluation);
+            } else {
+                log.info("Evaluation already exists for classification run {}. Updating values.",
+                         properties.getVersion());
+                evaluation.setElementId(existingEval.getElementId());
+                client.updateNode(evaluation);
+            }
+        } catch (Exception e) {
+            log.error("Error while evaluating classification run {}", properties.getVersion(), e);
         }
 
     }
@@ -349,15 +350,15 @@ public class ClassificationPipeline {
      * @param qas The list of QAs to filter.
      * @return A map of unclassified QAs with their element IDs as keys.
      */
-    private Map<String, QA> filterUnclassifiedQAs(List<QA> qas) {
+    private List<QA> filterUnclassifiedQAs(List<QA> qas) {
         String qaIds = qas.stream()
                           .map(qa -> "'" + qa.getElementId() + "'")
                           .collect(Collectors.joining(","));
 
         String query = String.format("""
-                                             MATCH (n:%s)-[:%s]->(:%s)-[:%s]->(cr:%s)
+                                             MATCH (n:%s)-[:%s]->(:%s)-[:%s]->(cp:%s)
                                              WHERE elementId(n) IN [%s]
-                                             AND elementId(cr) = '%s'
+                                             AND elementId(cp) = '%s'
                                              RETURN n
                                              """,
                                      Neo4jNode.getLabel(QA.class),
@@ -374,7 +375,7 @@ public class ClassificationPipeline {
 
         return qas.stream()
                   .filter(qa -> !classified.contains(qa.getElementId()))
-                  .collect(Collectors.toMap(QA::getElementId, qa -> qa));
+                  .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -400,6 +401,7 @@ public class ClassificationPipeline {
      */
     private ClassificationRequest buildRequest(QA qa) {
         return ClassificationRequest.builder()
+                                    .qa(qa)
                                     .question(qa.getQuestion())
                                     .context(buildContext(qa.getInterviewQuestion(),
                                                           qa.getInterviewAnswer()))
@@ -432,15 +434,15 @@ public class ClassificationPipeline {
      *
      * @return The corresponding Category, or null if not found.
      */
-    private Category findAssignedCategory(String name) {
+    private Taxonomy.Category findAssignedCategory(String name) {
         String normalizedName = name.replaceAll("[ _-]", "");
-        for (Category category : properties.getTaxonomy().getCategories()) {
+        for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
             String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
             if (normalizedCategoryName.equals(normalizedName)) {
                 return category;
             }
         }
-        for (Category category : properties.getTaxonomy().getCategories()) {
+        for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
             String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
             if (normalizedCategoryName.contains(normalizedName)
                     || normalizedName.contains(normalizedCategoryName)) {
@@ -455,5 +457,5 @@ public class ClassificationPipeline {
     /**
      * A record representing a classification task, containing the QA, classification result, and category.
      */
-    private record ClassificationTask(QA qa, ClassificationResult result, Category category) {}
+    private record ClassificationTask(QA qa, ClassificationResult result, Taxonomy.Category category) {}
 }

@@ -17,24 +17,24 @@ public final class JacksonUtils {
         return obj;
     }
 
+    public static <T> T convertAndInit(
+            com.fasterxml.jackson.databind.ObjectMapper mapper, Object raw, Class<T> clazz) {
+        T obj = mapper.convertValue(raw, clazz);
+        callAfterDeserializationRecursive(obj, new HashSet<>());
+        return obj;
+    }
+
     private static void callAfterDeserializationRecursive(Object obj, Set<Object> visited) {
         if (obj == null || visited.contains(obj)) return;
         visited.add(obj);
 
-        for (Method method : obj.getClass().getDeclaredMethods()) {
-            if (method.isAnnotationPresent(AfterDeserialization.class)) {
-                method.setAccessible(true);
-                try {
-                    method.invoke(obj);
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                            "Error invoking @AfterDeserialization on " + obj.getClass().getName(), e);
-                }
-            }
-        }
-
+        // ERST: Rekursiv in die Tiefe gehen
         for (Field field : obj.getClass().getDeclaredFields()) {
-            if (isJdkClass(field.getType())) continue;
+            // Ausnahme für Iterable/List - diese immer durchlaufen
+            if (!Iterable.class.isAssignableFrom(field.getType()) && isJdkClass(field.getType())) {
+                continue;
+            }
+
             field.setAccessible(true);
             try {
                 Object value = field.get(obj);
@@ -52,6 +52,19 @@ public final class JacksonUtils {
                     callAfterDeserializationRecursive(value, visited);
                 }
             } catch (IllegalAccessException ignore) {
+            }
+        }
+
+        // DANN: Methode auf diesem Objekt aufrufen
+        for (Method method : obj.getClass().getDeclaredMethods()) {
+            if (method.isAnnotationPresent(AfterDeserialization.class)) {
+                method.setAccessible(true);
+                try {
+                    method.invoke(obj);
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                            "Error invoking @AfterDeserialization on " + obj.getClass().getName(), e);
+                }
             }
         }
     }

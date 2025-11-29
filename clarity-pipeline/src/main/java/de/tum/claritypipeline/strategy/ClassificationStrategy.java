@@ -2,6 +2,7 @@ package de.tum.claritypipeline.strategy;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 
@@ -44,4 +45,6 @@ public interface ClassificationStrategy {
      * to indicate failure via a null return (prefer throwing for errors).
      */
     ClassificationResult execute(ClassificationRequest request);
+
+    <T extends Neo4jNode> T getClassificationStrategyNode();
 }

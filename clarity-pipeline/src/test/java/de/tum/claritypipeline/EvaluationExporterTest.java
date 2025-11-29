@@ -32,6 +32,6 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/11_04_2025_INITIAL_EXPERIMENTS.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_01_2025.xlsx");
     }
 }

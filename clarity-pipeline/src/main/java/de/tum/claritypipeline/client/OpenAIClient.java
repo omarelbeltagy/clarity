@@ -3,10 +3,10 @@ package de.tum.claritypipeline.client;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.credential.BearerTokenCredential;
 import com.openai.models.ChatModel;
+import com.openai.models.ReasoningEffort;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.config.ResponseFormat;
 import de.tum.clarityutils.EnvLoader;
 import lombok.Getter;
 import lombok.Setter;
@@ -82,7 +82,7 @@ public class OpenAIClient implements Client {
     public <T> T makeRequest(String prompt, Class<T> clazz) {
         try {
             T result;
-            if (properties.getResponseFormat() == ResponseFormat.JSON_OBJECT) {
+            if (properties.getResponseFormat() == ModelProperties.ResponseFormat.JSON_OBJECT) {
                 result = makeStructuredRequest(prompt, clazz);
             } else {
                 if (clazz == String.class) {
@@ -113,30 +113,25 @@ public class OpenAIClient implements Client {
      * @return deserialized response or null
      */
     private <T> T makeStructuredRequest(String prompt, Class<T> clazz) {
-        StructuredChatCompletionCreateParams<T> params;
-        if (properties.getName().toLowerCase().startsWith("gpt-4")) {
-            params =
-                    ChatCompletionCreateParams.builder()
-                                              .model(chatModel)
-                                              .temperature(properties.getTemperature())
-                                              .topP(properties.getTopP())
-                                              .maxCompletionTokens(properties.getMaxTokens())
-                                              .addUserMessage(
-                                                      prompt)
-                                              .responseFormat(clazz)
-                                              .build();
-        } else {
-            params =
-                    ChatCompletionCreateParams.builder()
-                                              .model(chatModel)
-                                              .maxCompletionTokens(properties.getMaxTokens())
-                                              .addUserMessage(
-                                                      prompt)
-                                              .responseFormat(clazz)
-                                              .build();
+        StructuredChatCompletionCreateParams.Builder<T> paramsBuilder = ChatCompletionCreateParams.builder()
+                                                                                                  .model(chatModel)
+                                                                                                  .maxCompletionTokens(
+                                                                                                          properties.getMaxTokens())
+                                                                                                  .addUserMessage(
+                                                                                                          prompt)
+                                                                                                  .responseFormat(
+                                                                                                          clazz);
+        if (properties.getTemperature() != null) {
+            paramsBuilder.temperature(properties.getTemperature());
+        }
+        if (properties.getTopP() != null) {
+            paramsBuilder.topP(properties.getTopP());
+        }
+        if (properties.getReasoningEffort() != null) {
+            paramsBuilder.reasoningEffort(ReasoningEffort.of(properties.getReasoningEffort()));
         }
 
-        return client.chat().completions().create(params).choices()
+        return client.chat().completions().create(paramsBuilder.build()).choices()
                      .getFirst()
                      .message()
                      .content()
@@ -150,17 +145,24 @@ public class OpenAIClient implements Client {
      * @return extracted label string or null
      */
     private String makeTextRequest(String prompt) {
-        ChatCompletionCreateParams params =
+        ChatCompletionCreateParams.Builder paramsBuilder =
                 ChatCompletionCreateParams.builder()
                                           .model(chatModel)
-                                          .temperature(properties.getTemperature())
-                                          .topP(properties.getTopP())
                                           .maxCompletionTokens(properties.getMaxTokens())
                                           .addUserMessage(
-                                                  prompt)
-                                          .build();
+                                                  prompt);
 
-        String content = client.chat().completions().create(params).choices()
+        if (properties.getTemperature() != null) {
+            paramsBuilder.temperature(properties.getTemperature());
+        }
+        if (properties.getTopP() != null) {
+            paramsBuilder.topP(properties.getTopP());
+        }
+        if (properties.getReasoningEffort() != null) {
+            paramsBuilder.reasoningEffort(ReasoningEffort.of(properties.getReasoningEffort()));
+        }
+
+        String content = client.chat().completions().create(paramsBuilder.build()).choices()
                                .getFirst()
                                .message()
                                .content()

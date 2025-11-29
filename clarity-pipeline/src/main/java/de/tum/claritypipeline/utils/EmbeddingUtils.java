@@ -3,6 +3,9 @@ package de.tum.claritypipeline.utils;
 import com.openai.models.embeddings.CreateEmbeddingResponse;
 import com.openai.models.embeddings.EmbeddingCreateParams;
 import com.openai.models.embeddings.EmbeddingModel;
+import de.tum.clarityneo4j.core.Neo4jClient;
+import de.tum.clarityneo4j.core.Neo4jNode;
+import de.tum.claritypipeline.model.config.EmbeddingIndex;
 import org.slf4j.Logger;
 
 import java.util.List;
@@ -37,5 +40,30 @@ public class EmbeddingUtils {
                                                             .build();
         CreateEmbeddingResponse response = client.embeddings().create(params);
         return toDoubleArray(response.data().getFirst().embedding());
+    }
+
+    public static void ensureEmbeddingIndicesExist(Neo4jClient client) {
+        for (EmbeddingIndex embeddingIndex : EmbeddingIndex.values()) {
+            createEmbeddingIndex(client, embeddingIndex);
+        }
+    }
+
+    private static void createEmbeddingIndex(Neo4jClient client, EmbeddingIndex embeddingIndex) {
+        String cypher = """
+                CREATE VECTOR INDEX %s IF NOT EXISTS
+                FOR (n:%s)
+                ON n.%s
+                OPTIONS {
+                  indexConfig: {
+                    `vector.dimensions`: 3072,
+                    `vector.similarity_function`: 'cosine'
+                  }
+                }
+                """.formatted(
+                embeddingIndex.getIndexName(),
+                Neo4jNode.getLabel(embeddingIndex.getNodeClass()),
+                embeddingIndex.getFieldName()
+        );
+        client.executeQuery(cypher);
     }
 }

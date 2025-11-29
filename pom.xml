@@ -48,7 +48,7 @@
         <version.maven.resources>3.3.1</version.maven.resources>
         <version.nd4j>1.0.0-M2.1</version.nd4j>
         <version.okhttp>4.12.0</version.okhttp>
-        <version.openai>4.5.0</version.openai>
+        <version.openai>4.8.0</version.openai>
         <version.org.neo4j>5.26.13</version.org.neo4j>
         <version.org.neo4j.driver>6.0.1</version.org.neo4j.driver>
         <version.slf4j>2.0.13</version.slf4j>

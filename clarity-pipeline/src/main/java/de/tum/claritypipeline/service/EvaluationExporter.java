@@ -2,9 +2,8 @@ package de.tum.claritypipeline.service;
 
 import de.tum.clarityneo4j.core.Neo4jClient;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
+import de.tum.claritypipeline.model.config.ClassificationProperties;
 import de.tum.claritypipeline.model.config.EvaluationExportProperties;
-import de.tum.claritypipeline.model.core.Cluster;
-import de.tum.claritypipeline.model.evaluation.Evaluation;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.poi.ss.usermodel.*;
@@ -21,7 +20,7 @@ import java.util.Objects;
 /**
  * Utility responsible for exporting evaluation results from Neo4j into an Excel file.
  *
- * <p>This class queries the Neo4j database for Cluster / Classification / Version nodes,
+ * <p>This class queries the Neo4j database for Classification / Version nodes,
  * retrieves Evaluation objects from version nodes and writes a tabular XLSX file with
  * configurable formatting options.</p>
  *
@@ -31,9 +30,8 @@ import java.util.Objects;
 public class EvaluationExporter {
     private static final Logger log = LoggerFactory.getLogger(EvaluationExporter.class);
 
-    private static final String[] HEADERS = {
-            "Cluster", "Name", "Version", "Accuracy",
-            "Precision", "Recall", "Macro F1", "Micro F1"
+    private static final String[] HEADERS = {"Name", "Version", "Accuracy",
+                                             "Precision", "Recall", "Macro F1", "Micro F1"
     };
 
     private final Neo4jClient client;
@@ -100,7 +98,7 @@ public class EvaluationExporter {
     /**
      * Export evaluation data from the connected Neo4j database to an XLSX file.
      *
-     * <p>This method collects clusters and their child nodes, extracts Evaluation objects
+     * <p>This method collects classifications and their child nodes, extracts Evaluation objects
      * from version nodes and writes the results to the given file path. On failure a
      * RuntimeException is thrown.</p>
      *
@@ -108,8 +106,9 @@ public class EvaluationExporter {
      */
     public void exportAsExcel(String path) {
         try {
-            List<Cluster> clusters = client.findNodes(Map.of(), Cluster.class);
-            List<ExcelRow> excelRows = readExcelRows(clusters);
+            List<ClassificationProperties.Classification> classifications = client.findNodes(Map.of(),
+                                                                                             ClassificationProperties.Classification.class);
+            List<ExcelRow> excelRows = readExcelRows(classifications);
             exportToExcelFile(excelRows, path);
         } catch (Exception e) {
             log.error("Failed to export evaluation data to Excel", e);
@@ -118,21 +117,19 @@ public class EvaluationExporter {
     }
 
     /**
-     * Read the Evaluation objects from the provided clusters and map them to ExcelRow DTOs.
+     * Read the Evaluation objects from the provided classifications and map them to ExcelRow DTOs.
      *
-     * @param clusters list of Cluster nodes retrieved from Neo4j
+     * @param classifications list of Classification nodes retrieved from Neo4j
      * @return list of ExcelRow entries to be written to the spreadsheet
      */
-    private List<ExcelRow> readExcelRows(List<Cluster> clusters) {
-        return clusters.stream()
-                       .flatMap(cluster -> cluster.getChildren(client).stream()
-                                                  .flatMap(classification -> classification.getChildren(client).stream()
-                                                                                           .map(version -> createExcelRow(
-                                                                                                   cluster,
-                                                                                                   classification,
-                                                                                                   version))))
-                       .filter(Objects::nonNull)
-                       .toList();
+    private List<ExcelRow> readExcelRows(List<ClassificationProperties.Classification> classifications) {
+        return classifications.stream()
+                              .flatMap(classification -> classification.getRuns(client).stream()
+                                                                       .map(version -> createExcelRow(
+                                                                               classification,
+                                                                               version)))
+                              .filter(Objects::nonNull)
+                              .toList();
     }
 
     /**
@@ -141,9 +138,9 @@ public class EvaluationExporter {
      * @param version version node object from which to fetch the Evaluation
      * @return Evaluation instance if available, otherwise null
      */
-    private Evaluation getEvaluation(Object version) {
+    private ClassificationProperties.Evaluation getEvaluation(Object version) {
         try {
-            return (Evaluation) version.getClass()
+            return (ClassificationProperties.Evaluation) version.getClass()
                                        .getMethod("getEvaluation", Neo4jClient.class)
                                        .invoke(version, client);
         } catch (Exception e) {
@@ -152,8 +149,8 @@ public class EvaluationExporter {
         }
     }
 
-    private ExcelRow createExcelRow(Cluster cluster, Object classification, Object version) {
-        Evaluation evaluation = getEvaluation(version);
+    private ExcelRow createExcelRow(Object classification, Object version) {
+        ClassificationProperties.Evaluation evaluation = getEvaluation(version);
         if (evaluation == null) {
             return null;
         }
@@ -163,7 +160,6 @@ public class EvaluationExporter {
         }
 
         return ExcelRow.builder()
-                       .cluster(cluster.getName())
                        .name(getClassificationName(classification))
                        .version(getVersionNumber(version))
                        .accuracy(evaluation.getAccuracy())
@@ -194,9 +190,9 @@ public class EvaluationExporter {
         return options.getRoundToDigits() > 0;
     }
 
-    private Evaluation roundEvaluation(Evaluation eval) {
+    private ClassificationProperties.Evaluation roundEvaluation(ClassificationProperties.Evaluation eval) {
         double factor = Math.pow(10, options.getRoundToDigits());
-        return Evaluation.builder()
+        return ClassificationProperties.Evaluation.builder()
                          .accuracy(round(eval.getAccuracy(), factor))
                          .precision(round(eval.getPrecision(), factor))
                          .recall(round(eval.getRecall(), factor))
@@ -245,7 +241,6 @@ public class EvaluationExporter {
 
     private void populateRow(XSSFRow excelRow, ExcelRow data, StyleHelper styles) {
         int col = 0;
-        createCell(excelRow, col++, data.cluster(), styles.getCellStyle());
         createCell(excelRow, col++, data.name(), styles.getCellStyle());
         createCell(excelRow, col++, data.version(), styles.getCellStyle());
         createNumericCell(excelRow, col++, data.accuracy(), styles.getNumberStyle());
@@ -340,18 +335,16 @@ public class EvaluationExporter {
     /**
      * Simple immutable DTO representing a single row in the exported Excel file.
      *
-     * @param cluster cluster name
-     * @param name classification name
-     * @param version version identifier
-     * @param accuracy accuracy metric
+     * @param name      classification name
+     * @param version   version identifier
+     * @param accuracy  accuracy metric
      * @param precision precision metric
-     * @param recall recall metric
-     * @param macroF1 macro F1 score
-     * @param microF1 micro F1 score
+     * @param recall    recall metric
+     * @param macroF1   macro F1 score
+     * @param microF1   micro F1 score
      */
     @Builder
     private record ExcelRow(
-            String cluster,
             String name,
             String version,
             double accuracy,

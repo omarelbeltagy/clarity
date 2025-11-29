@@ -1,6 +1,7 @@
 name: "Evasion Techniques"
+version: "v1"
 mapping:
-  enabled: false
+  enabled: true
   label-property: "clarityLabel"
   labels:
     - "Clear Reply"

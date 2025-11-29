@@ -12,11 +12,10 @@ public class EmbeddingServiceTest {
     @Test
     public void testGenerateEmbeddingsForQAs() throws IOException {
         EmbeddingService.initialize(Neo4jCredentials.getDefault(),
-                                    "text-embedding-3-small");
+                                    "text-embedding-3-large");
         final EmbeddingService embeddingService = EmbeddingService.getInstance();
         String query = """
                 MATCH (n:QA)
-                WHERE n.test = false
                 RETURN n
                 """;
         embeddingService.generateEmbeddingsForQAs(query);

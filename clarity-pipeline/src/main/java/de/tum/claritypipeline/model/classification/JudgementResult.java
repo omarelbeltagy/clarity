@@ -60,4 +60,13 @@ public class JudgementResult implements Serializable {
     @JsonProperty("confirmed")
     @JsonPropertyDescription("If the initial classification was correct or not")
     private boolean confirmed;
+
+    public static final String JSON_SCHEME = """
+            {
+                "confirmed": <BOOLEAN | If the initial classification was correct or not>,
+                "name": <STRING | Name of the classified category. If the initial classification was incorrect, choose the name of the correct category. Otherwise, use the name of the initially classified category>,
+                "explanation": <STRING | Explanation for the judgement decision>,
+                "confidence": <DOUBLE | Confidence score of the classification. If the classification was incorrect, this indicates the confidence in the corrected category>
+            }
+            """;
 }

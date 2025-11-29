@@ -1,6 +1,7 @@
 package de.tum.claritypipeline.model.classification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.tum.claritypipeline.model.core.QA;
 import de.tum.claritypipeline.model.core.Taxonomy;
 import lombok.*;
 
@@ -49,4 +50,12 @@ public class ClassificationRequest implements Serializable {
      */
     @JsonIgnore
     private Taxonomy taxonomy;
+
+    /**
+     * The full QA pair
+     *
+     * <p>Ignored during serialization.
+     */
+    @JsonIgnore
+    private QA qa;
 }

@@ -7,8 +7,10 @@ import de.tum.claritypipeline.service.DatasetGraphImporter;
 import de.tum.claritypipeline.service.DatasetReader;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,127 +46,43 @@ public class PipelineTest {
     @Test
     public void testImportDatasets() {
         List<QA> data = new ArrayList<>();
-        data.addAll(datasetReaderService.readDataset(DatasetType.TRAIN));
-        data.addAll(datasetReaderService.readDataset(DatasetType.VALID));
-        data.addAll(datasetReaderService.readDataset(DatasetType.TEST));
+        for (DatasetType datasetType : DatasetType.values()) {
+            data.addAll(datasetReaderService.readDataset(datasetType));
+        }
         datasetGraphImporter.importDataset(data);
     }
 
-    /**
-     * Run classification using a single properties file.
-     *
-     * @throws IOException if the pipeline fails to initialize or run
-     */
     @Test
-    public void testClassify() throws IOException {
-        ClassificationPipeline classificationPipeline = new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/Llama-3.3-70B.yaml");
+    public void testClassifyFromDirectory() {
+        classifyFromDirectory("src/test/resources/properties/single-few-shot");
+        classifyFromDirectory("src/test/resources/properties/single-few-shot-reasoning-high");
+        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based");
+        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-reasoning-high");
+    }
+
+    private void classifyFromDirectory(String dirPath) {
+        final int attempts = 3;
+        File dir = new File(dirPath);
+        File[] files = dir.listFiles();
+
+        if (files != null) {
+            for (int i = 0; i < attempts; i++) {
+                Arrays.stream(files).forEach(file -> {
+                    try {
+                        ClassificationPipeline cp = new ClassificationPipeline(file.getAbsolutePath());
+                        cp.classify();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                });
+            }
+        }
+    }
+
+    @Test
+    public void testClassifyFromFile() throws IOException {
+        String file = "src/test/resources/properties/single-few-shot/Llama-3.3-70B.yaml";
+        ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
-    }
-
-    /**
-     * Run classification experiments for different encoder-based configurations in parallel.
-     *
-     * @throws IOException if any pipeline initialization fails
-     */
-    @Test
-    public void testClassifyEncoder() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/encoder/roberta-base.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/encoder/roberta-large.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
-    }
-
-
-    @Test
-    public void testClassifyFineTuned() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/fine-tune/Llama-3-8B-LoRA.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
-    }
-
-    /**
-     * Run classification experiments for different Llama-based configurations in parallel.
-     *
-     * @throws IOException if any pipeline initialization fails
-     */
-    @Test
-    public void testClassifyLlama() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/Llama-3.3-70B.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/Llama-4-Maverick-17B-128E.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
-    }
-
-    /**
-     * Run classification experiments for Claude model variants.
-     *
-     * @throws IOException if any pipeline initialization fails
-     */
-    @Test
-    public void testClassifyClaude() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/claude-haiku-4.5.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/claude-sonnet-4.5.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/claude-opus-4.1.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
-    }
-
-    /**
-     * Run classification experiments for DeepSeek model variants.
-     *
-     * @throws IOException if any pipeline initialization fails
-     */
-    @Test
-    public void testClassifyDeepSeek() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/DeepSeek-R1-0528-tput.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/DeepSeek-R1-Distill-Qwen-14B.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/DeepSeek-R1-Distill-Llama-70B.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
-    }
-
-    /**
-     * Run a variety of OpenAI / OSS GPT model configurations for classification.
-     *
-     * @throws IOException if any pipeline initialization fails
-     */
-    @Test
-    public void testClassifyOpenAi() throws IOException {
-        List<ClassificationPipeline> pipelines = new ArrayList<>();
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-4.1.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-4.1-mini.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-oss-20b.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-oss-120b.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-5.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-5-mini.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/gpt-5-nano.yaml"));
-        pipelines.add(new ClassificationPipeline(
-                "src/test/resources/properties/few-shot/o3.yaml"));
-
-        pipelines.parallelStream().forEach(ClassificationPipeline::classify);
     }
 }

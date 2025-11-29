@@ -3,7 +3,7 @@ package de.tum.clarityneo4j.core;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import de.tum.clarityneo4j.model.Neo4jCredentials;
+import de.tum.clarityneo4j.model.Neo4jExporterConfig;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.slf4j.Logger;
@@ -20,42 +20,21 @@ import java.util.stream.Collectors;
  * as well as to clear the database.
  */
 public class Neo4jExporter {
-    private static final int RELATIONSHIPS_BATCH_SIZE = 1000;
-    private static final int NODES_BATCH_SIZE = 1000;
 
-    private static final int READ_BATCH_SIZE = 10000;
-    private static final int RELATIONSHIPS_BATCH_SIZE_EXPORT = 5000;
-    private static final int NODES_BATCH_SIZE_EXPORT = 5000;
     private final Driver driver;
+    private final Neo4jExporterConfig neo4jExporterConfig;
     private final Logger log = org.slf4j.LoggerFactory.getLogger(Neo4jExporter.class);
 
-    /**
-     * Constructs a Neo4jExporter using default credentials.
-     *
-     * @throws IOException if default credentials cannot be loaded
-     */
     public Neo4jExporter() throws IOException {
-        this(Neo4jCredentials.getDefault());
+        this(Neo4jExporterConfig.getDefault());
     }
 
-    /**
-     * Constructs a Neo4jExporter with the specified credentials.
-     *
-     * @param neo4jCredentials credentials for Neo4j connection
-     */
-    public Neo4jExporter(Neo4jCredentials neo4jCredentials) {
-        this.driver = GraphDatabase.driver(neo4jCredentials.getNeo4jUrl(),
-                                           AuthTokens.basic(neo4jCredentials.getNeo4jUser(),
-                                                            neo4jCredentials.getNeo4jPassword()));
-    }
-
-    /**
-     * Constructs a Neo4jExporter with an existing Neo4j driver.
-     *
-     * @param driver Neo4j driver instance
-     */
-    public Neo4jExporter(Driver driver) {
-        this.driver = driver;
+    public Neo4jExporter(Neo4jExporterConfig neo4jExporterConfig) {
+        this.neo4jExporterConfig = neo4jExporterConfig;
+        this.driver = GraphDatabase.driver(neo4jExporterConfig.getNeo4jCredentials().getNeo4jUrl(),
+                                           AuthTokens.basic(neo4jExporterConfig.getNeo4jCredentials().getNeo4jUser(),
+                                                            neo4jExporterConfig.getNeo4jCredentials()
+                                                                               .getNeo4jPassword()));
     }
 
     /**
@@ -111,7 +90,8 @@ public class Neo4jExporter {
                             "CALL apoc.export.json.data([n], [], null, {stream: true}) " +
                             "YIELD data " +
                             "RETURN data",
-                    Map.of("skip", processed, "limit", NODES_BATCH_SIZE_EXPORT)
+                    Map.of("skip", processed, "limit",
+                           neo4jExporterConfig.getBatchConfig().getExportConfig().getNodeBatchSize())
             );
 
             while (result.hasNext()) {
@@ -122,7 +102,7 @@ public class Neo4jExporter {
                 }
             }
 
-            processed += NODES_BATCH_SIZE_EXPORT;
+            processed += neo4jExporterConfig.getBatchConfig().getExportConfig().getNodeBatchSize();
             if (processed > totalNodes) {
                 processed = totalNodes;
             }
@@ -144,7 +124,8 @@ public class Neo4jExporter {
                             "CALL apoc.export.json.data([], [r], null, {stream: true}) " +
                             "YIELD data " +
                             "RETURN data",
-                    Map.of("skip", processed, "limit", RELATIONSHIPS_BATCH_SIZE_EXPORT)
+                    Map.of("skip", processed, "limit",
+                           neo4jExporterConfig.getBatchConfig().getExportConfig().getRelationshipBatchSize())
             );
 
             while (result.hasNext()) {
@@ -155,7 +136,7 @@ public class Neo4jExporter {
                 }
             }
 
-            processed += RELATIONSHIPS_BATCH_SIZE_EXPORT;
+            processed += neo4jExporterConfig.getBatchConfig().getExportConfig().getRelationshipBatchSize();
             if (processed > totalRels) {
                 processed = totalRels;
             }
@@ -168,9 +149,32 @@ public class Neo4jExporter {
      * Logs the operation.
      */
     public void clearDatabase() {
-        String cypherQuery = "MATCH (n) DETACH DELETE n";
-        this.driver.session().run(cypherQuery);
-        log.info("Cleared the database.");
+        int deletedCount;
+        int totalDeleted = 0;
+
+        log.info("Starting database cleanup in batches of {}...",
+                 neo4jExporterConfig.getBatchConfig().getDeleteBatchSize());
+
+        try (Session session = driver.session()) {
+            do {
+                String cypherQuery = String.format(
+                        "MATCH (n) " +
+                                "WITH n LIMIT %d " +
+                                "DETACH DELETE n " +
+                                "RETURN count(n) as deleted",
+                        neo4jExporterConfig.getBatchConfig().getDeleteBatchSize()
+                );
+
+                Result result = session.run(cypherQuery);
+                deletedCount = result.single().get("deleted").asInt();
+                totalDeleted += deletedCount;
+
+                log.debug("Deleted {} nodes (total: {})", deletedCount, totalDeleted);
+
+            } while (deletedCount > 0);
+
+            log.info("Database cleared. Total nodes deleted: {}", totalDeleted);
+        }
     }
 
     /**
@@ -209,7 +213,8 @@ public class Neo4jExporter {
                     ((ObjectNode) node.get("properties")).put("tempId", id.toString());
                     nodeBatch.add(node);
 
-                    if (nodeBatch.size() >= READ_BATCH_SIZE) {
+                    if (nodeBatch.size() >= neo4jExporterConfig.getBatchConfig().getImportConfig()
+                                                               .getReadBatchSize()) {
                         Record record = importNodeBatch(nodeBatch, mapper);
                         totalNodes += record.get("total").asInt();
                         nodeBatch.clear();
@@ -234,15 +239,20 @@ public class Neo4jExporter {
                 if (line.isBlank()) continue;
 
                 JsonNode node = mapper.readTree(line);
+                if (!node.has("properties") || node.get("properties").isNull()) {
+                    ((ObjectNode) node).set("properties", mapper.createObjectNode());
+                }
 
                 if ("relationship".equals(node.get("type").asText())) {
-                    Object startId = node.get("start").get("id").asLong();
-                    Object endId = node.get("end").get("id").asLong();
-                    ((ObjectNode) node).put("start", startId.toString());
-                    ((ObjectNode) node).put("end", endId.toString());
+                    String startId = node.get("start").get("id").asText();
+                    String endId = node.get("end").get("id").asText();
+                    ((ObjectNode) node).put("startTempId", startId);
+                    ((ObjectNode) node).put("endTempId", endId);
                     relationshipBatch.add(node);
 
-                    if (relationshipBatch.size() >= READ_BATCH_SIZE) {
+                    if (relationshipBatch.size() >= neo4jExporterConfig.getBatchConfig()
+                                                                       .getImportConfig()
+                                                                       .getReadBatchSize()) {
                         Record record = importRelationshipBatch(relationshipBatch, mapper);
                         totalRelationships += record.get("total").asInt();
                         relationshipBatch.clear();
@@ -283,7 +293,10 @@ public class Neo4jExporter {
                                                                  YIELD node
                                                                  RETURN node
                                                                  ',
-                                                                 {batchSize:""" + NODES_BATCH_SIZE + """
+                                                                 {batchSize:""" + neo4jExporterConfig.getBatchConfig()
+                                                                                                     .getImportConfig()
+                                                                                                     .getNodeBatchSize()
+                                                             + """
                                                         , parallel: true, params: {nodes: $nodes}}
                                                         )
                                                         """, Values.parameters("nodes", nodes.stream()
@@ -310,14 +323,17 @@ public class Neo4jExporter {
                                                                  'UNWIND $relationships as relData RETURN relData',
                                                                  '
                                                                  MATCH (a), (b)
-                                                                 WHERE a.tempId = relData.start
-                                                                     AND b.tempId = relData.end
+                                                                 WHERE a.tempId = relData.startTempId
+                                                                     AND b.tempId = relData.endTempId
                                                                  CALL apoc.create.relationship(a, relData.label, relData.properties, b)
                                                                  YIELD rel
                                                                  RETURN rel
                                                                  ',
-                                                                 {batchSize:""" + RELATIONSHIPS_BATCH_SIZE + """
-                                                            , parallel: true, params: {relationships: $relationships}}
+                                                                 {batchSize:""" + neo4jExporterConfig.getBatchConfig()
+                                                                                                     .getImportConfig()
+                                                                                                     .getRelationshipBatchSize()
+                                                             + """
+                                                                , parallel: true, params: {relationships: $relationships}}
                                                         )
                                                         """, Values.parameters("relationships", relationships.stream()
                                                                                                              .map(n -> mapper.convertValue(
