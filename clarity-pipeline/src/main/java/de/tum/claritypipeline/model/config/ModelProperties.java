@@ -114,15 +114,6 @@ public class ModelProperties extends Neo4jNode {
     @Getter(AccessLevel.NONE)
     private PatternProperties patternConfig;
 
-    /**
-     * Whether to inject response format instructions into the prompt.
-     *
-     * <p>Default is true.
-     */
-    @JsonProperty("inject-response-format")
-    @JsonPropertyDescription("Whether to inject response format instructions into the prompt.")
-    private boolean injectResponseFormat = true;
-
     @JsonProperty("reasoning-effort")
     @JsonPropertyDescription("Set the reasoning effort for models that support that setting.")
     private String reasoningEffort;
