@@ -1,0 +1,17 @@
+name: "GPT 5.1"
+version: "rag:evasion-based:single:few-shot:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-5.1"
+    prompt: "../assets/prompts/few-shot.yaml"
+    rag:
+      enabled: true
+      k: 1
+      embedding-index: "qa_answer"

@@ -1,0 +1,17 @@
+name: "Llama 3.3 70B"
+version: "rag:evasion-based:single:few-shot:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    prompt: "../assets/prompts/few-shot.yaml"
+    rag:
+      enabled: true
+      k: 1
+      embedding-index: "qa_answer"

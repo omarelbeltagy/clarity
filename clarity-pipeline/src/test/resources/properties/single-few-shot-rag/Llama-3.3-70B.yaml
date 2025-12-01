@@ -1,0 +1,17 @@
+name: "Llama 3.3 70B"
+version: "rag:single:few-shot:v1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "together"
+    name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    prompt: "../assets/prompts/few-shot.yaml"
+    rag:
+      enabled: true
+      k: 2
+      embedding-index: "qa_answer"
