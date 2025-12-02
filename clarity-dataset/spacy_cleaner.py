@@ -12,7 +12,7 @@ from datasets import load_dataset
 import pandas as pd
 
 
-class FillerWordRemover:
+class SpacyCleaner:
     """
     A comprehensive filler word removal system that:
     1. Uses spaCy for intelligent tokenization and stopword handling
@@ -274,7 +274,7 @@ class FillerWordRemover:
 def create_cleaner(
     preserve_negation: bool = True,
     custom_fillers: Optional[Set[str]] = None
-) -> FillerWordRemover:
+) -> SpacyCleaner:
     """
     Create a cleaner with sensible defaults
     
@@ -283,7 +283,7 @@ def create_cleaner(
         custom_fillers: Additional fillers specific to your domain
     """
     preserve = {"not", "no", "never", "neither", "nor", "none", "in", "on", "at", "the", "a", "but"} if preserve_negation else None
-    return FillerWordRemover(
+    return SpacyCleaner(
         preserve_stopwords=preserve,
         custom_fillers=custom_fillers
     )
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     }
     
     # Note: multi-word phrases go in custom_phrases parameter
-    political_cleaner = FillerWordRemover(
+    political_cleaner = SpacyCleaner(
         custom_fillers={"listen", "look", "folks"},
         custom_phrases=["believe me", "let me be clear", "make no mistake"]
     )
