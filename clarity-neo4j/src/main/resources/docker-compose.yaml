@@ -29,7 +29,7 @@ services:
     healthcheck:
       test: [
         "CMD-SHELL",
-        "cypher-shell -u neo4j -p bluesolve123 'RETURN 1' || exit 1"
+        "cypher-shell -u neo4j -p clarity123 'RETURN 1' || exit 1"
       ]
       interval: 10s
       timeout: 5s
