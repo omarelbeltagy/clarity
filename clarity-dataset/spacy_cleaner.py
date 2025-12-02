@@ -283,6 +283,7 @@ if __name__ == "__main__":
     cleaner = create_cleaner()
     
     test_cases = [
+        "I don't talk about whether or not I'd use military force. That's not appropriate to be talking about. But I can tell you this: They will not be doing nuclear weapons. That I can tell you. Okay? They're not going to be doing nuclear weapons. You can bank on it.Okay. Please.[.]",
         "Um, well, you know, I think we should, like, proceed with this.",
         "At the end of the day, basically, we need to focus on results.",
         "So, uh, to be honest, I mean, this is actually quite important.",
