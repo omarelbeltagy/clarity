@@ -32,7 +32,7 @@ class FillerWordRemover:
         "seriously", "clearly", "obviously", "definitely", "certainly",
         "apparently", "presumably", "supposedly", "arguably",
         "like", "well", "so", "okay", "ok", "right", "yeah", "yep",
-        "alright", "anyway", "anyways", "whatever"
+        "alright", "anyway", "anyways", "whatever", "please"
     }
     
     # Multi-word filler phrases
