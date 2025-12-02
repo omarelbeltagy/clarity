@@ -123,6 +123,7 @@ class FillerWordRemover:
         text = re.sub(r'\[[^\]]*\]', ' ', text)
         text = re.sub(r'([.!?])([A-Z])', r'\1 \2', text)
         text = re.sub(r'([a-z])([A-Z])', r'\1. \2', text)
+        text = re.sub(r'^[\s\.\,\;\:\!\?\-—–"\'\(\)\[\]\{]+', '', text)
         return text
 
 
@@ -151,6 +152,32 @@ class FillerWordRemover:
                 to_remove.add(nxt.i)
 
         return to_remove
+
+    def _rebuild_text(self, doc, remove_indices):
+        """
+        Rebuild text from tokens after removals.
+        - Avoid spaces before punctuation
+        - Preserve spaces where needed
+        """
+        tokens = []
+        for i, token in enumerate(doc):
+            if i in remove_indices:
+                continue
+
+            if token.is_punct:
+                # Attach punctuation directly to previous token (no leading space)
+                tokens.append(token.text)
+            elif tokens and re.match(r'^[.,;:!?\'")\]]', token.text):
+                # Safety: attach punctuation directly if regex matches
+                tokens.append(token.text)
+            else:
+                # Normal word
+                if tokens:
+                    tokens.append(' ' + token.text)
+                else:
+                    tokens.append(token.text)
+        return ''.join(tokens)
+
 
     
     def clean_text(
@@ -195,7 +222,7 @@ class FillerWordRemover:
                 continue
 
         # Step 4: Rebuild clean text using spaCy token whitespace to avoid inserting artificial spaces
-        text = ''.join([t.text_with_ws for t in doc if t.i not in remove_indices])
+        text = self._rebuild_text(doc, remove_indices)
 
         # Step 5: Final punctuation cleanup
         text = self._clean_punctuation(text)
@@ -205,6 +232,8 @@ class FillerWordRemover:
     
     def _join_tokens(self, doc: Doc, tokens: List[str]) -> str:
         """Join tokens while preserving proper spacing with punctuation"""
+        print("TOKENS::::" )
+        print(tokens)
         if not tokens:
             return ""
         
