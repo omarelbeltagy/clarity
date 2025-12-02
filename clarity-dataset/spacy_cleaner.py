@@ -40,10 +40,10 @@ class FillerWordRemover:
         "you know", "i mean", "i think", "i guess", "i suppose",
         "you see", "you know what", "you know what i mean",
         "kind of", "sort of", "a bit", "a little", "a little bit",
-        "at the end of the day", "to be honest", "to be fair",
-        "to be frank", "to be clear", "to tell you the truth",
+        "at the end of the day", "by the end of the day", "to be honest", "to be fair",
+        "to be frank", "to be clear", "to tell you the truth", "to be honest"
         "the thing is", "the fact is", "the point is",
-        "by the way", "in other words", "so to speak",
+        "by the way", "in other words", "so to speak", "so to say"
         "as it were", "if you will", "more or less",
         "you know what i'm saying", "what i'm trying to say is",
         "that being said", "having said that", "all things considered",
