@@ -117,6 +117,8 @@ class FillerWordRemover:
         text = re.sub(r"([.,;:!?]){2,}", r"\1", text)
         text = re.sub(r"\s+", " ", text).strip()
         text = re.sub(r'\[[^\]]*\]', ' ', text)
+        text = re.sub(r'([.!?])([A-Z])', r'\1 \2', text)
+        text = re.sub(r'([a-z])([A-Z])', r'\1. \2', text)
         return text
 
 
