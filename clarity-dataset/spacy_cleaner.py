@@ -228,23 +228,6 @@ class FillerWordRemover:
         text = self._clean_punctuation(text)
 
         return text
-
-    
-    def _join_tokens(self, doc: Doc, tokens: List[str]) -> str:
-        """Join tokens while preserving proper spacing with punctuation"""
-        print("TOKENS::::" )
-        print(tokens)
-        if not tokens:
-            return ""
-        
-        result = []
-        for i, token in enumerate(tokens):
-            result.append(token)
-            # Add space unless next token is punctuation
-            if i < len(tokens) - 1 and not re.match(r'^[.,;:!?\'\")]$', tokens[i + 1]):
-                result.append(' ')
-        
-        return ''.join(result)
     
     def process_dataset(
         self,
