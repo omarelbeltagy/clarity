@@ -1,6 +1,7 @@
 # Dataset and data processing
 datasets==4.2.0
 huggingface-hub>=0.16.0
+spacy>=3.7.0,<4.0.0
 
 # NLP and transformers for BERT summaries
 transformers>=4.30.0
