@@ -282,7 +282,7 @@ def create_cleaner(
         preserve_negation: Keep words like "not", "no", "never" (important for sentiment)
         custom_fillers: Additional fillers specific to your domain
     """
-    preserve = {"not", "no", "never", "neither", "nor", "none"} if preserve_negation else None
+    preserve = {"not", "no", "never", "neither", "nor", "none", "in", "on", "at", "the", "a", "but"} if preserve_negation else None
     return FillerWordRemover(
         preserve_stopwords=preserve,
         custom_fillers=custom_fillers
