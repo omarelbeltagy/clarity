@@ -1,0 +1,15 @@
+name: "Llama 3.3 70B"
+version: "extended-evasion-based:best-guess:few-shot:v2"
+taxonomy: "../assets/taxonomy/extended-evasion-techniques.yaml"
+worker-threads: 16
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "best-guess"
+  model:
+    provider: "together"
+    name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    prompt: "../assets/prompts/few-shot-best-guess.yaml"
+  k: 2
