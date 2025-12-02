@@ -1,5 +1,5 @@
 name: "GPT 5.1"
-version: "rag:evasion-based:single:few-shot:v3"
+version: "rag:evasion-based:single:few-shot:v4"
 taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
 worker-threads: 16
 query: |
@@ -10,6 +10,7 @@ strategy:
   type: "single"
   model:
     provider: "openai"
+    reasoning-effort: "high"
     name: "gpt-5.1"
     prompt: "../assets/prompts/few-shot-rag.yaml"
     rag:

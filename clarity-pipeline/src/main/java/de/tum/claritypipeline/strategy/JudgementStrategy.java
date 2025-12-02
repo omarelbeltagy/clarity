@@ -3,15 +3,23 @@ package de.tum.claritypipeline.strategy;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import de.tum.clarityneo4j.annotations.Neo4jIgnore;
 import de.tum.clarityneo4j.annotations.Node;
 import de.tum.clarityneo4j.core.Neo4jNode;
+import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.classification.JudgementResult;
+import de.tum.claritypipeline.model.config.GlobalConfig;
 import de.tum.claritypipeline.model.config.ModelProperties;
+import de.tum.claritypipeline.model.relation.HasClassificationModel;
+import de.tum.claritypipeline.model.relation.HasJudgementModel;
 import de.tum.claritypipeline.utils.PromptUtils;
+import de.tum.clarityutils.AfterDeserialization;
 import lombok.*;
+
+import java.util.Map;
 
 /**
  * Strategy that performs a two-step classification: an initial classification
@@ -37,10 +45,12 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
 
     @JsonProperty("classification-model")
     @JsonPropertyDescription("The model configuration to use for the initial classification.")
+    @Neo4jIgnore
     private ModelProperties classificationModel;
 
     @JsonProperty("judgement-model")
     @JsonPropertyDescription("The model configuration to use for the judgement step.")
+    @Neo4jIgnore
     private ModelProperties judgementModel;
 
     /**
@@ -58,6 +68,61 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
         JudgementResult judgementResult = performJudgement(request, initialResult);
 
         return mergeResults(initialResult, judgementResult);
+    }
+
+    @AfterDeserialization
+    private void createNode() {
+        String query = """
+                MATCH(jm:%s)<-[:%s]-(n:%s)-[:%s]->(cm:%s)
+                WHERE elementId(cm) = $classificationModelPropertiesId
+                AND elementId(jm) = $judgementModelPropertiesId
+                RETURN n
+                """.formatted(
+                Neo4jNode.getLabel(ModelProperties.class),
+                Neo4jRelation.getType(HasJudgementModel.class),
+                Neo4jNode.getLabel(JudgementStrategy.class),
+                Neo4jRelation.getType(HasClassificationModel.class),
+                Neo4jNode.getLabel(ModelProperties.class));
+
+        JudgementStrategy existingNode = GlobalConfig.NEO4J_CLIENT.executeQuery(query,
+                                                                                Map.of("classificationModelPropertiesId",
+                                                                                       classificationModel.getElementId(),
+                                                                                       "judgementModelPropertiesId",
+                                                                                       judgementModel.getElementId()),
+                                                                                JudgementStrategy.class).stream()
+                                                                  .findFirst()
+                                                                  .orElse(null);
+
+        if (existingNode != null && allRelationsExist(existingNode)) {
+            setElementId(existingNode.getElementId());
+            return;
+        }
+
+        GlobalConfig.NEO4J_CLIENT.saveNode(this);
+        createRelationIfNeeded(classificationModel, HasClassificationModel.builder().build());
+        createRelationIfNeeded(judgementModel, HasJudgementModel.builder().build());
+    }
+
+    private boolean allRelationsExist(JudgementStrategy existingNode) {
+        boolean classificationModelOk =
+                GlobalConfig.NEO4J_CLIENT.findRelation(existingNode.getElementId(), classificationModel.getElementId(),
+                                                       HasClassificationModel.class)
+                        != null;
+
+        boolean judgementModelOk =
+                GlobalConfig.NEO4J_CLIENT.findRelation(existingNode.getElementId(), judgementModel.getElementId(),
+                                                       HasJudgementModel.class)
+                        != null;
+
+        return classificationModelOk && judgementModelOk;
+    }
+
+    private <T extends Neo4jRelation, N extends Neo4jNode> void createRelationIfNeeded(
+            N targetNode, T relation) {
+        if (targetNode == null) return;
+        relation.setStartNodeId(this.getElementId());
+        relation.setEndNodeId(targetNode.getElementId());
+        GlobalConfig.NEO4J_CLIENT.createRelation(relation);
     }
 
     @Override

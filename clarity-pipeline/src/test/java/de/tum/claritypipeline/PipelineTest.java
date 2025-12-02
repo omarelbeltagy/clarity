@@ -54,9 +54,9 @@ public class PipelineTest {
 
     @Test
     public void testClassifyFromDirectory() {
+        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-rag");
         classifyFromDirectory("src/test/resources/properties/single-few-shot");
         classifyFromDirectory("src/test/resources/properties/single-few-shot-rag");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-rag");
         classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-rag-reasoning-high");
         classifyFromDirectory("src/test/resources/properties/single-few-shot-reasoning-high");
         classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based");
@@ -84,7 +84,7 @@ public class PipelineTest {
 
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/single-few-shot-evasion-based-rag/gpt-oss-120b.yaml";
+        String file = "src/test/resources/properties/judgement-few-shot/gpt-5.1.yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }

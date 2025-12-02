@@ -125,10 +125,16 @@ public class PromptUtils {
             case QA_QUESTION -> request.getQa().getQuestionEmbedding();
             case QA_QUESTION_AND_ANSWER -> request.getQa().getQuestionAnswerEmbedding();
         };
+        if (requestEmbedding == null || requestEmbedding.length == 0) {
+            throw new IllegalArgumentException("Embedding must not be null or empty.");
+        }
         List<Neo4jEmbeddingSearchResult<QA>> similarExamples = GlobalConfig.NEO4J_CLIENT.similaritySearch(
-                ragProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 256, QA.class);
+                                                                                   ragProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 256, QA.class).stream()
+                                                                                        .filter(example -> !example.getNode()
+                                                                                                                   .isTest())
+                                                                                        .toList();
+
         similarExamples = similarExamples.stream()
-                                         .filter(example -> !example.getNode().isTest())
                                          .collect(Collectors.groupingBy(
                                                  r -> {
                                                      try {

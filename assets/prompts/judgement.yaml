@@ -33,3 +33,6 @@ prompt: |
   3. Evaluate whether the provided classification aligns with the taxonomy based on your analysis and the explanation given.
   5. Confirm or deny the correctness of the classification.
   6. If the classification is incorrect, determine the correct classification according to the taxonomy.
+  
+  ### Output
+  {response_format}
