@@ -32,6 +32,21 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_01_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_02_2025.xlsx");
+    }
+
+    @Test
+    public void testExportResult() throws IOException {
+        evaluationExporter.exportResult(
+                "src/test/resources/properties/single-few-shot-evasion-based-rag/gpt-5.1.yaml",
+                "src/test/resources/prediction.zip"
+        );
+    }
+
+    @Test
+    public void testGenerateCustomEvaluation() throws IOException {
+        evaluationExporter.generateCustomEvaluation(
+                "src/test/resources/properties/single-few-shot-evasion-based/gpt-5.1.yaml"
+        );
     }
 }

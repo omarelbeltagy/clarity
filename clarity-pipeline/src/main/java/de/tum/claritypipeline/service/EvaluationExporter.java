@@ -131,6 +131,11 @@ public class EvaluationExporter {
         }
     }
 
+    public void generateCustomEvaluation(String classificationPropertiesPath) throws IOException {
+        ClassificationProperties classificationProperties = ClassificationProperties.load(classificationPropertiesPath);
+        generateCustomEvaluation(classificationProperties);
+    }
+
     public void generateCustomEvaluation(ClassificationProperties properties) {
         log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
                  properties.getName());
