@@ -51,7 +51,7 @@ class FillerWordRemover:
         "as it were", "if you will", "more or less",
         "you know what i'm saying", "what i'm trying to say is",
         "that being said", "having said that", "all things considered",
-        "for what it's worth", "at this point in time"
+        "for what it's worth", "at this point in time", "mr. president"
     ]
     
     def __init__(
@@ -303,6 +303,7 @@ if __name__ == "__main__":
     
     test_cases = [
         "I don't talk about whether or not I'd use military force. That's not appropriate to be talking about. But I can tell you this: They will not be doing nuclear weapons. That I can tell you. Okay? They're not going to be doing nuclear weapons. You can bank on it.Okay. Please.[.]",
+        "Q. Thank you very much, Mr. President. Given the conditions that were just laid out at the migrant facilities at the U.S. border, will you commit to allowing journalists to have access to the facilities that are overcrowded moving forward?",
         "Um, well, you know, I think we should, like, proceed with this.",
         "At the end of the day, basically, we need to focus on results.",
         "So, uh, to be honest, I mean, this is actually quite important.",
