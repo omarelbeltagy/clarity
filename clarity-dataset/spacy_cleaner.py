@@ -163,7 +163,14 @@ class SpacyCleaner:
         for i, token in enumerate(doc):
             if i in remove_indices:
                 continue
-
+            if token.text == "n't":
+                if tokens:
+                    # Remove any trailing space from previous token
+                    tokens[-1] = tokens[-1].rstrip() + "n't"
+                else:
+                    # Edge case: nothing before, just keep n't
+                    tokens.append("n't")
+                continue
             if token.is_punct:
                 # Attach punctuation directly to previous token (no leading space)
                 tokens.append(token.text)
