@@ -16,6 +16,8 @@ public class DatabaseExporterTest {
      * Neo4j exporter utility used to perform export/import operations.
      */
     private final Neo4jExporter neo4jExporter = new Neo4jExporter();
+    //private final Neo4jExporter neo4jExporter = new Neo4jExporter(Neo4jExporterConfig.load
+    // ("src/test/resources/neo4j-exporter-config-reduced-batch-size.yaml"));
 
     /**
      * Default constructor initializes resources required for tests.
@@ -45,7 +47,7 @@ public class DatabaseExporterTest {
      */
     @Test
     public void testExportDatabase() throws IOException {
-        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_01_2025.json");
+        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_02_2025.json");
     }
 
     /**
@@ -59,6 +61,6 @@ public class DatabaseExporterTest {
     @Test
     public void testImportDatabase() throws IOException {
         neo4jExporter.clearDatabase();
-        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_01_2025.json");
+        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_02_2025.json");
     }
 }
