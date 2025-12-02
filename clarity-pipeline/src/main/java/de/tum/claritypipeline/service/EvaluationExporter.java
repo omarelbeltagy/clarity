@@ -175,40 +175,12 @@ public class EvaluationExporter {
                                         result.getElementId());
                                return null;
                            }
-                           String predictedLabel;
-                           if (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy().getMapping()
-                                                                                          .isEnabled()) {
-                               Taxonomy.Category category = properties.getTaxonomy().getCategories().stream()
-                                                                      .filter(c ->
-                                                                                      c.getName()
-                                                                                       .equals(result.getName()))
-                                                                      .findFirst()
-                                                                      .orElse(null);
-                               if (category != null) {
-                                   predictedLabel = category.getMapTo();
-                               } else {
-                                   return null;
-                               }
-                           } else {
-                               predictedLabel = result.getName();
-                           }
-                           String propertyLabel =
-                                   (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
-                                                                                               .getMapping()
-                                                                                               .isEnabled())
-                                           ? properties.getTaxonomy().getMapping().getLabelProperty()
-                                           : properties.getTaxonomy().getLabelProperty();
-                           String expectedLabel;
-                           try {
-                               Field field = qa.getClass().getDeclaredField(propertyLabel);
-                               field.setAccessible(true);
-                               Object value = field.get(qa);
-                               if (value == null) {
-                                   return null;
-                               }
-                               expectedLabel = value.toString();
-                           } catch (NoSuchFieldException | IllegalAccessException e) {
-                               throw new RuntimeException(e);
+                           String predictedLabel = result.getName();
+                           String expectedLabel = qa.getAnnotator1();
+                           if (predictedLabel.equals(qa.getAnnotator2())) {
+                                expectedLabel = qa.getAnnotator2();
+                           } else if (predictedLabel.equals(qa.getAnnotator3())) {
+                                expectedLabel = qa.getAnnotator3();
                            }
                            if (predictedLabel != null && expectedLabel != null) {
                                return new String[]{predictedLabel, expectedLabel};
@@ -226,15 +198,10 @@ public class EvaluationExporter {
                                                       .map(arr -> arr[1])
                                                       .toList();
 
-        List<String> labels;
-        if (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy().getMapping().isEnabled()) {
-            labels = properties.getTaxonomy().getMapping().getLabels();
-        } else {
-            labels = properties.getTaxonomy().getCategories()
+        List<String> labels = properties.getTaxonomy().getCategories()
                                .stream()
                                .map(Taxonomy.Category::getName)
                                .toList();
-        }
 
         try {
             ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);

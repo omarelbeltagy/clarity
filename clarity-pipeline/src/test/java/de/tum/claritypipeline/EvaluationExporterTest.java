@@ -46,7 +46,7 @@ public class EvaluationExporterTest {
     @Test
     public void testGenerateCustomEvaluation() throws IOException {
         evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/single-few-shot-evasion-based/gpt-5.1.yaml"
+                "src/test/resources/properties/single-few-shot-evasion-based-rag/gpt-5.1.yaml"
         );
     }
 }
