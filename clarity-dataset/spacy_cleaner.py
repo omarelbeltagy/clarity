@@ -84,6 +84,8 @@ class SpacyCleaner:
         
         # Stopwords to preserve (commonly: not, no, never for sentiment)
         self.preserve_stopwords = preserve_stopwords or set()
+
+        self._compile_title_patterns()
         
         for filler in self.fillers:
             self.nlp.vocab[filler].is_stop = True
@@ -274,7 +276,8 @@ class SpacyCleaner:
         self,
         text: str,
         remove_stopwords: bool = False,
-        keep_punctuation: bool = True
+        keep_punctuation: bool = True,
+        president_name: Optional[str] = None
     ) -> str:
         """
         Clean text by removing filler words and optionally stopwords
@@ -283,6 +286,7 @@ class SpacyCleaner:
             text: Input text to clean
             remove_stopwords: Whether to remove standard stopwords too
             keep_punctuation: Whether to keep punctuation marks
+            president_name: Name of president to remove (e.g., "Joe Biden")  # ADD THIS LINE
             
         Returns:
             Cleaned text
