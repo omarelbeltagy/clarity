@@ -270,10 +270,8 @@ class SpacyCleaner:
                 else:
                     parts.append(token.text)
             else:
-                # Normal token - use original whitespace
                 parts.append(token.text_with_ws)
 
-        # Join and clean up
         text = ''.join(parts)
         return text.rstrip()  # Remove trailing whitespace
 
