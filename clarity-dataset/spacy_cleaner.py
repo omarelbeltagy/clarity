@@ -107,6 +107,101 @@ class SpacyCleaner:
         
         return patterns
 
+    def _compile_title_patterns(self):
+        """Pre-compile patterns for common titles and honorifics"""
+        # Direct addresses
+        self.rx_direct_address = re.compile(
+            r"(?i)\b(?:sir|ma'am|madam)\b\s*[.,;:!?—–-]?\s*"
+        )
+        
+        # Honorific titles (Mr., Mrs., Ms., President)
+        self.rx_honoured_title = re.compile(
+            r"(?i)\b(?:mr|mister|ms|mrs|madam)\.?\s+president\b\s*[.,;:!?—–-]?\s*"
+        )
+
+    def _compile_name_patterns(self, president_name: str) -> List[re.Pattern]:
+        """
+        Compile regex patterns for a specific president name.
+        
+        Args:
+            president_name: Full name like "Joe Biden" or "Donald Trump"
+            
+        Returns:
+            List of compiled regex patterns to match name variations
+        """
+        if not president_name or not president_name.strip():
+            return []
+        
+        patterns = []
+        
+        # Split name into parts
+        name_parts = president_name.strip().split()
+        if not name_parts:
+            return []
+        
+        # Get first name, last name, and full name
+        first_name = name_parts[0]
+        last_name = name_parts[-1]
+        full_name = " ".join(name_parts)
+        
+        # Pattern 1: "President [Full Name]"
+        full_escaped = re.escape(full_name).replace(r'\ ', r'\s+')
+        patterns.append(re.compile(
+            r"(?i)\bpresident\s+" + full_escaped + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+        ))
+        
+        # Pattern 2: "President [Last Name]"
+        patterns.append(re.compile(
+            r"(?i)\bpresident\s+" + re.escape(last_name) + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+        ))
+        
+        # Pattern 3: "[Full Name]" standalone
+        patterns.append(re.compile(
+            r"(?i)\b" + full_escaped + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+        ))
+        
+        # Pattern 4: "Mr./Mrs. [Last Name]"
+        patterns.append(re.compile(
+            r"(?i)\b(?:mr|mister|ms|mrs)\.?\s+" + re.escape(last_name) + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+        ))
+        
+        # Pattern 5: Just "[Last Name]" (more aggressive, use carefully)
+        # Only at word boundaries and followed by punctuation or end
+        patterns.append(re.compile(
+            r"(?i)\b" + re.escape(last_name) + r"(?:\s*'?s)?\s*(?=[.,;:!?—–-]|\s|$)"
+        ))
+        
+        return patterns
+
+    def _remove_president_names(self, text: str, president_name: Optional[str]) -> str:
+        """
+        Remove president name mentions from text.
+        
+        Args:
+            text: Input text
+            president_name: Name like "Joe Biden", "Donald Trump", etc.
+            
+        Returns:
+            Text with president names removed
+        """
+        if not president_name or not text:
+            return text
+        
+        cleaned = text
+        
+        # Remove direct addresses (sir, ma'am)
+        cleaned = self.rx_direct_address.sub(' ', cleaned)
+        
+        # Remove honorific titles (Mr. President, etc.)
+        cleaned = self.rx_honoured_title.sub(' ', cleaned)
+        
+        # Remove specific name patterns
+        name_patterns = self._compile_name_patterns(president_name)
+        for pattern in name_patterns:
+            cleaned = pattern.sub(' ', cleaned)
+        
+        return cleaned
+
     def _clean_punctuation(self, text: str) -> str:
         """
         Normalize punctuation after token removal:
