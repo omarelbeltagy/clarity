@@ -276,7 +276,6 @@ class SpacyCleaner:
         self,
         text: str,
         remove_stopwords: bool = False,
-        keep_punctuation: bool = True,
         president_name: Optional[str] = None
     ) -> str:
         """
