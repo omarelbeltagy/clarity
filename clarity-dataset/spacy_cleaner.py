@@ -156,34 +156,32 @@ class SpacyCleaner:
     def _rebuild_text(self, doc, remove_indices):
         """
         Rebuild text from tokens after removals.
-        - Avoid spaces before punctuation
-        - Preserve spaces where needed
+        Uses spaCy's whitespace info to preserve original formatting.
         """
-        tokens = []
+        parts = []
+        print("remove_indices: " + str(remove_indices))
+        print("TOKENS:::")
         for i, token in enumerate(doc):
+            print(i, token)
             if i in remove_indices:
                 continue
-            if token.text == "n't":
-                if tokens:
-                    # Remove any trailing space from previous token
-                    tokens[-1] = tokens[-1].rstrip() + "n't"
+            
+            # For contractions like "n't", "'s", "'d" - attach to previous token
+            if token.text in "'":
+                if parts:
+                    # Remove any trailing space from previous part
+                    if parts[-1].endswith(' '):
+                        parts[-1] = parts[-1].rstrip()
+                    parts.append(token.text)
                 else:
-                    # Edge case: nothing before, just keep n't
-                    tokens.append("n't")
-                continue
-            if token.is_punct:
-                # Attach punctuation directly to previous token (no leading space)
-                tokens.append(token.text)
-            elif tokens and re.match(r'^[.,;:!?\'")\]]', token.text):
-                # Safety: attach punctuation directly if regex matches
-                tokens.append(token.text)
+                    parts.append(token.text)
             else:
-                # Normal word
-                if tokens:
-                    tokens.append(' ' + token.text)
-                else:
-                    tokens.append(token.text)
-        return ''.join(tokens)
+                # Normal token - use original whitespace
+                parts.append(token.text_with_ws)
+
+        # Join and clean up
+        text = ''.join(parts)
+        return text.rstrip()  # Remove trailing whitespace
 
 
     
