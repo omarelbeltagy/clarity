@@ -72,23 +72,19 @@ class SpacyCleaner:
         """
         self.nlp = spacy.load(model)
         
-        # Build complete filler set
         self.fillers = self.FILLER_SOUNDS | self.FILLER_WORDS
         if custom_fillers:
             self.fillers |= custom_fillers
         
-        # Build complete phrase list
         self.filler_phrases = self.FILLER_PHRASES.copy()
         if custom_phrases:
             self.filler_phrases.extend(custom_phrases)
         
-        # Compile phrase patterns (sorted by length for longest match first)
         self.phrase_patterns = self._compile_phrase_patterns()
         
         # Stopwords to preserve (commonly: not, no, never for sentiment)
         self.preserve_stopwords = preserve_stopwords or set()
         
-        # Add fillers to spaCy's stopword list
         for filler in self.fillers:
             self.nlp.vocab[filler].is_stop = True
         
@@ -97,10 +93,8 @@ class SpacyCleaner:
     def _compile_phrase_patterns(self) -> List[re.Pattern]:
         """Compile regex patterns for multi-word phrases"""
         patterns = []
-        # Sort by length (descending) to match longer phrases first
-        sorted_phrases = sorted(self.filler_phrases, key=len, reverse=True)
         
-        for phrase in sorted_phrases:
+        for phrase in self.filler_phrases:
             # Make pattern case-insensitive and flexible with whitespace
             pattern = r'\b' + re.escape(phrase).replace(r'\ ', r'\s+') + r'\b'
             patterns.append(re.compile(pattern, re.IGNORECASE))
