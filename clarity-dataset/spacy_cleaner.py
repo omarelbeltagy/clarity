@@ -254,8 +254,7 @@ class SpacyCleaner:
         Uses spaCy's whitespace info to preserve original formatting.
         """
         parts = []
-        print("remove_indices: " + str(remove_indices))
-        print("TOKENS:::")
+
         for i, token in enumerate(doc):
             print(i, token)
             if i in remove_indices:
