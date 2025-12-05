@@ -9,7 +9,6 @@ from spacy.tokens import Doc, Token
 import re
 from typing import List, Set, Optional
 from datasets import load_dataset
-import pandas as pd
 
 
 class SpacyCleaner:
