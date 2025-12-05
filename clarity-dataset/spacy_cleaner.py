@@ -292,10 +292,8 @@ class SpacyCleaner:
         if not text or not text.strip():
             return ""
         
-        # Step 1: Remove multi-word phrases first
         text = self._remove_phrase_fillers(text)
         
-        # Step 2: Process with spaCy
         doc = self.nlp(text)
         
         for token in doc:
@@ -312,10 +310,8 @@ class SpacyCleaner:
                 remove_indices |= self._remove_token_with_attached_punct(token)
                 continue
 
-        # Step 4: Rebuild clean text using spaCy token whitespace to avoid inserting artificial spaces
         text = self._rebuild_text(doc, remove_indices)
 
-        # Step 5: Final punctuation cleanup
         text = self._clean_punctuation(text)
 
         return text
