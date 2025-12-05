@@ -51,7 +51,7 @@ class SpacyCleaner:
         "as it were", "if you will", "more or less",
         "you know what i'm saying", "what i'm trying to say is",
         "that being said", "having said that", "all things considered",
-        "for what it's worth", "at this point in time", "mr. president", "thank you"
+        "for what it's worth", "at this point in time", "mr. ", "mr ", "mr. president", "thank you"
     ]
     
     def __init__(
@@ -294,6 +294,9 @@ class SpacyCleaner:
         remove_indices = set()
         if not text or not text.strip():
             return ""
+
+        if president_name:
+            text = self._remove_president_names(text, president_name)
         
         text = self._remove_phrase_fillers(text)
         
@@ -393,7 +396,7 @@ if __name__ == "__main__":
     
     test_cases = [
         "I don't talk about whether or not I'd use military force. That's not appropriate to be talking about. But I can tell you this: They will not be doing nuclear weapons. That I can tell you. Okay? They're not going to be doing nuclear weapons. You can bank on it.Okay. Please.[.]",
-        "Q. Thank you very much, Mr. President. Given the conditions that were just laid out at the migrant facilities at the U.S. border, will you commit to allowing journalists to have access to the facilities that are overcrowded moving forward?",
+        "Q. Thank you very much, Mr. Trump. Given the conditions that were just laid out at the migrant facilities at the U.S. border, will you commit to allowing journalists to have access to the facilities that are overcrowded moving forward?",
         "Um, well, you know, I think we should, like, proceed with this.",
         "At the end of the day, basically, we need to focus on results.",
         "So, uh, to be honest, I mean, this is actually quite important.",
@@ -401,7 +404,7 @@ if __name__ == "__main__":
     ]
     
     for text in test_cases:
-        cleaned = cleaner.clean_text(text)
+        cleaned = cleaner.clean_text(text, president_name="Trump")
         print(f"\nOriginal:  {text}")
         print(f"Cleaned:   {cleaned}")
         print(f"Reduction: {len(text)} → {len(cleaned)} chars ({100*(1-len(cleaned)/len(text)):.1f}%)")
