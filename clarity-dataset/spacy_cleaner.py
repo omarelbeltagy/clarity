@@ -250,7 +250,6 @@ class SpacyCleaner:
         parts = []
 
         for i, token in enumerate(doc):
-            print(i, token)
             if i in remove_indices:
                 continue
             
