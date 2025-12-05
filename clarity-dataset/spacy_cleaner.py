@@ -59,7 +59,8 @@ class SpacyCleaner:
         model: str = "en_core_web_sm",
         preserve_stopwords: Optional[Set[str]] = None,
         custom_fillers: Optional[Set[str]] = None,
-        custom_phrases: Optional[List[str]] = None
+        custom_phrases: Optional[List[str]] = None,
+        clear_name: bool = True
     ):
         """
         Initialize the filler word remover
@@ -366,7 +367,8 @@ class SpacyCleaner:
 # Convenience function
 def create_cleaner(
     preserve_negation: bool = True,
-    custom_fillers: Optional[Set[str]] = None
+    custom_fillers: Optional[Set[str]] = None,
+    clear_name: bool = True
 ) -> SpacyCleaner:
     """
     Create a cleaner with sensible defaults
@@ -378,7 +380,8 @@ def create_cleaner(
     preserve = {"not", "no", "never", "neither", "nor", "none", "in", "on", "at", "the", "a", "but"} if preserve_negation else None
     return SpacyCleaner(
         preserve_stopwords=preserve,
-        custom_fillers=custom_fillers
+        custom_fillers=custom_fillers,
+        clear_name=clear_name
     )
 
 
