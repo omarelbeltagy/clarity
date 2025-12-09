@@ -35,7 +35,8 @@ class SpacyCleaner:
         "listen", "look", "folks", "essentially", "technically",
         "practically", "virtually", "just", "maybe", "perhaps",
         "probably", "possibly", "sorta", "kinda", "stuff",
-        "anyhoo", "anyhow","somehow", "someway", "really", "truly", "very", "much"
+        "anyhoo", "anyhow","somehow", "someway", "really", "truly", "very", "much",
+        "mr", "mr.", "mrs", "mrs.", "president", "chancellor"
     }
     
     # Multi-word filler phrases
@@ -50,7 +51,7 @@ class SpacyCleaner:
         "as it were", "if you will", "more or less",
         "you know what i'm saying", "what i'm trying to say is",
         "that being said", "having said that", "all things considered",
-        "for what it's worth", "at this point in time", "mr. ", "mr ", "mr. president", "thank you"
+        "for what it's worth", "at this point in time", "mr. president", "thank you"
     ]
     
     def __init__(
