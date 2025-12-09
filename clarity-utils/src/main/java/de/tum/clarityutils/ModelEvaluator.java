@@ -5,9 +5,12 @@ import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 /**
@@ -37,7 +40,10 @@ public class ModelEvaluator {
     public ModelEvaluator(List<String> labels, List<String> predictions, List<String> expected) {
         if (predictions.size() != expected.size()) {
             throw new IllegalArgumentException("predictions and expected lists must have the same size.");
+        } else if (labels.isEmpty()) {
+            throw new IllegalArgumentException("labels list cannot be empty.");
         }
+
         this.labels = List.copyOf(labels);
         this.predictions = List.copyOf(predictions);
         this.expected = List.copyOf(expected);
@@ -78,6 +84,44 @@ public class ModelEvaluator {
      * @return macro F1 in range [0.0, 1.0]
      */
     public double macroF1() {return withEval(() -> eval.f1(EvaluationAveraging.Macro));}
+
+    /**
+     * Returns the macro-averages F1 score based on multiple annotators, any of which can be true
+     * 
+     * @param annotations the annotations which the prediction is compared against
+     * @return mayro F! in range [0.0,  1.0]
+     */
+    public double multiLabelMacroF1(List<List<String>> annotations) {
+        if (annotations.size() != predictions.size()) {
+            throw new IllegalArgumentException("predictions and expected lists must have the same size.");
+        }
+
+        List<Double> perClassF1s = new ArrayList<>();
+        for (String targetLabel : labels) {
+            int tp = 0, fp = 0, fn = 0;
+
+            for (int i = 0; i < predictions.size(); i++) {
+                Set<String> annotationSet = new HashSet<String>(List.copyOf(annotations.get(i)));
+                String prediction = predictions.get(i);
+
+                if (prediction.equals(targetLabel) && annotationSet.contains(targetLabel)) {
+                    tp++;
+                } else if (prediction.equals(targetLabel) && !annotationSet.contains(targetLabel)) {
+                    fp++;
+                } else if (annotationSet.contains(targetLabel) && !annotationSet.contains(prediction)) {
+                    fn++;
+                }
+            }
+ 
+            double precision = (tp + fp) > 0 ? ((double) tp) / (tp + fp) : 0d;
+            double recall = (tp + fn) > 0 ? ((double) tp) / (tp + fn) : 0d;
+            double f1 = (precision + recall) > 0d ? 2d * precision * recall / (precision + recall) : 0d;
+            perClassF1s.add(f1);
+        }
+
+        double macroF1 = perClassF1s.stream().reduce(0d, (d1, d2) -> d1 + d2) / perClassF1s.size();
+        return macroF1;
+    }
 
     /**
      * Returns the weighted-averaged F1 score.

@@ -22,10 +22,10 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -138,74 +138,78 @@ public class EvaluationExporter {
 
     public void generateCustomEvaluation(ClassificationProperties properties) {
         log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
-                 properties.getName());
-        String query = String.format("""
-                                             MATCH (n:%s)--(cr:%s)--(c:%s)
-                                             WHERE cr.version = '%s'
-                                             AND c.name = '%s'
-                                             RETURN n
-                                             """,
-                                     Neo4jNode.getLabel(ClassificationResult.class),
-                                     Neo4jNode.getLabel(ClassificationProperties.class),
-                                     Neo4jNode.getLabel(ClassificationProperties.Classification.class),
-                                     properties.getVersion(),
-                                     properties.getClassification().getName());
-        List<ClassificationResult> results = client.executeQuery(query,
-                                                                 ClassificationResult.class);
+            properties.getName());
+        String query = String.format(
+                """
+                MATCH (n:%s)--(cr:%s)--(c:%s)
+                WHERE cr.version = '%s'
+                AND c.name = '%s'
+                RETURN n
+                """,
+            Neo4jNode.getLabel(ClassificationResult.class),
+            Neo4jNode.getLabel(ClassificationProperties.class),
+            Neo4jNode.getLabel(ClassificationProperties.Classification.class),
+            properties.getVersion(),
+            properties.getClassification().getName()
+        );
+
+        List<ClassificationResult> results = client.executeQuery(query, ClassificationResult.class);
         log.info("Found {} classification results for evaluation", results.size());
-        List<String[]> predictionsAndExpected =
-                results.parallelStream()
-                       .map(result -> {
-                           String findQAQuery = String.format("""
-                                                                      MATCH (cr:%s)--(n:%s)
-                                                                      WHERE elementId(cr) = '%s'
-                                                                      RETURN n
-                                                                      """,
-                                                              Neo4jNode.getLabel(ClassificationResult.class),
-                                                              Neo4jNode.getLabel(QA.class),
-                                                              result.getElementId());
+        List<List<String>> predictionsAndExpected =
+            results.parallelStream()
+                .map(result -> {
+                    String findQAQuery = String.format(
+                            """
+                            MATCH (cr:%s)--(n:%s)
+                            WHERE elementId(cr) = '%s'
+                            RETURN n
+                            """,
+                        Neo4jNode.getLabel(ClassificationResult.class),
+                        Neo4jNode.getLabel(QA.class),
+                        result.getElementId()
+                    );
 
-                           QA qa = client.executeQuery(findQAQuery, QA.class)
-                                         .stream()
-                                         .findFirst()
-                                         .orElse(null);
+                    QA qa = client.executeQuery(findQAQuery, QA.class)
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
 
-                           if (qa == null) {
-                               log.warn("No QA found for classification result {}. Could not generate evaluation",
-                                        result.getElementId());
-                               return null;
-                           }
-                           String predictedLabel = result.getName();
-                           String expectedLabel = qa.getAnnotator1();
-                           if (predictedLabel.equals(qa.getAnnotator2())) {
-                                expectedLabel = qa.getAnnotator2();
-                           } else if (predictedLabel.equals(qa.getAnnotator3())) {
-                                expectedLabel = qa.getAnnotator3();
-                           }
-                           if (predictedLabel != null && expectedLabel != null) {
-                               return new String[]{predictedLabel, expectedLabel};
-                           }
-                           return null;
-                       })
-                       .filter(Objects::nonNull)
-                       .toList();
+                    if (qa == null) {
+                        log.warn("No QA found for classification result {}. Could not generate evaluation",
+                                result.getElementId());
+                        return null;
+                    }
+                    List<String> returnList = new ArrayList<>();
+                    returnList.add(result.getName());
+                    returnList.add(qa.getClarityLabel());
+                    returnList.add(qa.getAnnotator1());
+                    returnList.add(qa.getAnnotator2());
+                    returnList.add(qa.getAnnotator3());
+                    return returnList.contains(null) ? null : returnList;
+                })
+                .filter(Objects::nonNull)
+                .toList();
 
         List<String> predictions = predictionsAndExpected.stream()
-                                                         .map(arr -> arr[0])
-                                                         .toList();
+            .map(l -> l.get(0))
+            .toList();
 
         List<String> expected = predictionsAndExpected.stream()
-                                                      .map(arr -> arr[1])
-                                                      .toList();
+            .map(l -> l.get(1))
+            .toList();
+
+        List<List<String>> annotations = predictionsAndExpected.stream()
+            .map(l -> l.subList(2, 5))
+            .toList();
 
         List<String> labels = properties.getTaxonomy().getCategories()
-                               .stream()
-                               .map(Taxonomy.Category::getName)
-                               .toList();
+            .stream()
+            .map(Taxonomy.Category::getName)
+            .toList();
 
         try {
             ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
-            log.info("Evaluation Results:");
+            /*log.info("Evaluation Results (clarity level):");
             double accuracy = evaluator.accuracy();
             log.info("Accuracy: {}", String.format("%.2f", accuracy * 100));
             double precision = evaluator.precision();
@@ -214,8 +218,11 @@ public class EvaluationExporter {
             log.info("Recall: {}", String.format("%.2f", recall * 100));
             double microF1 = evaluator.microF1();
             log.info("Micro F1 Score: {}", String.format("%.2f", microF1 * 100));
-            double macroF1 = evaluator.macroF1();
-            log.info("Macro F1 Score: {}", String.format("%.2f", macroF1 * 100));
+            double clarityMacroF1 = evaluator.macroF1();
+            log.info("Macro F1 Score: {}", String.format("%.2f", clarityMacroF1 * 100));*/
+            double evasionMacroF1 = evaluator.multiLabelMacroF1(annotations);
+            log.info("Evaluation Results (evasion level):");
+            log.info("Macro F1 Score: {}", String.format("%.2f", evasionMacroF1 * 100));
         } catch (Exception e) {
             log.error("Error while evaluating classification run {}", properties.getVersion(), e);
         }
