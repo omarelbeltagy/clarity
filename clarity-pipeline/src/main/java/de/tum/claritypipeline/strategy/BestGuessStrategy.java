@@ -1,6 +1,5 @@
 package de.tum.claritypipeline.strategy;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import de.tum.clarityneo4j.annotations.Neo4jIgnore;
@@ -46,17 +45,13 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
     @Neo4jIgnore
     private ModelProperties model;
 
-    @JsonIgnore
-    @Neo4jIgnore
-    private Taxonomy taxonomy;
-
     @JsonProperty("k")
     @JsonPropertyDescription("The number of guesses for the model")
     private int k = 3;
 
     @Override
     public ClassificationResult execute(ClassificationRequest request) {
-        validateConfiguration();
+        validateConfiguration(request);
         String prompt = PromptUtils.replacePrompt(request, model, BestGuessClassificationResult.JSON_SCHEME)
                                    .replace("{k}", String.valueOf(k));
         BestGuessClassificationResult result = model.getClient()
@@ -66,11 +61,11 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
         }
         List<String> labels = result.getTopLabels().stream()
                                     .map(label -> {
-                                        Taxonomy.Category category = taxonomy.getCategories().stream()
-                                                                             .filter(c -> c.getName()
-                                                                                           .equalsIgnoreCase(
-                                                                                                   label.getName()))
-                                                                             .findFirst().orElse(null);
+                                        Taxonomy.Category category = request.getTaxonomy().getCategories().stream()
+                                                                            .filter(c -> c.getName()
+                                                                                          .equalsIgnoreCase(
+                                                                                                  label.getName()))
+                                                                            .findFirst().orElse(null);
                                         if (category == null) {
                                             return null;
                                         }
@@ -113,7 +108,7 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
     /**
      * Validates that the model configuration is compatible with best guess strategy.
      */
-    private void validateConfiguration() {
+    private void validateConfiguration(ClassificationRequest request) {
         if (model.getClient() instanceof LocalClient) {
             throw new UnsupportedOperationException(
                     "LocalClient is not supported for BestGuessStrategy"
@@ -127,13 +122,13 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
             );
         }
 
-        if (taxonomy == null) {
+        if (request.getTaxonomy() == null) {
             throw new UnsupportedOperationException(
                     "Taxonomy is not set for BestGuessStrategy"
             );
         }
 
-        if (taxonomy.getMapping() == null || !taxonomy.getMapping().isEnabled()) {
+        if (request.getTaxonomy().getMapping() == null || !request.getTaxonomy().getMapping().isEnabled()) {
             throw new UnsupportedOperationException(
                     "Taxonomy mapping must be enabled for BestGuessStrategy"
             );

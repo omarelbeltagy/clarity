@@ -19,7 +19,6 @@ import de.tum.claritypipeline.model.relation.HasClassificationStrategy;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
 import de.tum.claritypipeline.model.relation.HasTaxonomy;
 import de.tum.claritypipeline.model.relation.IsPartOf;
-import de.tum.claritypipeline.strategy.BestGuessStrategy;
 import de.tum.claritypipeline.strategy.ClassificationStrategy;
 import de.tum.clarityutils.AfterDeserialization;
 import de.tum.clarityutils.JacksonUtils;
@@ -309,9 +308,6 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
             throw new IOException("Missing taxonomy for classification properties");
         }
         createNode();
-        if (strategy instanceof BestGuessStrategy bg) {
-            bg.setTaxonomy(taxonomy);
-        }
     }
 
     @Node(label = "Classification")

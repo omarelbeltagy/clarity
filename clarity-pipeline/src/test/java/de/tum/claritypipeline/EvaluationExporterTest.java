@@ -32,7 +32,7 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_02_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_09_2025.xlsx");
     }
 
     @Test

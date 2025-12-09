@@ -14,7 +14,7 @@ import java.io.Serializable;
  */
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
 public class ClassificationRequest implements Serializable {

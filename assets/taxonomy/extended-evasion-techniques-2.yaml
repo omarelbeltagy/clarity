@@ -1,0 +1,368 @@
+name: "Evasion Techniques Extended"
+version: "v2"
+mapping:
+  enabled: true
+  label-property: "evasionLabel"
+  labels:
+    - "Explicit"
+    - "Implicit"
+    - "General"
+    - "Partial"
+    - "Dodging"
+    - "Deflection"
+    - "Declining"
+    - "Ignorance"
+    - "Clarification"
+
+categories:
+
+  - name: "Explicit"
+    description: >
+      The requested information is directly provided in the expected form.
+    map-to: "Explicit"
+    subcategories:
+
+      - name: "Direct Complete"
+        map-to: "Explicit"
+        description: >
+          Fully answers the question with clear and complete information.
+        examples:
+          - question: "Do you support the proposal?"
+            answer: "Yes, I support it."
+            explanation: "The answer directly addresses the question with a clear yes."
+
+      - name: "Direct With Addition"
+        map-to: "Explicit"
+        description: >
+          Direct answer plus extra information not required to answer.
+        examples:
+          - question: "Did you approve the budget?"
+            answer: "Yes, and we also adjusted the education section."
+            explanation: "The speaker provides the required yes plus additional detail."
+
+      - name: "Direct Minimal"
+        map-to: "Explicit"
+        description: >
+          Very short direct answer with no elaboration.
+        examples:
+          - question: "Were you present at the vote?"
+            answer: "Yes."
+            explanation: "A minimal but fully sufficient direct response."
+
+  - name: "Implicit"
+    description: >
+      The requested information is implied but not explicitly stated.
+    map-to: "Implicit"
+    subcategories:
+
+      - name: "Implicit Agreement"
+        map-to: "Implicit"
+        description: >
+          Suggests agreement without directly saying yes.
+        examples:
+          - question: "Do you support this?"
+            answer: "It is clearly the right direction."
+            explanation: "The statement implies support but avoids explicit commitment."
+
+      - name: "Implicit Rejection"
+        map-to: "Implicit"
+        description: >
+          Suggests disagreement without directly saying no.
+        examples:
+          - question: "Will you vote for the bill?"
+            answer: "The proposal has significant issues."
+            explanation: "The focus on issues implies opposition rather than direct refusal."
+
+      - name: "Implicit Preference"
+        map-to: "Implicit"
+        description: >
+          Conveys a leaning, not a direct answer.
+        examples:
+          - question: "Do you prefer option A?"
+            answer: "Option A seems more sustainable."
+            explanation: "The speaker signals preference without confirming it directly."
+
+      - name: "Implicit Safeguard"
+        map-to: "Implicit"
+        description: >
+          Implied answer combined with hedging language.
+        examples:
+          - question: "Are you responsible?"
+            answer: "Responsibility is shared among several offices."
+            explanation: "Avoids a yes or no by distributing responsibility."
+
+  - name: "General"
+    description: >
+      The information is too broad or unspecific to answer the question.
+    map-to: "General"
+    subcategories:
+
+      - name: "Overgeneralisation"
+        map-to: "General"
+        description: >
+          Broad statements unrelated to the specific detail asked for.
+        examples:
+          - question: "What is your policy on energy prices?"
+            answer: "Energy policy must benefit everyone."
+            explanation: "The reply is universal but gives no concrete position."
+
+      - name: "Unfocused Listing"
+        map-to: "General"
+        description: >
+          Provides multiple unspecific items instead of the requested one.
+        examples:
+          - question: "What is your top priority?"
+            answer: "Growth, fairness, and innovation."
+            explanation: "Three broad themes instead of a single priority."
+
+      - name: "Meta Answer"
+        map-to: "General"
+        description: >
+          Talks about the topic area instead of answering the question.
+        examples:
+          - question: "Which reform do you support?"
+            answer: "Reforms are always complex."
+            explanation: "Shifts to a meta-comment instead of naming a reform."
+
+  - name: "Partial"
+    description: >
+      Only part of the requested information is provided.
+    map-to: "Partial"
+    subcategories:
+
+      - name: "Detail Focus"
+        map-to: "Partial"
+        description: >
+          Focuses on one detail and ignores the rest.
+        examples:
+          - question: "Did the programme succeed overall?"
+            answer: "The infrastructure upgrades worked well."
+            explanation: "Addresses one detail but not the overall success."
+
+      - name: "Component Selection"
+        map-to: "Partial"
+        description: >
+          Addresses one component of a multi-part question.
+        examples:
+          - question: "Why did costs rise and who approved it?"
+            answer: "Costs rose due to inflation."
+            explanation: "Only answers the first part of the question."
+
+      - name: "Selective Silence"
+        map-to: "Partial"
+        description: >
+          Avoids the critical part of the question.
+        examples:
+          - question: "Were you involved in the decision?"
+            answer: "The process involved many teams."
+            explanation: "Evades the personal involvement aspect."
+
+  - name: "Dodging"
+    description: >
+      The question is ignored or replaced by another topic.
+    map-to: "Dodging"
+    subcategories:
+
+      - name: "Complete Ignoring"
+        map-to: "Dodging"
+        description: >
+          No acknowledgement of the question at all.
+        examples:
+          - question: "Did you speak to the minister?"
+            answer: "We must focus on economic growth."
+            explanation: "Switches to a completely unrelated topic."
+
+      - name: "Safe Topic Switch"
+        map-to: "Dodging"
+        description: >
+          Switches to a non-controversial topic.
+        examples:
+          - question: "Why did you vote against it?"
+            answer: "What matters is that we all want progress."
+            explanation: "Avoids the vote and jumps to a harmless value statement."
+
+      - name: "Attack Switch"
+        map-to: "Dodging"
+        description: >
+          Redirects to criticism of others.
+        examples:
+          - question: "Why were you absent?"
+            answer: "The opposition refuses to take responsibility."
+            explanation: "Deflects by criticising another group."
+
+      - name: "Self Protective Dodge"
+        map-to: "Dodging"
+        description: >
+          Deflects using personal workload or circumstances.
+        examples:
+          - question: "Why did you delay the report?"
+            answer: "I had to manage several urgent situations."
+            explanation: "Focuses on personal circumstances rather than the question."
+
+  - name: "Deflection"
+    description: >
+      Starts on topic but shifts focus away from what is asked.
+    map-to: "Deflection"
+    subcategories:
+
+      - name: "Reframing"
+        map-to: "Deflection"
+        description: >
+          Reinterprets the question to change its meaning.
+        examples:
+          - question: "Did you fail to meet the target?"
+            answer: "The real goal is long-term improvement."
+            explanation: "Shifts the definition of success."
+
+      - name: "Focus Shift"
+        map-to: "Deflection"
+        description: >
+          Begins with the question but moves to unrelated content.
+        examples:
+          - question: "Why were funds cut?"
+            answer: "Funding decisions require a holistic view."
+            explanation: "Starts vaguely related but never answers why funds were cut."
+
+      - name: "Emotional Redirect"
+        map-to: "Deflection"
+        description: >
+          Appeals to emotion to dodge the core answer.
+        examples:
+          - question: "Did you approve the plan?"
+            answer: "People are struggling and deserve hope."
+            explanation: "Emotional appeal replaces the actual answer."
+
+      - name: "Fogging"
+        map-to: "Deflection"
+        description: >
+          Uses vague but topic-adjacent content.
+        examples:
+          - question: "Will you change the policy?"
+            answer: "Policies must evolve with circumstances."
+            explanation: "Statement sounds meaningful but avoids the actual yes or no."
+
+  - name: "Declining"
+    description: >
+      The speaker refuses to answer the question.
+    map-to: "Declining"
+    subcategories:
+
+      - name: "Explicit Refusal"
+        map-to: "Declining"
+        description: >
+          Openly states they will not answer.
+        examples:
+          - question: "Did you authorize the order?"
+            answer: "I will not comment on that."
+            explanation: "Direct refusal to answer."
+
+      - name: "Temporary Refusal"
+        map-to: "Declining"
+        description: >
+          Refuses now but implies an answer later.
+        examples:
+          - question: "Will you publish the report?"
+            answer: "We will discuss it at the right time."
+            explanation: "Defers the answer to an unspecified future moment."
+
+      - name: "Formal Refusal"
+        map-to: "Declining"
+        description: >
+          claims the question is outside their scope.
+        examples:
+          - question: "Why did the ministry act?"
+            answer: "This is not within my remit."
+            explanation: "Uses jurisdiction boundaries to avoid answering."
+
+      - name: "Political Refusal"
+        map-to: "Declining"
+        description: >
+          Frames refusal as responsible or necessary.
+        examples:
+          - question: "What is your stance?"
+            answer: "It would be irresponsible to speculate."
+            explanation: "Refusal is framed as a virtue."
+
+  - name: "Ignorance"
+    description: >
+      Claims not to know the requested information.
+    map-to: "Ignorance"
+    subcategories:
+
+      - name: "Genuine Not Knowing"
+        map-to: "Ignorance"
+        description: >
+          Admits not having the information.
+        examples:
+          - question: "What is the exact figure?"
+            answer: "I do not know."
+            explanation: "Simple admission of lacking the information."
+
+      - name: "Strategic Not Knowing"
+        map-to: "Ignorance"
+        description: >
+          Claims ignorance to avoid answering.
+        examples:
+          - question: "Who approved the document?"
+            answer: "I am not aware of that."
+            explanation: "Likely avoidance disguised as ignorance."
+
+      - name: "Delegation"
+        map-to: "Ignorance"
+        description: >
+          Redirects the answer responsibility to another entity.
+        examples:
+          - question: "Who made the call?"
+            answer: "That was handled by the department."
+            explanation: "Transfers responsibility to avoid answering."
+
+      - name: "Future Promise"
+        map-to: "Ignorance"
+        description: >
+          Claims they will find out later.
+        examples:
+          - question: "What date was the order signed?"
+            answer: "I will check and report back."
+            explanation: "Postpones the answer with a promise."
+
+  - name: "Clarification"
+    description: >
+      Does not answer but asks for clarification from the interviewer.
+    map-to: "Clarification"
+    subcategories:
+
+      - name: "Genuine Clarification"
+        map-to: "Clarification"
+        description: >
+          Asks for details due to real uncertainty.
+        examples:
+          - question: "Did you support the measure?"
+            answer: "Which measure do you mean exactly?"
+            explanation: "Clarification is necessary to answer correctly."
+
+      - name: "Delay Clarification"
+        map-to: "Clarification"
+        description: >
+          Uses a clarification request to avoid answering.
+        examples:
+          - question: "Will you resign?"
+            answer: "Resign from which specific committee?"
+            explanation: "Clarification request delays the need to answer."
+
+      - name: "Reframing Clarification"
+        map-to: "Clarification"
+        description: >
+          Uses the question to reframe the original.
+        examples:
+          - question: "Did you approve the change?"
+            answer: "Do you mean the administrative adjustment?"
+            explanation: "Reframes the scope of the question subtly."
+
+      - name: "Pretended Information Gap"
+        map-to: "Clarification"
+        description: >
+          Pretends to need clarification to gain time.
+        examples:
+          - question: "Were you briefed on the incident?"
+            answer: "Which briefing are you referring to?"
+            explanation: "Signals not understanding despite likely knowing perfectly well."

@@ -14,7 +14,7 @@ import lombok.*;
 @Node(label = "QA")
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
 public class QA extends Neo4jNode {

@@ -446,6 +446,33 @@ public class Neo4jClient {
         return nodes;
     }
 
+    public Map<String, List<? super Neo4jNode>> executeQuery(
+            String query,
+            Map<String, Object> params,
+            Map<String, Class<? extends Neo4jNode>> classes
+    ) {
+        if (query == null || query.isEmpty()) {
+            log.error("Query is null or empty");
+            return new HashMap<>();
+        }
+        Map<String, List<? super Neo4jNode>> nodes = new HashMap<>();
+        try {
+            Stream<Record> records = getRecords(query, params);
+            records.forEach(record -> {
+                for (Map.Entry<String, Class<? extends Neo4jNode>> entry : classes.entrySet()) {
+                    String key = entry.getKey();
+                    Class<? extends Neo4jNode> clazz = entry.getValue();
+                    NodeValue n = (NodeValue) record.get(key);
+                    Neo4jNode node = Neo4jNode.fromNodeValue(n, clazz);
+                    nodes.computeIfAbsent(key, k -> new ArrayList<>()).add(node);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error executing query: {}", query, e);
+        }
+        return nodes;
+    }
+
     public Stream<Record> executeQuery(
             String query
     ) {
