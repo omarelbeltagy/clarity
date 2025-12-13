@@ -9,6 +9,8 @@ from spacy.tokens import Doc, Token
 import re
 from typing import List, Set, Optional
 from datasets import load_dataset
+import os
+import json
 
 
 class SpacyCleaner:
@@ -327,40 +329,66 @@ class SpacyCleaner:
         dataset_name: str = "ailsntua/QEvasion",
         question_col: str = "interview_question",
         answer_col: str = "interview_answer",
+        president_col: str = "president",
         remove_stopwords: bool = False,
-        batch_size: int = 100
+        batch_size: int = 100,
+        clear_names: bool = True
     ) -> tuple:
         """
-        Process entire dataset and return cleaned versions
+        Process entire dataset and return cleaned versions as lists
+        
+        Args:
+            dataset_name: HuggingFace dataset name
+            question_col: Column name for questions
+            answer_col: Column name for answers
+            president_col: Column name for president names
+            remove_stopwords: Whether to remove stopwords
+            batch_size: Batch size for processing
+            clear_names: Whether to remove president names
         
         Returns:
-            Tuple of (train_dataset, test_dataset) with cleaned columns added
+            Tuple of (train_list, test_list) with cleaned records as Python lists
         """
         print(f"Loading dataset: {dataset_name}")
         ds_train = load_dataset(dataset_name, split="train")
         ds_test = load_dataset(dataset_name, split="test")
         
-        def clean_batch(batch):
-            questions_clean = []
-            answers_clean = []
+        def clean_records(dataset):
+            """Clean a dataset and return as list of dicts"""
+            cleaned_records = []
             
-            for q, a in zip(batch[question_col], batch[answer_col]):
-                questions_clean.append(self.clean_text(q, remove_stopwords=remove_stopwords))
-                answers_clean.append(self.clean_text(a, remove_stopwords=remove_stopwords))
+            for record in dataset:
+                president = record.get(president_col, None)
+                
+                question_clean = self.clean_text(
+                    record[question_col],
+                    remove_stopwords=remove_stopwords,
+                    president_name=president if clear_names else None
+                )
+                
+                answer_clean = self.clean_text(
+                    record[answer_col],
+                    remove_stopwords=remove_stopwords,
+                    president_name=president if clear_names else None
+                )
+                
+                # Create cleaned record preserving all original fields
+                cleaned_record = dict(record)
+                cleaned_record[f"{question_col}_clean"] = question_clean
+                cleaned_record[f"{answer_col}_clean"] = answer_clean
+                
+                cleaned_records.append(cleaned_record)
             
-            return {
-                f"{question_col}_clean": questions_clean,
-                f"{answer_col}_clean": answers_clean
-            }
+            return cleaned_records
         
         print("Cleaning training data...")
-        ds_train_clean = ds_train.map(clean_batch, batched=True, batch_size=batch_size)
+        train_cleaned = clean_records(ds_train)
         
         print("Cleaning test data...")
-        ds_test_clean = ds_test.map(clean_batch, batched=True, batch_size=batch_size)
+        test_cleaned = clean_records(ds_test)
         
         print("✓ Dataset cleaning complete!")
-        return ds_train_clean, ds_test_clean
+        return train_cleaned, test_cleaned
 
 
 # Convenience function
@@ -389,103 +417,22 @@ def create_cleaner(
 # ============================================================================
 
 if __name__ == "__main__":
-    # Example 1: Basic usage
-    print("=" * 70)
-    print("EXAMPLE 1: Basic Filler Removal")
-    print("=" * 70)
-    
-    cleaner = create_cleaner()
-    
-    test_cases = [
-        "I don't talk about whether or not I'd use military force. That's not appropriate to be talking about. But I can tell you this: They will not be doing nuclear weapons. That I can tell you. Okay? They're not going to be doing nuclear weapons. You can bank on it.Okay. Please.[.]",
-        "Q. Thank you very much, Mr. Trump. Given the conditions that were just laid out at the migrant facilities at the U.S. border, will you commit to allowing journalists to have access to the facilities that are overcrowded moving forward?",
-        "Um, well, you know, I think we should, like, proceed with this.",
-        "At the end of the day, basically, we need to focus on results.",
-        "So, uh, to be honest, I mean, this is actually quite important.",
-        "You know what I'm saying? Like, it's kind of complicated, right?",
-    ]
-    
-    for text in test_cases:
-        cleaned = cleaner.clean_text(text, president_name="Trump")
-        print(f"\nOriginal:  {text}")
-        print(f"Cleaned:   {cleaned}")
-        print(f"Reduction: {len(text)} → {len(cleaned)} chars ({100*(1-len(cleaned)/len(text)):.1f}%)")
-    
-    # Example 2: With stopword removal
-    print("\n" + "=" * 70)
-    print("EXAMPLE 2: With Stopword Removal (preserving negation)")
-    print("=" * 70)
-    
-    text = "Well, I do not think this is the right approach for us."
-    print(f"\nOriginal: {text}")
-    print(f"Fillers only: {cleaner.clean_text(text, remove_stopwords=False)}")
-    print(f"With stopwords: {cleaner.clean_text(text, remove_stopwords=True)}")
-    
-    # Example 3: Custom fillers for political interviews
-    print("\n" + "=" * 70)
-    print("EXAMPLE 3: Custom Fillers for Political Domain")
-    print("=" * 70)
-    
-    political_fillers = {
-        "listen", "look", "folks", "believe me",
-        "let me be clear", "make no mistake"
-    }
-    
-    # Note: multi-word phrases go in custom_phrases parameter
-    political_cleaner = SpacyCleaner(
-        custom_fillers={"listen", "look", "folks"},
-        custom_phrases=["believe me", "let me be clear", "make no mistake"]
+    cleaner = create_cleaner(preserve_negation=True)
+    train_clean, test_clean = cleaner.process_dataset(
+        dataset_name="ailsntua/QEvasion",
+        remove_stopwords=False,
+        clear_names=True  # Set to False to keep president names
     )
-    
-    political_text = "Look, folks, believe me, we need to move forward on this issue."
-    print(f"\nOriginal: {political_text}")
-    print(f"Cleaned:  {political_cleaner.clean_text(political_text)}")
-    
-    # Example 4: Process small sample
-    print("\n" + "=" * 70)
-    print("EXAMPLE 4: Dataset Processing (Sample)")
-    print("=" * 70)
-    
-    # Simulate dataset
-    sample_data = {
-        "interview_question": [
-            "Um, Mr. President, what are your thoughts on this?",
-            "So, like, what's your position on the economy?"
-        ],
-        "interview_answer": [
-            "Well, you know, I think we should focus on growth.",
-            "At the end of the day, basically, jobs are key."
-        ]
-    }
-    
-    for i, (q, a) in enumerate(zip(sample_data["interview_question"], 
-                                    sample_data["interview_answer"])):
-        print(f"\nPair {i+1}:")
-        print(f"Q (original): {q}")
-        print(f"Q (cleaned):  {cleaner.clean_text(q)}")
-        print(f"A (original): {a}")
-        print(f"A (cleaned):  {cleaner.clean_text(a)}")
-    
-    # Example 5: Statistics
-    print("\n" + "=" * 70)
-    print("STATISTICS")
-    print("=" * 70)
-    print(f"Total filler words loaded: {len(cleaner.fillers)}")
-    print(f"Total filler phrases loaded: {len(cleaner.filler_phrases)}")
-    print(f"Stopwords preserved: {cleaner.preserve_stopwords}")
-    
-    print("\n" + "=" * 70)
-    print("To process your full dataset, uncomment this:")
-    print("=" * 70)
-    print("""
-# Process full dataset
-cleaner = create_cleaner(preserve_negation=True)
-train_clean, test_clean = cleaner.process_dataset(
-    dataset_name="ailsntua/QEvasion",
-    remove_stopwords=False  # Set True to also remove stopwords
-)
 
-# Save to disk or push to hub
-train_clean.save_to_disk("./data/qevasion_train_clean")
-test_clean.save_to_disk("./data/qevasion_test_clean")
-""")
+    # Save as JSON files
+    os.makedirs("./data/cleaned", exist_ok=True)
+
+    with open("./data/cleaned/train.json", "w", encoding="utf-8") as f:
+        json.dump(train_clean, f, ensure_ascii=False, indent=2)
+
+    with open("./data/cleaned/test.json", "w", encoding="utf-8") as f:
+        json.dump(test_clean, f, ensure_ascii=False, indent=2)
+
+    print(f"✓ Saved train.json ({len(train_clean)} records)")
+    print(f"✓ Saved test.json ({len(test_clean)} records)")
+
