@@ -1,0 +1,212 @@
+name: "Evasion Techniques"
+version: "v2"
+mapping:
+  enabled: true
+  label-property: "clarityLabel"
+  labels:
+    - "Clear Reply"
+    - "Ambivalent"
+    - "Clear Non-Reply"
+
+label-property: "evasionLabel"
+
+categories:
+  # ----------------------------
+  # CLEAR REPLY
+  # ----------------------------
+  - name: "Explicit"
+    map-to: "Clear Reply"
+    examples:
+      - question: Do you support the bill?
+        answer: Yes, I support the bill.
+        explanation: The answer explicitly provides the requested information in the expected form.
+    description: >
+      The information requested is explicitly stated (in the requested form).
+
+  - name: "Qualified but complete"
+    map-to: "Clear Reply"
+    examples:
+      - question: Will taxes increase next year?
+        answer: No. There are no plans to raise taxes next year, though we review policy annually.
+        explanation: The core question is answered clearly; added context does not obscure the answer.
+    description: >
+      The question is answered directly, but with clarifying context or conditions that do not
+      prevent identifying the requested information.
+
+  # ----------------------------
+  # AMBIVALENT (ambiguous / evasive but still engaging)
+  # ----------------------------
+  - name: "Implicit"
+    map-to: "Ambivalent"
+    examples:
+      - question: Are you going to watch television?
+        answer: What else is there to do?
+        explanation: Implies the intended answer without stating it explicitly.
+    description: >
+      The information requested is given, but without being explicitly stated (not in the expected form).
+
+  - name: "General"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did the president break his promise?
+        answer: Politicians make many promises, and governing is complicated.
+        explanation: Talks generally about the topic but does not resolve the specific question.
+    description: >
+      The information provided is too general or lacks the requested specificity.
+
+  - name: "Hedging / non-commitment"
+    map-to: "Ambivalent"
+    examples:
+      - question: Will the Senate push this through?
+        answer: We’ll see how discussions develop in the coming days.
+        explanation: Engages the question but avoids a clear commitment.
+    description: >
+      Uses uncertainty markers or non-committal language that prevents extracting a clear answer.
+
+  - name: "Partial/half-answer"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you approve the plan?
+        answer: I supported parts of the plan.
+        explanation: Provides only part of the requested information and leaves the core unresolved.
+    description: >
+      Offers only a specific component of the requested information, leaving the full answer unclear.
+
+  - name: "Answering a different question"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you meet with the lobbyist last week?
+        answer: We always meet with many stakeholders to hear their views.
+        explanation: Responds with a general statement about meetings instead of addressing the specific event.
+    description: >
+      Responds to a related but different question, avoiding the specific information requested.
+
+  - name: "Dodging"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you read the report?
+        answer: Let’s talk about the real challenges families are facing.
+        explanation: Does not address the question and shifts immediately to another topic.
+    description: >
+      Ignoring the question altogether by moving away from it without acknowledgement.
+
+  - name: "Deflection"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you vote for the amendment?
+        answer: What’s important is that the final bill protects citizens.
+        explanation: Acknowledges the topic but pivots to a different point, leaving the asked fact unanswered.
+    description: >
+      Starts on topic but shifts the focus and makes a different point than what is asked.
+
+  - name: "Reframing (values/morals)"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did the president go back on his word?
+        answer: The real issue is doing what’s best for the country.
+        explanation: Reframes from factual accountability to values, avoiding a direct stance.
+    description: >
+      Shifts the frame from the requested information to a values-based or moralized perspective.
+
+  - name: "Whataboutism / comparative deflection"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did your party mishandle the funds?
+        answer: What about the opposition’s scandals last year?
+        explanation: Redirects attention to others rather than answering the accusation.
+    description: >
+      Responds by pointing to another actor/event as a diversion, rather than answering the question.
+
+  - name: "Obfuscation (excessive context)"
+    map-to: "Ambivalent"
+    examples:
+      - question: Will you release the report?
+        answer: Over the past decade, reporting standards have evolved, and multiple committees have reviewed similar matters...
+        explanation: Provides long background without giving the requested yes/no or concrete action.
+    description: >
+      Overloads with background, narrative, or process detail such that the requested information remains unclear.
+
+  - name: "Obfuscation (technical/legal jargon)"
+    map-to: "Ambivalent"
+    examples:
+      - question: Did you authorize the surveillance program?
+        answer: The implementation complied with applicable statutory and regulatory frameworks as interpreted by counsel.
+        explanation: Uses dense legal language that does not clearly answer the yes/no question.
+    description: >
+      Uses technical or legalistic language that prevents a clear extraction of the requested information.
+
+  - name: "Counter-question (rhetorical reframing)"
+    map-to: "Ambivalent"
+    examples:
+      - question: Will the Senate push this through?
+        answer: Why would we rush something this important?
+        explanation: Engages but redirects the question to a new frame rather than answering.
+    description: >
+      Responds with a rhetorical question that shifts framing or implies an answer without providing it directly.
+
+  # ----------------------------
+  # CLEAR NON-REPLY
+  # ----------------------------
+  - name: "Declining to answer"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Did you approve the contract?
+        answer: I’m not going to comment on that.
+        explanation: Explicitly refuses to provide the requested information.
+    description: >
+      Acknowledges the question but directly or indirectly refuses to answer at the moment.
+
+  - name: "Claims ignorance"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: On what date was the order signed?
+        answer: I don’t know the exact date.
+        explanation: Claims they do not have the information.
+    description: >
+      The answerer claims or admits not to know the answer themselves.
+
+  - name: "Clarification"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Was it your decision to release the fund?
+        answer: Do you mean the public fund?
+        explanation: Gives no data, asks for clarification.
+    description: >
+      Does not provide the requested information and asks for clarification.
+
+  - name: "Counter-question (meta/blocking)"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Will the Senate push this through?
+        answer: Is that the question?
+        explanation: A meta-question that blocks progress and provides no substantive information.
+    description: >
+      Responds with a meta-level question that does not advance answering and functions as a block.
+
+  - name: "Procedural blocking (not my remit / not my role)"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Will you release the full report?
+        answer: That decision rests with the independent committee.
+        explanation: Shifts responsibility to another actor and does not answer.
+    description: >
+      States that the question cannot be answered by the speaker due to responsibility, mandate, or process constraints.
+
+  - name: "Agenda control / closing down"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: Why did you ignore the recommendations?
+        answer: We’re moving on to the next question.
+        explanation: Explicitly ends the exchange rather than answering.
+    description: >
+      Explicitly shuts down the question or ends discussion without providing the requested information.
+
+  - name: "Ad hominem deflection (attacking the reporter/question)"
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: The president went back on his word. Do you have any comment on that?
+        answer: That’s a stupid question. You’re a bad reporter.
+        explanation: Attacks the interviewer/question instead of addressing the content.
+    description: >
+      Rejects the question by attacking the reporter or the legitimacy/intelligence of the question,
+      rather than engaging with the requested information.
