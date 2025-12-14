@@ -1,0 +1,18 @@
+name: "GPT 5.1"
+version: "pag:evasion-based:few-shot:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "pag"
+  k: 5
+  classification-model:
+    provider: "openai"
+    name: "gpt-5.1"
+    prompt: "../assets/prompts/few-shot.yaml"
+  paraphrasing-model:
+    provider: "openai"
+    name: "gpt-5.1"
+    prompt: "../assets/prompts/paraphrase.yaml"

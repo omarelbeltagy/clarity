@@ -25,7 +25,9 @@ import de.tum.claritypipeline.model.classification.ClassificationResult;
         @JsonSubTypes.Type(value = SingleStrategy.class, name = "single"),
         @JsonSubTypes.Type(value = JudgementStrategy.class, name = "judgement"),
         @JsonSubTypes.Type(value = DiscussionStrategy.class, name = "discussion"),
-        @JsonSubTypes.Type(value = MultiStrategy.class, name = "multi")
+        @JsonSubTypes.Type(value = MultiStrategy.class, name = "multi"),
+        @JsonSubTypes.Type(value = BestGuessStrategy.class, name = "best-guess"),
+        @JsonSubTypes.Type(value = PagStrategy.class, name = "pag")
 })
 public interface ClassificationStrategy {
     /**

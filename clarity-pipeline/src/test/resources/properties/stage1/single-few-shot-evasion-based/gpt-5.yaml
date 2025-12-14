@@ -1,0 +1,13 @@
+name: "GPT 5"
+version: "evasion-based:single:few-shot:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-5"
+    prompt: "../assets/prompts/few-shot.yaml"

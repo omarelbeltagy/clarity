@@ -151,6 +151,9 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     @Node(label = "Category")
     @Getter
     @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Category extends Neo4jNode {
 
         /**

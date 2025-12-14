@@ -13,6 +13,7 @@ import de.tum.claritypipeline.model.relation.BelongsTo;
 import de.tum.claritypipeline.model.relation.GeneratedBy;
 import de.tum.claritypipeline.model.relation.HasClassification;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
+import de.tum.claritypipeline.strategy.BestGuessStrategy;
 import de.tum.clarityutils.ModelEvaluator;
 import org.slf4j.Logger;
 
@@ -148,6 +149,9 @@ public class ClassificationPipeline {
                                         ClassificationRequest request = buildRequest(qa);
                                         ClassificationResult result = classifySingle(request);
                                         Taxonomy.Category category = findAssignedCategory(result.getName());
+                                        if (category != null) {
+                                            result.setName(category.getName());
+                                        }
                                         log.info("Classified QA as {} ({}/{})",
                                                  category != null ? category.getName() : "UNKNOWN",
                                                  counter.incrementAndGet(),
@@ -184,8 +188,10 @@ public class ClassificationPipeline {
         for (ClassificationTask task : tasks) {
             relations.add(createRelationObject(new HasClassification(),
                                                task.qa.getElementId(), task.result.getElementId()));
-            relations.add(createRelationObject(new BelongsTo(),
-                                               task.result.getElementId(), task.category.getElementId()));
+            if (task.category != null && task.category.getElementId() != null) {
+                relations.add(createRelationObject(new BelongsTo(),
+                                                   task.result.getElementId(), task.category.getElementId()));
+            }
             relations.add(createRelationObject(new GeneratedBy(),
                                                task.result.getElementId(), properties.getElementId()));
         }
@@ -236,8 +242,10 @@ public class ClassificationPipeline {
                                return null;
                            }
                            String predictedLabel;
-                           if (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy().getMapping()
-                                                                                          .isEnabled()) {
+                           if (!(properties.getStrategy() instanceof BestGuessStrategy)
+                                   && properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
+                                                                                                 .getMapping()
+                                                                                                 .isEnabled()) {
                                Taxonomy.Category category = properties.getTaxonomy().getCategories().stream()
                                                                       .filter(c ->
                                                                                       c.getName()
@@ -253,9 +261,10 @@ public class ClassificationPipeline {
                                predictedLabel = result.getName();
                            }
                            String propertyLabel =
-                                   (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
-                                                                                               .getMapping()
-                                                                                               .isEnabled())
+                                   ((properties.getStrategy() instanceof BestGuessStrategy)
+                                           || (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
+                                                                                                         .getMapping()
+                                                                                                          .isEnabled()))
                                            ? properties.getTaxonomy().getMapping().getLabelProperty()
                                            : properties.getTaxonomy().getLabelProperty();
                            String expectedLabel;
@@ -436,17 +445,33 @@ public class ClassificationPipeline {
      */
     private Taxonomy.Category findAssignedCategory(String name) {
         String normalizedName = name.replaceAll("[ _-]", "");
-        for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
-            String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
-            if (normalizedCategoryName.equals(normalizedName)) {
-                return category;
+        if (properties.getStrategy() instanceof BestGuessStrategy) {
+            for (String category : properties.getTaxonomy().getMapping().getLabels()) {
+                String normalizedCategoryName = category.replaceAll("[ _-]", "");
+                if (normalizedCategoryName.equals(normalizedName)) {
+                    return Taxonomy.Category.builder().name(category).build();
+                }
             }
-        }
-        for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
-            String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
-            if (normalizedCategoryName.contains(normalizedName)
-                    || normalizedName.contains(normalizedCategoryName)) {
-                return category;
+            for (String category : properties.getTaxonomy().getMapping().getLabels()) {
+                String normalizedCategoryName = category.replaceAll("[ _-]", "");
+                if (normalizedCategoryName.contains(normalizedName)
+                        || normalizedName.contains(normalizedCategoryName)) {
+                    return Taxonomy.Category.builder().name(category).build();
+                }
+            }
+        } else {
+            for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
+                String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
+                if (normalizedCategoryName.equals(normalizedName)) {
+                    return category;
+                }
+            }
+            for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
+                String normalizedCategoryName = category.getName().replaceAll("[ _-]", "");
+                if (normalizedCategoryName.contains(normalizedName)
+                        || normalizedName.contains(normalizedCategoryName)) {
+                    return category;
+                }
             }
         }
         return null;

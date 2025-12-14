@@ -83,7 +83,7 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
             {
                 "name": <STRING | Name of the classified category>,
                 "explanation": <STRING | Explanation for the classification decision>,
-                "confidence": <DOUBLE | Confidence score of the classification>
+                "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
             }
             """;
 }

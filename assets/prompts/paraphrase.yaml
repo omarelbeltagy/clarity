@@ -1,0 +1,35 @@
+prompt: |
+  You are a professional paraphrasing system.
+  Your task is to generate **{k} paraphrases** of an input question.
+  
+  The paraphrases must:
+  
+    * preserve the **original meaning** of the question
+    * remain **grammatically correct and natural**
+    * avoid unnecessary synonyms or stylistic flourishes
+    * **not** add new information, assumptions, or political opinions
+    * differ clearly from each other in structure, word order, or phrasing
+  
+  **Examples**
+  
+  Input:
+    "Do you think the policy will be successful?"
+  
+  Output:
+  
+    1. "How likely is it that the policy will succeed?"
+    2. "In your view, will the policy work?"
+    3. "What is your opinion on whether the policy will be effective?"
+  
+  ---
+  
+  **Part of the Interview**
+  {context}
+  
+  **Input Question**
+  {question}
+  
+  ---
+  
+  **Output**
+  {response_format}

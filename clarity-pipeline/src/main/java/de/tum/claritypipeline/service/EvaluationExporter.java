@@ -1,9 +1,17 @@
 package de.tum.claritypipeline.service;
 
 import de.tum.clarityneo4j.core.Neo4jClient;
+import de.tum.clarityneo4j.core.Neo4jNode;
+import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.clarityneo4j.model.Neo4jCredentials;
+import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.config.ClassificationProperties;
 import de.tum.claritypipeline.model.config.EvaluationExportProperties;
+import de.tum.claritypipeline.model.core.QA;
+import de.tum.claritypipeline.model.core.Taxonomy;
+import de.tum.claritypipeline.model.relation.GeneratedBy;
+import de.tum.claritypipeline.model.relation.HasClassification;
+import de.tum.clarityutils.ModelEvaluator;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.poi.ss.usermodel.*;
@@ -11,11 +19,18 @@ import org.apache.poi.xssf.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Utility responsible for exporting evaluation results from Neo4j into an Excel file.
@@ -116,6 +131,173 @@ public class EvaluationExporter {
         }
     }
 
+    public void generateCustomEvaluation(String classificationPropertiesPath) throws IOException {
+        ClassificationProperties classificationProperties = ClassificationProperties.load(classificationPropertiesPath);
+        generateCustomEvaluation(classificationProperties);
+    }
+
+    public void generateCustomEvaluation(ClassificationProperties properties) {
+        log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
+            properties.getName());
+        String query = String.format(
+                """
+                MATCH (n:%s)--(cr:%s)--(c:%s)
+                WHERE cr.version = '%s'
+                AND c.name = '%s'
+                RETURN n
+                """,
+            Neo4jNode.getLabel(ClassificationResult.class),
+            Neo4jNode.getLabel(ClassificationProperties.class),
+            Neo4jNode.getLabel(ClassificationProperties.Classification.class),
+            properties.getVersion(),
+            properties.getClassification().getName()
+        );
+
+        List<ClassificationResult> results = client.executeQuery(query, ClassificationResult.class);
+        log.info("Found {} classification results for evaluation", results.size());
+        List<List<String>> predictionsAndExpected =
+            results.parallelStream()
+                .map(result -> {
+                    String findQAQuery = String.format(
+                            """
+                            MATCH (cr:%s)--(n:%s)
+                            WHERE elementId(cr) = '%s'
+                            RETURN n
+                            """,
+                        Neo4jNode.getLabel(ClassificationResult.class),
+                        Neo4jNode.getLabel(QA.class),
+                        result.getElementId()
+                    );
+
+                    QA qa = client.executeQuery(findQAQuery, QA.class)
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
+
+                    if (qa == null) {
+                        log.warn("No QA found for classification result {}. Could not generate evaluation",
+                                result.getElementId());
+                        return null;
+                    }
+                    List<String> returnList = new ArrayList<>();
+                    returnList.add(result.getName());
+                    returnList.add(qa.getClarityLabel());
+                    returnList.add(qa.getAnnotator1());
+                    returnList.add(qa.getAnnotator2());
+                    returnList.add(qa.getAnnotator3());
+                    return returnList.contains(null) ? null : returnList;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<String> predictions = predictionsAndExpected.stream()
+            .map(l -> l.get(0))
+            .toList();
+
+        List<String> expected = predictionsAndExpected.stream()
+            .map(l -> l.get(1))
+            .toList();
+
+        List<List<String>> annotations = predictionsAndExpected.stream()
+            .map(l -> l.subList(2, 5))
+            .toList();
+
+        List<String> labels = properties.getTaxonomy().getCategories()
+            .stream()
+            .map(Taxonomy.Category::getName)
+            .toList();
+
+        try {
+            ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
+            /*log.info("Evaluation Results (clarity level):");
+            double accuracy = evaluator.accuracy();
+            log.info("Accuracy: {}", String.format("%.2f", accuracy * 100));
+            double precision = evaluator.precision();
+            log.info("Precision: {}", String.format("%.2f", precision * 100));
+            double recall = evaluator.recall();
+            log.info("Recall: {}", String.format("%.2f", recall * 100));
+            double microF1 = evaluator.microF1();
+            log.info("Micro F1 Score: {}", String.format("%.2f", microF1 * 100));
+            double clarityMacroF1 = evaluator.macroF1();
+            log.info("Macro F1 Score: {}", String.format("%.2f", clarityMacroF1 * 100));*/
+            double evasionMacroF1 = evaluator.multiLabelMacroF1(annotations);
+            log.info("Evaluation Results (evasion level):");
+            log.info("Macro F1 Score: {}", String.format("%.2f", evasionMacroF1 * 100));
+        } catch (Exception e) {
+            log.error("Error while evaluating classification run {}", properties.getVersion(), e);
+        }
+
+    }
+
+    public void exportResult(String classificationPropertiesPath, String outputFile) throws IOException {
+        ClassificationProperties classificationProperties = ClassificationProperties.load(classificationPropertiesPath);
+        exportResult(classificationProperties, outputFile);
+    }
+
+    public void exportResult(ClassificationProperties classificationProperties, String outputFile) throws IOException {
+        log.info("Exporting evaluation data for {}({}) to file", classificationProperties.getName(),
+                 classificationProperties.getVersion());
+        String query = """
+                MATCH(qa:%s)-[:%s]->(n:%s)-[:%s]->(m:%s)
+                WHERE elementId(m) = $propsNodeId
+                RETURN n
+                ORDER BY qa.index ASC
+                """.formatted(
+                Neo4jNode.getLabel(QA.class),
+                Neo4jRelation.getType(HasClassification.class),
+                Neo4jNode.getLabel(ClassificationResult.class),
+                Neo4jRelation.getType(GeneratedBy.class),
+                Neo4jNode.getLabel(ClassificationProperties.class)
+        );
+        List<ClassificationResult> results = client.executeQuery(query, Map.of("propsNodeId",
+                                                                               classificationProperties.getElementId()),
+                                                                 ClassificationResult.class);
+
+        Path temp = Files.createTempFile("prediction", ".tmp");
+        try (BufferedWriter writer = Files.newBufferedWriter(temp)) {
+            for (int i = 0; i < results.size(); i++) {
+                ClassificationResult result = results.get(i);
+                if (classificationProperties.getTaxonomy().getMapping() == null
+                        || !classificationProperties.getTaxonomy().getMapping().isEnabled()) {
+                    writer.write(result.getName());
+                } else {
+                    Taxonomy.Category category = classificationProperties.getTaxonomy().getCategories().stream()
+                                                                         .filter(c -> c.getName()
+                                                                                       .equals(result.getName()))
+                                                                         .findFirst().orElse(null);
+                    if (category == null) {
+                        throw new RuntimeException("Could not find category with name " + result.getName());
+                    }
+                    String name = category.getMapTo();
+                    if (name == null) {
+                        throw new RuntimeException("Could not find mapping for category with name " + result.getName());
+                    }
+                    writer.write(name);
+                }
+                if (i < results.size() - 1) {
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        Path zipPath = Paths.get(outputFile);
+        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(zipPath))) {
+
+            ZipEntry entry = new ZipEntry("prediction");
+            zipOut.putNextEntry(entry);
+
+            Files.copy(temp, zipOut);
+
+            zipOut.closeEntry();
+        }
+        Files.deleteIfExists(temp);
+
+        log.info("Successfully exported evaluation data to file {}", outputFile);
+
+    }
+
     /**
      * Read the Evaluation objects from the provided classifications and map them to ExcelRow DTOs.
      *
@@ -141,8 +323,8 @@ public class EvaluationExporter {
     private ClassificationProperties.Evaluation getEvaluation(Object version) {
         try {
             return (ClassificationProperties.Evaluation) version.getClass()
-                                       .getMethod("getEvaluation", Neo4jClient.class)
-                                       .invoke(version, client);
+                                                                .getMethod("getEvaluation", Neo4jClient.class)
+                                                                .invoke(version, client);
         } catch (Exception e) {
             log.warn("Failed to get evaluation for version", e);
             return null;
@@ -193,12 +375,12 @@ public class EvaluationExporter {
     private ClassificationProperties.Evaluation roundEvaluation(ClassificationProperties.Evaluation eval) {
         double factor = Math.pow(10, options.getRoundToDigits());
         return ClassificationProperties.Evaluation.builder()
-                         .accuracy(round(eval.getAccuracy(), factor))
-                         .precision(round(eval.getPrecision(), factor))
-                         .recall(round(eval.getRecall(), factor))
-                         .macroF1(round(eval.getMacroF1(), factor))
-                         .microF1(round(eval.getMicroF1(), factor))
-                         .build();
+                                                  .accuracy(round(eval.getAccuracy(), factor))
+                                                  .precision(round(eval.getPrecision(), factor))
+                                                  .recall(round(eval.getRecall(), factor))
+                                                  .macroF1(round(eval.getMacroF1(), factor))
+                                                  .microF1(round(eval.getMicroF1(), factor))
+                                                  .build();
     }
 
     private double round(double value, double factor) {

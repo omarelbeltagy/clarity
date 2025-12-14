@@ -22,20 +22,7 @@ public class PromptUtils {
     private static final String PLACEHOLDER_ONTOLOGY = "{ontology}";
     private static final String PLACEHOLDER_TAXONOMY = "{taxonomy}";
     private static final String PLACEHOLDER_EXAMPLES = "{examples}";
-
-    private static final String TEXT_FORMAT_SUFFIX = """
-            
-            ---
-            
-            Return only the label in the format "Label: <label>". No additional text or metadata.
-            """;
-
-    private static final String JSON_FORMAT_TEMPLATE = """
-            
-            **Output**
-            Respond with a JSON that strictly follows this schema:
-            %s
-            """;
+    private static final String PLACEHOLDER_RESPONSE_FORMAT = "{response_format}";
 
     private static String buildRaqExampleString(QA qa, Taxonomy taxonomy) {
         try {
@@ -71,12 +58,8 @@ public class PromptUtils {
             throw new IllegalArgumentException("Taxonomy is empty.");
         }
 
-        String prompt = replacePlaceholders(modelProperties.getPrompt(), modelProperties.getRagProperties(),
-                                            classificationRequest);
-        if (modelProperties.isInjectResponseFormat()) {
-            prompt = appendResponseFormatInstructions(prompt, modelProperties.getResponseFormat(), jsonScheme);
-        }
-        return prompt;
+        return replacePlaceholders(modelProperties.getPrompt(), modelProperties,
+                                   classificationRequest, jsonScheme);
     }
 
     private static String buildOntologyString(List<Taxonomy.Category> categories) {
@@ -106,17 +89,21 @@ public class PromptUtils {
 
     private static String replacePlaceholders(
             String prompt,
-            ModelProperties.RagProperties ragProperties,
-            ClassificationRequest request
+            ModelProperties modelProperties,
+            ClassificationRequest request,
+            String jsonScheme
     ) {
         prompt = prompt
                 .replace(PLACEHOLDER_CONTEXT,
                          buildContext(request.getQa().getInterviewQuestion(), request.getQa().getInterviewAnswer()))
                 .replace(PLACEHOLDER_ONTOLOGY, buildOntologyString(request.getTaxonomy().getCategories()))
-                .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()));
-        if (ragProperties != null && ragProperties.isEnabled()) {
+                .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()))
+                .replace(PLACEHOLDER_RESPONSE_FORMAT,
+                         getResponseFormatInstructions(modelProperties.getResponseFormat(), jsonScheme));
+        if (modelProperties.getRagProperties() != null && modelProperties.getRagProperties().isEnabled()) {
             prompt = prompt
-                    .replace(PLACEHOLDER_EXAMPLES, buildRagExamples(prompt, ragProperties, request));
+                    .replace(PLACEHOLDER_EXAMPLES,
+                             buildRagExamples(prompt, modelProperties.getRagProperties(), request));
         } else {
             prompt = prompt
                     .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()));
@@ -138,10 +125,16 @@ public class PromptUtils {
             case QA_QUESTION -> request.getQa().getQuestionEmbedding();
             case QA_QUESTION_AND_ANSWER -> request.getQa().getQuestionAnswerEmbedding();
         };
+        if (requestEmbedding == null || requestEmbedding.length == 0) {
+            throw new IllegalArgumentException("Embedding must not be null or empty.");
+        }
         List<Neo4jEmbeddingSearchResult<QA>> similarExamples = GlobalConfig.NEO4J_CLIENT.similaritySearch(
-                ragProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 256, QA.class);
+                                                                                   ragProperties.getEmbeddingIndex().getIndexName(), requestEmbedding, 256, QA.class).stream()
+                                                                                        .filter(example -> !example.getNode()
+                                                                                                                   .isTest())
+                                                                                        .toList();
+
         similarExamples = similarExamples.stream()
-                                         .filter(example -> !example.getNode().isTest())
                                          .collect(Collectors.groupingBy(
                                                  r -> {
                                                      try {
@@ -209,11 +202,10 @@ public class PromptUtils {
     }
 
 
-    private static <T> String appendResponseFormatInstructions(
-            String prompt, ModelProperties.ResponseFormat format, String jsonScheme) {
+    private static String getResponseFormatInstructions(ModelProperties.ResponseFormat format, String jsonScheme) {
         return switch (format) {
-            case TEXT -> prompt + TEXT_FORMAT_SUFFIX;
-            case JSON_OBJECT -> prompt + JSON_FORMAT_TEMPLATE.formatted(jsonScheme);
+            case TEXT -> "Return only the label in the format \"Label: <label>\". No additional text or metadata.";
+            case JSON_OBJECT -> "Respond with a JSON object in the following format:\n%s".formatted(jsonScheme);
         };
     }
 }
