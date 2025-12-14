@@ -7,7 +7,6 @@ mapping:
     - "Clear Reply"
     - "Ambivalent"
     - "Clear Non-Reply"
-
 label-property: "evasionLabel"
 
 categories:

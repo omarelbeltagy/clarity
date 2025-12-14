@@ -1,7 +1,6 @@
 package de.tum.claritypipeline;
 
 import de.tum.clarityneo4j.core.Neo4jExporter;
-import de.tum.clarityneo4j.model.Neo4jExporterConfig;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -16,15 +15,11 @@ public class DatabaseExporterTest {
     /**
      * Neo4j exporter utility used to perform export/import operations.
      */
-    //private final Neo4jExporter neo4jExporter = new Neo4jExporter();
-    private final Neo4jExporter neo4jExporter = new Neo4jExporter(Neo4jExporterConfig.load
-                                                                                             ("src/test/resources"
-                                                                                                      + "/neo4j"
-                                                                                                      + "-exporter"
-                                                                                                      + "-config"
-                                                                                                      + "-reduced"
-                                                                                                      + "-batch-size"
-                                                                                                      + ".yaml"));
+    private final Neo4jExporter neo4jExporter = new Neo4jExporter();
+    /*
+    private final Neo4jExporter neo4jExporter = new Neo4jExporter(Neo4jExporterConfig.load(
+            "src/test/resources/neo4j-exporter-config-reduced-batch-size.yaml"));
+     */
 
     /**
      * Default constructor initializes resources required for tests.

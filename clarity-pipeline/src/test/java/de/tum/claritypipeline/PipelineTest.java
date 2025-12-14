@@ -54,15 +54,17 @@ public class PipelineTest {
 
     @Test
     public void testClassifyFromDirectory() {
-        classifyFromDirectory("src/test/resources/properties/pag-few-shot");
-        classifyFromDirectory("src/test/resources/properties/pag-few-shot-evasion-based");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-rag");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-rag");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-rag-reasoning-high");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-reasoning-high");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based");
-        classifyFromDirectory("src/test/resources/properties/single-few-shot-evasion-based-reasoning-high");
+        final String baseDir = "src/test/resources/properties/stage1/";
+
+        classifyFromDirectory(baseDir + "pag-few-shot");
+        classifyFromDirectory(baseDir + "pag-few-shot-evasion-based");
+        classifyFromDirectory(baseDir + "single-few-shot");
+        classifyFromDirectory(baseDir + "single-few-shot-rag");
+        classifyFromDirectory(baseDir + "single-few-shot-evasion-based-rag");
+        classifyFromDirectory(baseDir + "single-few-shot-evasion-based-rag-reasoning-high");
+        classifyFromDirectory(baseDir + "single-few-shot-reasoning-high");
+        classifyFromDirectory(baseDir + "single-few-shot-evasion-based");
+        classifyFromDirectory(baseDir + "single-few-shot-evasion-based-reasoning-high");
     }
 
     private void classifyFromDirectory(String dirPath) {
@@ -86,7 +88,7 @@ public class PipelineTest {
 
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/pag-few-shot-evasion-based-rag/gpt-5.1.yaml";
+        String file = "src/test/resources/properties/stage2/evasion-based/gpt-5.2-reasoning-auto.yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }
