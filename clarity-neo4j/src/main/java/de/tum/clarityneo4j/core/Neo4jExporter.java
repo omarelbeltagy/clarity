@@ -45,6 +45,10 @@ public class Neo4jExporter {
      * @throws IOException if writing to the file fails
      */
     public void exportAsJson(String outputFile) throws IOException {
+        exportAsJson(outputFile, true);
+    }
+
+    public void exportAsJson(String outputFile, boolean exportEmbeddings) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
 
             try (Session session = driver.session()) {
@@ -54,7 +58,7 @@ public class Neo4jExporter {
                 log.info("Starting export of {} nodes.", totalNodes);
                 Duration startDurationExport = Duration.ofMillis(System.currentTimeMillis());
 
-                exportNodesInBatches(session, writer, totalNodes);
+                exportNodesInBatches(session, writer, totalNodes, exportEmbeddings);
                 Duration endDurationExport = Duration.ofMillis(System.currentTimeMillis()).minus(startDurationExport);
                 log.info("Node export completed in {} ms.", endDurationExport.toMillis());
 
@@ -78,25 +82,31 @@ public class Neo4jExporter {
 
     private void exportNodesInBatches(
             Session session, BufferedWriter writer,
-            long totalNodes
+            long totalNodes, boolean exportEmbeddings
     ) throws IOException {
         long processed = 0;
 
         while (processed < totalNodes) {
             Result result = session.run(
-                    "MATCH (n) " +
-                            "WITH n " +
-                            "SKIP $skip LIMIT $limit " +
-                            "CALL apoc.export.json.data([n], [], null, {stream: true}) " +
-                            "YIELD data " +
-                            "RETURN data",
+                    """
+                            MATCH (n)
+                            WITH n
+                            SKIP $skip LIMIT $limit
+                            CALL apoc.export.json.data([n], [], null, {stream: true})
+                            YIELD data
+                            RETURN data
+                            """,
                     Map.of("skip", processed, "limit",
                            neo4jExporterConfig.getBatchConfig().getExportConfig().getNodeBatchSize())
             );
 
+            ObjectMapper mapper = new ObjectMapper();
             while (result.hasNext()) {
                 String data = result.next().get("data").asString().trim();
                 if (!data.isEmpty()) {
+                    if (!exportEmbeddings) {
+                        data = removeEmbeddingProperties(data, mapper);
+                    }
                     writer.write(data);
                     writer.newLine();
                 }
@@ -107,6 +117,25 @@ public class Neo4jExporter {
                 processed = totalNodes;
             }
             log.info("Nodes: {} / {}", processed, totalNodes);
+        }
+    }
+
+    private String removeEmbeddingProperties(String jsonLine, ObjectMapper mapper) {
+        try {
+            JsonNode obj = mapper.readTree(jsonLine);
+
+            if (obj.has("properties") && obj.get("properties").isObject()) {
+                ObjectNode properties = (ObjectNode) obj.get("properties");
+
+                properties.remove("questionAnswerEmbedding");
+                properties.remove("questionEmbedding");
+                properties.remove("answerEmbedding");
+            }
+
+            return mapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            log.warn("Failed to parse/modify JSON line, returning original: {}", e.getMessage());
+            return jsonLine;
         }
     }
 
@@ -128,9 +157,11 @@ public class Neo4jExporter {
                            neo4jExporterConfig.getBatchConfig().getExportConfig().getRelationshipBatchSize())
             );
 
+            ObjectMapper mapper = new ObjectMapper();
             while (result.hasNext()) {
                 String data = result.next().get("data").asString().trim();
                 if (!data.isEmpty()) {
+                    data = extractStartAndEndNodeIds(data, mapper);
                     writer.write(data);
                     writer.newLine();
                 }
@@ -141,6 +172,31 @@ public class Neo4jExporter {
                 processed = totalRels;
             }
             log.info("Relationships: {} / {}", processed, totalRels);
+        }
+    }
+
+    private String extractStartAndEndNodeIds(String jsonLine, ObjectMapper mapper) {
+        try {
+            JsonNode obj = mapper.readTree(jsonLine);
+
+            if (obj.has("start") && obj.get("start").isObject()) {
+                ObjectNode startNode = (ObjectNode) obj.get("start");
+                long startId = startNode.get("id").asLong();
+                ((ObjectNode) obj).remove("start");
+                ((ObjectNode) obj).put("start", startId);
+            }
+
+            if (obj.has("end") && obj.get("end").isObject()) {
+                ObjectNode endNode = (ObjectNode) obj.get("end");
+                long endId = endNode.get("id").asLong();
+                ((ObjectNode) obj).remove("end");
+                ((ObjectNode) obj).put("end", endId);
+            }
+
+            return mapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            log.warn("Failed to parse/modify JSON line, returning original: {}", e.getMessage());
+            return jsonLine;
         }
     }
 
@@ -188,9 +244,9 @@ public class Neo4jExporter {
      * @throws IOException if reading the file fails
      */
     public void importFromJson(String inputFile) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        log.info("Reading JSON data from file: {}", inputFile);
+        log.info("Starting import from JSON file: {}", inputFile);
 
+        ObjectMapper mapper = new ObjectMapper();
         Duration durationStart = Duration.ofMillis(System.currentTimeMillis());
 
         int totalNodes = 0;
@@ -231,6 +287,19 @@ public class Neo4jExporter {
 
         log.info("Node import completed. Total nodes: {}", totalNodes);
 
+        log.info("Creating lookup map for element IDs on temporary IDs...");
+        Map<String, String> tempIdToElementIdMap = driver.session().run(
+                                                                 """
+                                                                         MATCH (n)
+                                                                         WHERE n.tempId IS NOT NULL
+                                                                         RETURN n.tempId AS tempId, elementId(n) AS elementId
+                                                                         """
+                                                         ).list(r -> Map.entry(r.get("tempId").asString(),
+                                                                               String.valueOf(r.get("elementId").asString())))
+                                                         .stream().collect(
+                        Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        log.info("Lookup map created with {} entries.", tempIdToElementIdMap.size());
+
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFile), 1024 * 1024)) {
             String line;
             List<JsonNode> relationshipBatch = new ArrayList<>();
@@ -244,10 +313,21 @@ public class Neo4jExporter {
                 }
 
                 if ("relationship".equals(node.get("type").asText())) {
-                    String startId = node.get("start").get("id").asText();
-                    String endId = node.get("end").get("id").asText();
-                    ((ObjectNode) node).put("startTempId", startId);
-                    ((ObjectNode) node).put("endTempId", endId);
+                    String startId;
+                    if (node.get("start").isObject()) {
+                        startId = node.get("start").get("id").asText();
+                    } else {
+                        startId = node.get("start").asText();
+                    }
+                    String endId;
+                    if (node.get("end").isObject()) {
+                        endId = node.get("end").get("id").asText();
+                    } else {
+                        endId = node.get("end").asText();
+                    }
+
+                    ((ObjectNode) node).put("startElementId", tempIdToElementIdMap.get(startId));
+                    ((ObjectNode) node).put("endElementId", tempIdToElementIdMap.get(endId));
                     relationshipBatch.add(node);
 
                     if (relationshipBatch.size() >= neo4jExporterConfig.getBatchConfig()
@@ -323,8 +403,8 @@ public class Neo4jExporter {
                                                                  'UNWIND $relationships as relData RETURN relData',
                                                                  '
                                                                  MATCH (a), (b)
-                                                                 WHERE a.tempId = relData.startTempId
-                                                                     AND b.tempId = relData.endTempId
+                                                                 WHERE elementId(a) = relData.startElementId
+                                                                   AND elementId(b) = relData.endElementId
                                                                  CALL apoc.create.relationship(a, relData.label, relData.properties, b)
                                                                  YIELD rel
                                                                  RETURN rel

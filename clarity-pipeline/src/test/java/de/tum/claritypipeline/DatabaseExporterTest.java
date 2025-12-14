@@ -21,6 +21,7 @@ public class DatabaseExporterTest {
             "src/test/resources/neo4j-exporter-config-reduced-batch-size.yaml"));
      */
 
+
     /**
      * Default constructor initializes resources required for tests.
      *
@@ -49,7 +50,7 @@ public class DatabaseExporterTest {
      */
     @Test
     public void testExportDatabase() throws IOException {
-        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_02_2025.json");
+        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_14_2025.json", false);
     }
 
     /**
@@ -63,6 +64,6 @@ public class DatabaseExporterTest {
     @Test
     public void testImportDatabase() throws IOException {
         neo4jExporter.clearDatabase();
-        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_02_2025_Embeddings_2.json");
+        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_14_2025.json");
     }
 }

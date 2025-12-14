@@ -1,5 +1,5 @@
 name: "GPT 5.1"
-version: "rag:evasion-based:single:few-shot:v4"
+version: "rag:reasoning-effort-high:evasion-based:single:few-shot:v1"
 taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
 worker-threads: 16
 query: |
