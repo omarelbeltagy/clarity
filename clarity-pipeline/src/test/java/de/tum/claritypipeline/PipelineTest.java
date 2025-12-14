@@ -3,6 +3,7 @@ package de.tum.claritypipeline;
 import de.tum.claritypipeline.model.config.DatasetType;
 import de.tum.claritypipeline.model.core.QA;
 import de.tum.claritypipeline.service.ClassificationPipeline;
+import de.tum.claritypipeline.service.CleanedDataImporter;
 import de.tum.claritypipeline.service.DatasetGraphImporter;
 import de.tum.claritypipeline.service.DatasetReader;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,12 @@ public class PipelineTest {
     private final DatasetGraphImporter datasetGraphImporter = new DatasetGraphImporter();
 
     /**
+     * Service for importing cleaned QA records into the graph database.
+     */
+    private final CleanedDataImporter cleanedDataImporter = new CleanedDataImporter();
+
+
+    /**
      * Default constructor.
      *
      * @throws IOException if initialization fails
@@ -53,9 +60,23 @@ public class PipelineTest {
     }
 
     @Test
-    public void testClassifyFromDirectory() {
-        final String baseDir = "src/test/resources/properties/stage1/";
+    public void testImportCleanedDatasets() {
+        List<QA> data = new ArrayList<>();
 
+        final DatasetReader datasetReaderCleaned = new DatasetReader("../clarity-dataset/data/cleaned/");
+
+        data.addAll(datasetReaderCleaned.readDataset("test.json", DatasetType.TEST));
+        data.addAll(datasetReaderCleaned.readDataset("train.json"));
+
+        cleanedDataImporter.importCleanedData(data);
+    }
+
+    @Test
+    public void testClassifyFromDirectory() {
+        final String baseDir = "src/test/resources/properties/stage2/";
+
+        classifyFromDirectory(baseDir + "custom-evasion-based");
+        /*
         classifyFromDirectory(baseDir + "pag-few-shot");
         classifyFromDirectory(baseDir + "pag-few-shot-evasion-based");
         classifyFromDirectory(baseDir + "single-few-shot");
@@ -65,6 +86,7 @@ public class PipelineTest {
         classifyFromDirectory(baseDir + "single-few-shot-reasoning-high");
         classifyFromDirectory(baseDir + "single-few-shot-evasion-based");
         classifyFromDirectory(baseDir + "single-few-shot-evasion-based-reasoning-high");
+         */
     }
 
     private void classifyFromDirectory(String dirPath) {
@@ -88,7 +110,7 @@ public class PipelineTest {
 
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/stage2/evasion-based/gpt-5.2-reasoning-auto.yaml";
+        String file = "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-high.yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }

@@ -32,10 +32,23 @@ public class QA extends Neo4jNode {
     private String interviewQuestion;
 
     /**
+     * Cleaned version of the interview question.
+     */
+    @JsonProperty("interview_question_clean")
+    private String interviewQuestionClean;
+
+    /**
      * The corresponding interview answer.
      */
     @JsonProperty("interview_answer")
     private String interviewAnswer;
+
+    /**
+     * Cleaned version of the interview answer.
+     */
+    @JsonProperty("interview_answer_clean")
+    private String interviewAnswerClean;
+
 
     /**
      * The processed question used for classification.

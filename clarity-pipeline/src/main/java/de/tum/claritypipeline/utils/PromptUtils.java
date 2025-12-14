@@ -19,12 +19,14 @@ import java.util.stream.IntStream;
 
 public class PromptUtils {
     private static final String PLACEHOLDER_CONTEXT = "{context}";
+    private static final String PLACEHOLDER_CLEANED_CONTEXT = "{cleaned_context}";
     private static final String PLACEHOLDER_ONTOLOGY = "{ontology}";
     private static final String PLACEHOLDER_TAXONOMY = "{taxonomy}";
     private static final String PLACEHOLDER_EXAMPLES = "{examples}";
+    private static final String PLACEHOLDER_CLEANED_EXAMPLES = "{cleaned_examples}";
     private static final String PLACEHOLDER_RESPONSE_FORMAT = "{response_format}";
 
-    private static String buildRaqExampleString(QA qa, Taxonomy taxonomy) {
+    private static String buildRaqExampleString(QA qa, Taxonomy taxonomy, boolean useClean) {
         try {
             Field field = qa.getClass().getDeclaredField(
                     taxonomy.getLabelProperty());
@@ -33,7 +35,11 @@ public class PromptUtils {
             String label = value.toString();
             StringBuilder sb = new StringBuilder();
             sb.append("Question: ").append(qa.getQuestion()).append("\n");
-            sb.append("Answer: ").append(qa.getInterviewAnswer()).append("\n");
+            if (useClean) {
+                sb.append("Answer: ").append(qa.getInterviewAnswerClean()).append("\n");
+            } else {
+                sb.append("Answer: ").append(qa.getInterviewAnswer()).append("\n");
+            }
             sb.append("Label: ").append(label).append("\n");
             return sb.toString();
         } catch (NoSuchFieldException |
@@ -96,17 +102,22 @@ public class PromptUtils {
         prompt = prompt
                 .replace(PLACEHOLDER_CONTEXT,
                          buildContext(request.getQa().getInterviewQuestion(), request.getQa().getInterviewAnswer()))
+                .replace(PLACEHOLDER_CLEANED_CONTEXT, buildContext(request.getQa().getInterviewQuestionClean(),
+                                                                   request.getQa().getInterviewAnswerClean()))
                 .replace(PLACEHOLDER_ONTOLOGY, buildOntologyString(request.getTaxonomy().getCategories()))
                 .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()))
                 .replace(PLACEHOLDER_RESPONSE_FORMAT,
                          getResponseFormatInstructions(modelProperties.getResponseFormat(), jsonScheme));
         if (modelProperties.getRagProperties() != null && modelProperties.getRagProperties().isEnabled()) {
-            prompt = prompt
-                    .replace(PLACEHOLDER_EXAMPLES,
-                             buildRagExamples(prompt, modelProperties.getRagProperties(), request));
+            prompt = prompt.replace(PLACEHOLDER_EXAMPLES,
+                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request));
+            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
+                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request, true));
         } else {
             prompt = prompt
                     .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()));
+            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
+                                    buildExamplesString(request.getTaxonomy().getCategories()));
         }
         prompt = replacePlaceholdersDynamic(prompt, request.getQa());
         return prompt;
@@ -114,6 +125,13 @@ public class PromptUtils {
 
     private static String buildRagExamples(
             String prompt, ModelProperties.RagProperties ragProperties, ClassificationRequest request) {
+        return buildRagExamples(prompt, ragProperties, request, false);
+    }
+
+    private static String buildRagExamples(
+            String prompt, ModelProperties.RagProperties ragProperties, ClassificationRequest request,
+            boolean useClean
+    ) {
         if (prompt == null || ragProperties == null) {
             throw new IllegalArgumentException("Arguments must not be null");
         }
@@ -157,10 +175,9 @@ public class PromptUtils {
                                          .filter(Objects::nonNull)
                                          .toList();
 
-
         return similarExamples.stream()
                               .map(Neo4jEmbeddingSearchResult::getNode)
-                              .map(qa -> buildRaqExampleString(qa, request.getTaxonomy()))
+                              .map(qa -> buildRaqExampleString(qa, request.getTaxonomy(), useClean))
                               .collect(Collectors.joining("\n"));
     }
 
@@ -200,7 +217,6 @@ public class PromptUtils {
             return null;
         }
     }
-
 
     private static String getResponseFormatInstructions(ModelProperties.ResponseFormat format, String jsonScheme) {
         return switch (format) {

@@ -263,7 +263,7 @@ public class ClassificationPipeline {
                            String propertyLabel =
                                    ((properties.getStrategy() instanceof BestGuessStrategy)
                                            || (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
-                                                                                                         .getMapping()
+                                                                                                          .getMapping()
                                                                                                           .isEnabled()))
                                            ? properties.getTaxonomy().getMapping().getLabelProperty()
                                            : properties.getTaxonomy().getLabelProperty();
