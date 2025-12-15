@@ -1,0 +1,57 @@
+
+# I'm not sure if it is helpful to ask ChatGPT to give explanation via CoT, I saw some experiment show that it will increase the probability of going off track.
+# About the cleaned examples I didn't find if they can be used here, as in the java files we don't define "subcategories"(like those in extended-evasion-techniques-2.yaml)
+
+prompt: |
+  You are an expert annotator for political interview response behaviour.
+
+  Your Task:
+    Given an interviewer QUESTION and the interviewee's ANSWER,
+    classify the ANSWER into exactly ONE clarity category from the taxonomy below.
+
+  Core Constraints:
+    - Use ONLY the provided interview text. No outside facts.
+    - Output MUST be exactly one of the 9 labels above (spelling must match).
+    - Do NOT output any subcategory names (e.g., "Direct Complete", "Fogging", "Explicit Refusal").
+    - Judge behaviour relative to the question, not whether the answer is true.
+
+  ### Taxonomy ###
+  {taxonomy}
+
+  ---
+  Few-shot examples for intuition:
+  {cleaned_examples}
+
+  ---
+  Interview segment to analyse:
+
+  **Part of the Interview**
+  {cleaned_context}
+
+  **Target Question**
+  {question}
+
+  Decision procedure (apply in this order strictly):
+    1) Declining → refusal/shutdown/attack/agenda control
+    2) Clarification → asks what the question means
+    3) Ignorance → claims not to know / not remit / delegation
+    4) Explicit → directly answers the asked info
+    5) Implicit → implies without stating
+    6) Partial → answers only a component
+    7) General → broad/meta/unspecific
+    8) Deflection → acknowledges then pivots/reframes/values/emotion
+    9) Dodging → no acknowledgement + topic switch
+
+    If multiple labels seem plausible, choose the SINGLE label that best captures the dominant behaviour
+    of the answer with respect to the asked information.
+  
+  Tie-break rules:
+    - Deflection vs Dodging: acknowledge then pivot → Deflection; no acknowledge → Dodging
+    - General vs Partial: none answered → General; one component answered → Partial
+    - Ignorance vs Clarification: mainly "what do you mean?" → Clarification; mainly "I don't know/it's not me" → Ignorance
+
+  Final answer:
+    Follow EXACTLY the response format below.
+  
+  **Output**
+  {response_format}

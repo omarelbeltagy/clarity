@@ -90,7 +90,7 @@ public class PromptUtils {
     }
 
     private static String formatCategory(int index, Taxonomy.Category category) {
-        return String.format("%d. %s - %s", index, category.getName(), category.getDescription());
+        return String.format("%d. %s - %s%n", index, category.getName(), category.getDescription());
     }
 
     private static String replacePlaceholders(

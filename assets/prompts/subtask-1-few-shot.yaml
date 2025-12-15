@@ -1,0 +1,48 @@
+
+# Perhaps we should just place the top 3 categories in {taxonomy} instead of the dozens of sub-categories to avoid attention shifts.
+# Or if we use different prompts to solve different subtasks, we could just write them in the prompt.
+
+prompt: |
+  You are an expert in political communication and interview analysis.
+
+  Your Task:
+    Given an interviewer QUESTION and the interviewee's ANSWER,
+    classify the ANSWER into exactly ONE clarity category from the taxonomy below,
+    and then briefly explain your choice use Chain of Thought.
+
+  Core Constraints:
+    - Use ONLY the information in the interview segment. Do NOT use outside knowledge, facts or assumptions.
+    - Treat the taxonomy below as the ONLY valid set of labels.
+    - The final label MUST match exactly ONE of the category names in the taxonomy.
+    - Decide among three labels using these signals:
+       * Clear Non-Reply: explicit refusal / procedural blocking / closing down.
+       * Clear Reply: directly provides the requested information (clear yes/no or concrete fact).
+       * Ambivalent: engages the topic but does not resolve the asked information (vague, hedged, partial, or shifts focus).
+
+  ### Taxonomy ###
+  {taxonomy}
+
+  ---
+  Few-shot examples for intuition:
+  {cleaned_examples}
+
+  ---
+  Interview segment to analyse:
+
+  **Part of the Interview**
+  {cleaned_context}
+
+  **Target Question**
+  {question}
+
+  Decision procedure (apply in this order strictly):
+    1) If the answer explicitly refuses, blocks, claims not to know, asks for clarification,
+       shuts down the exchange, or attacks the questioner → Clear Non-Reply.
+    2) Else if the answer clearly provides what the question asks for (explicit, direct, unambiguous) → Clear Reply.
+    3) Else → Ambivalent.
+
+  Final answer:
+    Follow EXACTLY the response format below.
+
+  **Output**
+  {response_format}
