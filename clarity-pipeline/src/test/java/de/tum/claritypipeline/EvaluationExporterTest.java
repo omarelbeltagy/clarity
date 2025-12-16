@@ -32,7 +32,7 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_14_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_16_2025.xlsx");
     }
 
     @Test
@@ -51,7 +51,7 @@ public class EvaluationExporterTest {
         );
          */
         evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-high.yaml"
+                "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.1-reasoning-high.yaml"
         );
     }
 }

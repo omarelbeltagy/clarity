@@ -1,0 +1,38 @@
+prompt: |
+  You are a prompt engineer tasked with debugging a prompt for a classification pipeline that classifies the type of responses given by interviewees based on the questions posed by the interviewer.
+
+  You are given:
+
+  1) The current prompt:
+  <prompt>
+  {dump_prompt}
+  </prompt>
+  
+  2) Placeholders used in the prompt:
+  The prompt contains the following placeholders:
+  <placeholders>
+    <taxonomy>
+    {taxonomy}
+    </taxonomy>
+    <examples>
+    {examples}
+    </examples>
+  </placeholders>
+  The other placeholders are dynamically filled in at runtime and specific to the Question-Answer pair being classified.
+
+  3) A small set of logged failures. Each log has:
+  - query
+  - model_answer
+  - expected_answer
+
+  <failure_tracess>
+  {dump_failure_traces}
+  </failure_traces>
+
+  Your tasks:
+
+  1) Identify the distinct failure mode you see (e.g., misunderstanding_of_taxonomy, insufficient_context_utilization, lack_of_chain_of_thought).
+  2) For each failure mode, quote or paraphrase the specific lines or sections of the prompt that are most likely causing or reinforcing it. Include any contradictions (e.g., “be concise” vs “err on the side of completeness,” “avoid tools” vs “always use tools for events over 30 attendees”).
+  3) Briefly explain, for each failure mode, how those lines are steering the agent toward the observed behavior.
+
+  {response_format}

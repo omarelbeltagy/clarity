@@ -1,0 +1,137 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+  
+  Your goal is to apply the taxonomy carefully and consistently, while also mirroring how a typical human annotator would hear and classify the exchange in ordinary conversation.
+  
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response provided by the interviewee **for the specific focal question shown under “Question”**, using the taxonomy provided below. Then provide a brief explanation for your decision.
+  
+  Important instructions for using the taxonomy:
+  
+  1. **Focus only on the focal question and its answer**
+     - Always classify the response **only with respect to the single question shown under “Question”**, not with respect to the overall topic of the interview segment.
+     - Ignore whether the answer is relevant to other questions in the interview segment; only the match (or mismatch) with the **exact focal question** matters.
+     - If the interviewer’s turn contains multiple sub‑questions, treat the text under “Question” as the only thing you are coding. **Do not give credit for answering other sub‑questions.**
+  
+  2. **How to interpret Explicit, Implicit, General, and Partial/half-answer**
+  
+     Use the brief label descriptions in the taxonomy together with these operational rules. When these rules and your conversational intuitions conflict, **follow these rules**.
+  
+     - **Explicit**
+       - Use this **only** when **all of the specific information requested** is clearly and directly given **in the expected form or a very close paraphrase**, so that the answer functions as a literal reply.
+       - Typical cases:
+         - Direct “yes” / “no” to a yes–no question.
+         - A concrete number, date, name, or specific option when that is what was asked.
+         - A plainly stated commitment or non‑commitment (e.g., “We will do X”, “We will not do X”, “I will run”, “I will not run”).
+         - For multi‑part questions (e.g., “when and why”, “who and how”), the answer must cover **each requested component** to count as Explicit. If only some parts are answered, use **Partial/half-answer**.
+       - The key test: **the speaker actually states the requested info, rather than requiring the listener to infer it from broader stance or context.** If the answer mainly relies on inference, it should be **Implicit**, not **Explicit**.
+  
+     - **Implicit**
+       - Use this when the requested information is **strongly implied and reasonably clear**, but **not stated in the expected literal form**.
+       - Typical patterns:
+         - Rhetorical questions, ironies, or conditional/hedged statements that clearly reveal a yes/no or position.
+         - Reframed answers that don’t repeat the question’s exact wording but clearly convey the requested stance or prediction (e.g., strong optimism/pessimism about whether something will happen, clearly functioning as “yes, probably” or “no, unlikely”).
+         - Answers that do not say “yes” or “no”, or do not restate the requested commitment, but where a careful, reasonable listener would still come away **knowing how to code the requested yes/no, prediction, or commitment**.
+       - **Do not** use Implicit just because the answer is on the same topic. There must be a **specific, strong implication** of the requested information (e.g., effectively yes vs. no, or a clear stance on the concrete proposal), not just generic discussion.
+       - When the directional stance or prediction is clear enough that most careful listeners would agree on how to code the requested yes/no or commitment, prefer **Implicit** over **General**.
+       - **Tie‑break with Explicit:** If you can only access the requested information by inference from the wording, label the answer **Implicit**, not **Explicit**, even if the inference feels obvious.
+  
+     - **General**
+       - Use this when the answer is on topic but **too vague, broad, or non‑committal** relative to what was asked.
+       - Typical cases:
+         - The speaker talks about the issue or policy area at length but never provides the specific detail, commitment, time frame, or choice requested.
+         - After reading the answer, a careful listener **still cannot clearly tell** whether the requested yes/no, prediction, or specific commitment is being made.
+       - Prefer **General** over **Implicit** when:
+         - The answer stays at the level of principles, values, or high‑level goals **without clearly indicating which side of the concrete question they land on**.
+         - Any inference about the requested information would be weak, speculative, or ambiguous.
+       - For multi‑part questions, if the answer vaguely gestures at the topic but does not concretely address any specific requested component, use **General** (not Partial/half‑answer).
+  
+     - **Partial/half-answer**
+       - The answer provides **only one component or subset** of the requested information.
+       - Example: the question asks for multiple elements (e.g., “when and why”, or “your view and your plan”), but the answer covers only one.
+       - Prefer this over **General** when **part of the precise requested content is actually given** (e.g., one of the requested dates, a clear answer to one of several sub‑questions embedded in the focal question), but some key part is missing.
+       - Do **not** label as Explicit if any clearly requested component is missing; that should be **Partial/half-answer**.
+  
+  3. **Dodging vs. Deflection (and relation to General)**
+  
+     - **Core distinction:**
+       - **Dodging** depends on whether the answer **acknowledges the specific content of the focal question at all**.
+       - **Deflection** requires **some acknowledgment of the focal question’s issue**, followed by a pivot that avoids giving the requested information.
+       - Mere overlap in **broad topic** (e.g., same country, same war) is **not enough** for Deflection if the specific ask is never acknowledged.
+  
+     - **Dodging**
+       - The answer **does not acknowledge the focal question at all** and shifts immediately to something else.
+       - Use this when, from the point of view of the **specific focal question**, a careful listener would feel the question was simply ignored.
+       - The “something else” can be a different issue **or another aspect of the same broad topic**. It does **not** have to be a totally unrelated subject.
+       - If the answer may respond to **another sub‑question in the interviewer’s turn** but not to the focal question you are coding, that still counts as **Dodging** for the focal question.
+  
+     - **Deflection**
+       - The answer **starts by acknowledging or touching on the focal question’s specific issue**, but then **shifts focus to a different point** (e.g., attacking an opponent, changing to another issue) **without actually giving the requested information**, either explicitly or implicitly.
+       - The acknowledgement can be somewhat broad (e.g., repeats or paraphrases part of the question, directly refers to the decision, deadline, person, or scenario asked about), but it must show some orientation to the **specific ask**, not just the general topic.
+       - Use **Deflection** when there is a clear pivot away from answering the focal question after this acknowledgement, and the requested information remains unprovided.
+  
+     - **Deflection vs. General**
+       - Use **Deflection** instead of **General** when there is a **recognizable pivot away** from answering the specific point (the speaker orients to the question and then steers elsewhere), rather than a vague, steady attempt to discuss the issue.
+       - Use **General** when the speaker seems to be trying to answer but stays vague or high‑level **without a clear pivot away** from the question.
+  
+  4. **Other categories**
+  
+     - **Dodging**
+       - Defined above. Key sign: no acknowledgement of the focal question’s specific content.
+  
+     - **Declining to answer**
+       - The speaker **explicitly refuses or postpones** answering the question.
+       - Typical patterns: “I’m not going to answer that”, “I won’t comment on that”, “It would be inappropriate to say”, “I will not speculate.”
+       - Even if some context is mentioned, if there is an explicit refusal or postponement, use this label.
+  
+     - **Claims ignorance**
+       - The speaker **states that they do not know** the requested information.
+       - Typical patterns: “I don’t know”, “I don’t have those figures”, “I’m not aware of that.”
+       - If both ignorance and postponement are present (e.g., “I don’t know now, I’ll find out later”), still label as **Claims ignorance**.
+  
+     - **Clarification**
+       - The speaker **does not provide the requested information** and instead **asks for clarification or checks they understood the question**.
+       - Typical patterns: “Do you mean …?”, “Which one are you referring to?”, “Can you clarify what you’re asking?”
+  
+  5. **Tie-breaking rules when multiple labels seem plausible**
+  
+     Apply these in order when you are unsure between categories. Use the **first** rule that applies:
+  
+     1. If the answer **explicitly says they don’t know**, choose **Claims ignorance**, even if they also promise to respond later.
+     2. Else, if the answer **explicitly refuses or postpones** answering, choose **Declining to answer**, even if some topic-related remarks are made.
+     3. Else, if the answer **asks for more information about the question** instead of responding, choose **Clarification**.
+     4. Else, if the answer **does not acknowledge the focal question’s specific content at all** (even if it talks about the same broad topic), choose **Dodging**.
+     5. Else, if the answer **acknowledges the focal question’s issue** but mainly pivots to a different point and never supplies the requested information (even implicitly), choose **Deflection**.
+     6. Else, if the answer is **on topic but too vague or high-level** to provide the specific requested information, and a careful listener would not clearly know the specific answer, choose **General**.
+     7. Else, if the answer **provides only a subset** of the specifically requested information, choose **Partial/half-answer**.
+     8. Else, if the answer **conveys the requested information mainly through inference** (i.e., it is strongly implied but not literally stated), choose **Implicit**.
+     9. Else, if the answer **clearly and directly gives** all of the requested information in the expected form (or any unambiguous close paraphrase), choose **Explicit**.
+  
+  6. **Explanation requirements (concise chain-of-thought)**
+     - Provide a **brief** explanation (2–5 sentences) focused on how you applied the rules above.
+     - In your explanation, explicitly:
+       - Quote or reference the **key part of the focal question** and **key part of the answer** that determine the label.
+       - Refer to the decision rules above where relevant (e.g., “the answer explicitly refuses to answer, so this is Declining to answer”, or “the stance is only implied, so this is Implicit rather than Explicit”).
+       - If there is any plausible alternative label, briefly mention it and why it is **not** chosen, especially when distinguishing among Dodging, Deflection, and General.
+     - Keep the reasoning concise and focused on the text and the definitions, not on speculative political motives or strategy.
+  
+  Use the following taxonomy and examples as the base reference:
+  
+  {taxonomy}
+  
+  ---
+  Here is one small example for each term of the taxonomy:
+  
+  {examples}
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  {response_format}

@@ -1,0 +1,13 @@
+name: "GPT 5.2"
+version: "single:few-shot:enhanced-prompt:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques-enhanced.yaml"
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-5.2"
+    prompt: "../assets/prompts/prompt-enhancement-v1.yaml"

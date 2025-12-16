@@ -138,6 +138,9 @@ public class ModelProperties extends Neo4jNode {
         if (reasoningEffort == null) {
             propertiesMap.put("reasoning-effort", null);
         }
+        if (prompt != null) {
+            propertiesMap.put("prompt", prompt);
+        }
         String literal = toCypherMap(propertiesMap);
         if (ragProperties == null && patternConfig == null) {
             query = """
@@ -379,10 +382,12 @@ public class ModelProperties extends Neo4jNode {
         if (prompt.endsWith(".txt")) {
             try {
                 this.prompt = Files.readString(java.nio.file.Path.of(prompt));
+                return;
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load prompt from file: " + prompt, e);
             }
         }
+        this.prompt = prompt;
     }
 
     /**

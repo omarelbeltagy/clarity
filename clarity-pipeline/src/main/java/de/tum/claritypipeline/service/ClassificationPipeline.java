@@ -14,6 +14,7 @@ import de.tum.claritypipeline.model.relation.GeneratedBy;
 import de.tum.claritypipeline.model.relation.HasClassification;
 import de.tum.claritypipeline.model.relation.HasEvaluation;
 import de.tum.claritypipeline.strategy.BestGuessStrategy;
+import de.tum.claritypipeline.utils.PipelineUtils;
 import de.tum.clarityutils.ModelEvaluator;
 import org.slf4j.Logger;
 
@@ -146,7 +147,8 @@ public class ClassificationPipeline {
                     unclassified.stream()
                                 .map(qa -> CompletableFuture.supplyAsync(() -> {
                                     try {
-                                        ClassificationRequest request = buildRequest(qa);
+                                        ClassificationRequest request = PipelineUtils.buildRequest(qa,
+                                                                                                   properties.getTaxonomy());
                                         ClassificationResult result = classifySingle(request);
                                         Taxonomy.Category category = findAssignedCategory(result.getName());
                                         if (category != null) {
@@ -400,33 +402,6 @@ public class ClassificationPipeline {
         relation.setStartNodeId(startNodeId);
         relation.setEndNodeId(endNodeId);
         return relation;
-    }
-
-    /**
-     * Build a ClassificationRequest from a QA object.
-     *
-     * @param qa The QA object.
-     * @return The constructed ClassificationRequest.
-     */
-    private ClassificationRequest buildRequest(QA qa) {
-        return ClassificationRequest.builder()
-                                    .qa(qa)
-                                    .question(qa.getQuestion())
-                                    .context(buildContext(qa.getInterviewQuestion(),
-                                                          qa.getInterviewAnswer()))
-                                    .taxonomy(properties.getTaxonomy())
-                                    .answer(qa.getInterviewAnswer())
-                                    .build();
-    }
-
-    private String buildContext(String interviewQuestion, String interviewAnswer) {
-        StringBuilder contextBuilder = new StringBuilder();
-        if (interviewQuestion.startsWith("Q. ")) {
-            interviewQuestion = interviewQuestion.substring(3);
-        }
-        contextBuilder.append("Interviewer: ").append(interviewQuestion).append("\n");
-        contextBuilder.append("Answer: ").append(interviewAnswer).append("\n");
-        return contextBuilder.toString();
     }
 
     /**

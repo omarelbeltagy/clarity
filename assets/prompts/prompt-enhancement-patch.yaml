@@ -1,0 +1,45 @@
+prompt: |
+  You previously analyzed this prompt and its failure modes.
+
+  1) Prompt:
+  
+    <prompt>
+    {dump_prompt}
+    </prompt>
+  
+    The prompt contains the following placeholders in square brackets:
+    <placeholders>
+      <taxonomy>
+      {taxonomy}
+      </taxonomy>
+      <examples>
+      {examples}
+      </examples>
+    </placeholders>
+    The other placeholders are dynamically filled in at runtime and specific to the Question-Answer pair being classified.
+  
+  2) Failure-mode analysis:
+    {dump_failure_mode_analysis}
+  
+    Please propose a surgical revision of the prompt that reduces the observed issues while preserving the good behaviors.
+  
+  **Constraints:**
+  
+    - Do not redesign the agent from scratch.
+    - Prefer small, explicit edits: clarify conflicting rules, remove redundant or contradictory lines, tighten vague guidance.
+    - Make tradeoffs explicit (for example, clearly state when to prioritize concision over completeness).
+    - The names of the taxonomy categories MUST remain unchanged.
+
+  **Placeholder handling rules:**
+    - You MUST keep all runtime placeholders exactly as provided, including {taxonomy}, {examples}, {context}, {question}, {response_format}.
+    - You may only include these placeholders in their original structural positions where content is expected to be injected.
+    - Do NOT mention, reference, describe, or explain placeholders by name anywhere else in the prompt text.
+    - When giving instructions about their content, refer to them indirectly, e.g. “the taxonomy provided above”, “the examples section”, “the interview segment”.
+  
+  **Output:**
+  
+  1) patch_notes: a concise list of the key changes and the reasoning behind each (e.g., "Merged conflicting tool-usage rules into a single hierarchy", "Clarified chain-of-thought requirement to explicitly request step-by-step reasoning").
+  2) revised_prompt: the full updated prompt with your edits applied, ready to drop into an agent configuration and all placeholders intact.
+  3) revised_taxonomy: if any changes to the taxonomy description or examples are needed to support the prompt changes, provide them here; otherwise, return the original taxonomy placeholder.
+  
+  {response_format}

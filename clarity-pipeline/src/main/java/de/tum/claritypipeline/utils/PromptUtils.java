@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 public class PromptUtils {
@@ -69,9 +68,23 @@ public class PromptUtils {
     }
 
     private static String buildOntologyString(List<Taxonomy.Category> categories) {
-        return IntStream.range(0, categories.size())
-                        .mapToObj(i -> formatCategory(i + 1, categories.get(i)))
-                        .collect(Collectors.joining());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < categories.size(); i++) {
+            Taxonomy.Category category = categories.get(i);
+            if (category.getName() == null || category.getName().isEmpty()) {
+                throw new IllegalArgumentException("Category name is missing for category at index " + i);
+            }
+            if (category.getDescription() == null || category.getDescription().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Category description is missing for category: " + category.getName());
+            }
+            String formatCategory = formatCategory(i + 1, category);
+            if (!formatCategory.endsWith("\n")) {
+                formatCategory += "\n";
+            }
+            sb.append(formatCategory);
+        }
+        return sb.toString();
     }
 
     private static String buildExamplesString(List<Taxonomy.Category> categories) {
@@ -90,10 +103,10 @@ public class PromptUtils {
     }
 
     private static String formatCategory(int index, Taxonomy.Category category) {
-        return String.format("%d. %s - %s%n", index, category.getName(), category.getDescription());
+        return String.format("%d. %s - %s", index, category.getName(), category.getDescription());
     }
 
-    private static String replacePlaceholders(
+    public static String replacePlaceholders(
             String prompt,
             ModelProperties modelProperties,
             ClassificationRequest request,
@@ -183,6 +196,9 @@ public class PromptUtils {
 
     private static String buildContext(String interviewQuestion, String interviewAnswer) {
         StringBuilder contextBuilder = new StringBuilder();
+        if (interviewQuestion == null || interviewAnswer == null) {
+            return "";
+        }
         if (interviewQuestion.startsWith("Q. ")) {
             interviewQuestion = interviewQuestion.substring(3);
         }

@@ -72,4 +72,12 @@ public class SerializationUtils {
                     "Failed to deserialize JSON array to List<" + targetClass.getSimpleName() + ">", e);
         }
     }
+
+    public static void writeStringToFile(String filePath, String content) {
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(filePath), content);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Failed to write string to file: " + filePath, e);
+        }
+    }
 }
