@@ -6,10 +6,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 
 /**
- * Tests database export and import utilities.
- *
- * <p>This class validates operations such as clearing the database, exporting the entire
- * graph to JSON, and importing a previously exported JSON file back into Neo4j.</p>
+ * Regression tests for the README’s “Data Management” responsibilities.
+ * <p>
+ * Covers the life cycle of wiping the Neo4j graph, exporting a full snapshot, and restoring it again,
+ * ensuring reproducible experiments across machines.
+ * </p>
  */
 public class DatabaseExporterTest {
     /**
@@ -30,10 +31,8 @@ public class DatabaseExporterTest {
     public DatabaseExporterTest() throws IOException {}
 
     /**
-     * Delete all nodes and relationships from the Neo4j database.
-     *
-     * <p>This test ensures that the clear operation completes without throwing exceptions.
-     * It is intended to leave the database in a clean state before other tests run.</p>
+     * Ensures the exporter can delete every QA/taxonomy/strategy node so the next pipeline run starts from a clean
+     * slate.
      */
     @Test
     public void testClearDatabase() {
@@ -41,29 +40,20 @@ public class DatabaseExporterTest {
     }
 
     /**
-     * Export the Neo4j database to a JSON file.
-     *
-     * <p>Saves all nodes and relationships including their properties to the given output file.
-     * The produced JSON can be later used for import or analysis.</p>
-     *
-     * @throws IOException if writing the export file fails
+     * Validates that the entire ontology (datasets, strategies, evaluations) can be serialized to JSON for backup or
+     * sharing.
      */
     @Test
     public void testExportDatabase() throws IOException {
-        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_14_2025.json", false);
+        neo4jExporter.exportAsJson("src/test/resources/neo4j-export/12_16_2025.json", false);
     }
 
     /**
-     * Import a Neo4j database from a JSON file.
-     *
-     * <p>Loads nodes and relationships (with properties) from the specified JSON file into Neo4j.
-     * Use this to restore a saved database state for testing.</p>
-     *
-     * @throws IOException if reading the import file fails
+     * Confirms a previously exported snapshot can be re-imported to rebuild the pipeline state described in the README.
      */
     @Test
     public void testImportDatabase() throws IOException {
         neo4jExporter.clearDatabase();
-        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_14_2025.json");
+        neo4jExporter.importFromJson("src/test/resources/neo4j-export/12_16_2025.json");
     }
 }

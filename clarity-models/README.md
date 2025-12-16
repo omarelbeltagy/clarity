@@ -72,6 +72,10 @@ Supported types:
 - `together`: Remote/hosted models accessed via the Together API (few-shot/zero-shot/fine-tune). Together Models are
   only available in the `test` mode for inference.
 
+For the full available configuration options see the comments in the
+[`models.yaml`](models.yaml) file as well as the python classes [`encoder_config`](models/config/encoder_config.py),
+[`lora_config`](models/config/lora_config.py) and [`together_config`](models/config/together_config.py).
+
 ### Examples
 
 #### Encoder model
@@ -136,10 +140,10 @@ Supported types:
   type: "together"
 
   config:
-    model_name: "meta-llama/Llama-Guard-4-12B"  # HF / Together / local id
-    mode: "few-shot"                            # "few-shot" | "zero-shot" | "fine-tune"
-    prompt: null                                # Optional custom prompt template
-    env_files: # Candidate .env files to load API keys from
+    model_name: "meta-llama/Llama-Guard-4-12B"
+    mode: "few-shot"
+    prompt: null
+    env_files:
       - "/app/data/.env"
       - "./.env"
     labels:
@@ -215,7 +219,7 @@ Exposed ports:
 Models defined in [models.yaml](models.yaml) are exposed via REST. Example:
 
 ```bash
-curl -X POST "http://localhost:8000/classify/opt-1-3b" \
+curl -X POST "http://localhost:8000/classify/roberta-small" \
   -H "Content-Type: application/json" \
   -d '{ "question": "What is the current state of the world?", "context": "Mr. President, what is the current state of the world? - The world is facing numerous challenges including climate change, pandemics, and geopolitical tensions." }'
 ```

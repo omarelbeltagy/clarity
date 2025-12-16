@@ -28,6 +28,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+/**
+ * Declarative LLM configuration referenced by every strategy (README “Model Properties”).
+ * <p>Defines provider identity, prompting, sampling settings, response format and optional RAG/pattern helpers.
+ * During initialization the appropriate {@link de.tum.claritypipeline.client.Client} is created and persisted.</p>
+ */
 @Getter
 @Setter
 @AllArgsConstructor
@@ -39,12 +44,14 @@ public class ModelProperties extends Neo4jNode {
      * The model name
      */
     @JsonProperty("name")
+    @JsonPropertyDescription("LLM model identifier as exposed by the provider (e.g., gpt-4.1, claude-sonnet-4.5).")
     private String name;
 
     /**
      * The model provider name (e.g., "openai", "anthropic").
      */
     @JsonProperty("provider")
+    @JsonPropertyDescription("LLM provider key (openai, anthropic, together, local, ...).")
     private String provider;
 
     /**
@@ -119,7 +126,8 @@ public class ModelProperties extends Neo4jNode {
     private String reasoningEffort;
 
     @JsonProperty("rag")
-    @JsonPropertyDescription("Configure to use prompt injections with examples retrieved with RAG.")
+    @JsonPropertyDescription(
+            "Optional Retrieval-Augmented Generation settings (examples injected per README RAG section).")
     @Neo4jIgnore
     private RagProperties ragProperties;
 
@@ -415,12 +423,15 @@ public class ModelProperties extends Neo4jNode {
     @Setter
     public static class RagProperties extends Neo4jNode {
         @JsonProperty("enabled")
+        @JsonPropertyDescription("Whether dynamic few-shot examples should be retrieved from the embedding index.")
         private boolean enabled;
 
         @JsonProperty("embedding-index")
+        @JsonPropertyDescription("Name of the Neo4j embedding index that stores QA vectors for retrieval.")
         private EmbeddingIndex embeddingIndex;
 
         @JsonProperty("k")
+        @JsonPropertyDescription("Number of nearest-neighbour examples to fetch per taxonomy category.")
         private int k = 1;
 
         @AfterDeserialization

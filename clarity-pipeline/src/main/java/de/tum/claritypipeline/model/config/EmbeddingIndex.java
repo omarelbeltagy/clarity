@@ -6,6 +6,11 @@ import de.tum.claritypipeline.model.core.QA;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+/**
+ * Enumeration of embedding indices used in the application.
+ *
+ * <p>Defines the different types of embedding indices along with their associated properties.
+ */
 @Getter
 @AllArgsConstructor
 public enum EmbeddingIndex {

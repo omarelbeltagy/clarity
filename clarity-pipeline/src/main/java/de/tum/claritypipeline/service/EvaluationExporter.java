@@ -33,14 +33,87 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Utility responsible for exporting evaluation results from Neo4j into an Excel file.
+ * Service for exporting evaluation results and predictions from Neo4j to various formats.
+ * <p>
+ * This utility provides comprehensive export capabilities for classification experiment results,
+ * supporting multiple output formats and use cases:
+ * <ul>
+ *   <li><b>Excel Export</b>: Aggregate evaluation metrics across all classification runs</li>
+ *   <li><b>Prediction Export</b>: Individual predictions in competition-ready ZIP format</li>
+ *   <li><b>Custom Evaluation</b>: Multi-label evaluation metrics for evasion-level analysis</li>
+ * </ul>
  *
- * <p>This class queries the Neo4j database for Classification / Version nodes,
- * retrieves Evaluation objects from version nodes and writes a tabular XLSX file with
- * configurable formatting options.</p>
+ * <h2>Excel Export Features</h2>
+ * Generates formatted XLSX workbooks containing:
+ * <ul>
+ *   <li>Classification run names and versions</li>
+ *   <li>Accuracy, Precision, Recall metrics</li>
+ *   <li>Macro F1 and Micro F1 scores</li>
+ *   <li>Configurable formatting (borders, number formats, header styles)</li>
+ *   <li>Optional value rounding to specified decimal places</li>
+ * </ul>
  *
- * <p>Creation is performed via factory methods which allow providing Neo4j credentials
- * or custom EvaluationExportOptions.</p>
+ * <h2>Prediction Export Format</h2>
+ * Creates ZIP archives containing:
+ * <ul>
+ *   <li>Plain text file named "prediction"</li>
+ *   <li>One predicted label per line (in QA index order)</li>
+ *   <li>Automatic label mapping if taxonomy mapping is enabled</li>
+ *   <li>Compatible with competition submission formats</li>
+ * </ul>
+ *
+ * <h2>Custom Evaluation Metrics</h2>
+ * Supports advanced multi-label evaluation:
+ * <ul>
+ *   <li>Handles multiple annotators per QA (annotator1, annotator2, annotator3)</li>
+ *   <li>Computes multi-label macro F1 for evasion-level analysis</li>
+ *   <li>Filters out QAs with incomplete annotations</li>
+ *   <li>Useful for fine-grained evaluation beyond single ground truth labels</li>
+ * </ul>
+ *
+ * <h2>Factory Methods</h2>
+ * The class provides multiple factory methods for initialization:
+ * <ul>
+ *   <li>{@link #create()}: Default Neo4j credentials and export options</li>
+ *   <li>{@link #create(Neo4jCredentials)}: Custom credentials, default options</li>
+ *   <li>{@link #create(EvaluationExportProperties)}: Default credentials, custom options</li>
+ *   <li>{@link #create(Neo4jCredentials, EvaluationExportProperties)}: Full customization</li>
+ *   <li>{@link #fromCredentialsFile(String)}: Load credentials from file</li>
+ * </ul>
+ *
+ * <h2>Configuration Options</h2>
+ * Export behavior is controlled via {@link EvaluationExportProperties}:
+ * <ul>
+ *   <li><b>sheetName</b>: Excel worksheet name</li>
+ *   <li><b>roundToDigits</b>: Decimal places for metric rounding (0 = no rounding)</li>
+ *   <li><b>headerFontSize</b>: Font size for Excel headers</li>
+ *   <li><b>numberFormat</b>: Excel number format string (e.g., "0.0000")</li>
+ * </ul>
+ *
+ * <h2>Error Handling</h2>
+ * <ul>
+ *   <li>Throws RuntimeException on critical Excel export failures</li>
+ *   <li>Logs warnings for missing evaluations without stopping export</li>
+ *   <li>Logs errors for individual evaluation computation failures</li>
+ *   <li>Continues processing remaining runs when possible</li>
+ * </ul>
+ *
+ * <h2>Example Usage</h2>
+ * <pre>
+ * // Excel export with all runs
+ * EvaluationExporter exporter = EvaluationExporter.create();
+ * exporter.exportAsExcel("results/evaluation.xlsx");
+ *
+ * // Prediction export for specific run
+ * exporter.exportResult("properties/gpt-5.1.yaml", "predictions/run1.zip");
+ *
+ * // Custom multi-label evaluation
+ * exporter.generateCustomEvaluation("properties/gpt-5.1.yaml");
+ * </pre>
+ *
+ * @see EvaluationExportProperties
+ * @see ClassificationProperties
+ * @see ModelEvaluator
  */
 public class EvaluationExporter {
     private static final Logger log = LoggerFactory.getLogger(EvaluationExporter.class);
@@ -58,7 +131,7 @@ public class EvaluationExporter {
     }
 
     /**
-     * Create a new exporter using default Neo4j connection settings and default export options.
+     * Creates an exporter using default Neo4j connection settings and default export options.
      *
      * @return a new EvaluationExporter instance
      * @throws IOException if the default Neo4j client could not be initialized
@@ -68,7 +141,7 @@ public class EvaluationExporter {
     }
 
     /**
-     * Create a new exporter with explicit Neo4j credentials and default export options.
+     * Creates an exporter with explicit Neo4j credentials and default export options.
      *
      * @param credentials Neo4j credentials to use for the client
      * @return configured EvaluationExporter
@@ -78,9 +151,9 @@ public class EvaluationExporter {
     }
 
     /**
-     * Create a new exporter using default Neo4j connection settings and the given options.
+     * Creates an exporter using default Neo4j connection settings and the given options.
      *
-     * @param options export formatting and behavior options (may be null)
+     * @param options export formatting and behavior options (may be null for defaults)
      * @return configured EvaluationExporter
      * @throws IOException if the default Neo4j client could not be initialized
      */
@@ -89,10 +162,10 @@ public class EvaluationExporter {
     }
 
     /**
-     * Create a new exporter with explicit Neo4j credentials and given export options.
+     * Creates an exporter with explicit Neo4j credentials and given export options.
      *
      * @param credentials Neo4j credentials for the client
-     * @param options     export formatting and behavior options
+     * @param options export formatting and behavior options
      * @return configured EvaluationExporter
      */
     public static EvaluationExporter create(Neo4jCredentials credentials, EvaluationExportProperties options) {
@@ -100,9 +173,9 @@ public class EvaluationExporter {
     }
 
     /**
-     * Load Neo4j credentials from a file and create a new exporter.
+     * Loads Neo4j credentials from a file and creates a new exporter.
      *
-     * @param credentialsFile path to a credentials file
+     * @param credentialsFile path to a YAML credentials file
      * @return configured EvaluationExporter
      * @throws IOException if the credentials file cannot be read
      */
@@ -111,13 +184,29 @@ public class EvaluationExporter {
     }
 
     /**
-     * Export evaluation data from the connected Neo4j database to an XLSX file.
+     * Exports aggregated evaluation metrics to an Excel workbook.
+     * <p>
+     * This method:
+     * <ol>
+     *   <li>Retrieves all Classification nodes from Neo4j</li>
+     *   <li>Collects evaluation metrics from each classification run</li>
+     *   <li>Formats data according to export options (rounding, styling)</li>
+     *   <li>Generates an XLSX file with formatted metrics table</li>
+     * </ol>
+     * <p>
+     * The resulting Excel file contains one row per classification version with columns:
+     * <ul>
+     *   <li>Name: Classification run name</li>
+     *   <li>Version: Run version identifier</li>
+     *   <li>Accuracy: Overall accuracy metric</li>
+     *   <li>Precision: Weighted precision</li>
+     *   <li>Recall: Weighted recall</li>
+     *   <li>Macro F1: Unweighted average F1 score</li>
+     *   <li>Micro F1: Weighted average F1 score</li>
+     * </ul>
      *
-     * <p>This method collects classifications and their child nodes, extracts Evaluation objects
-     * from version nodes and writes the results to the given file path. On failure a
-     * RuntimeException is thrown.</p>
-     *
-     * @param path output path for the generated Excel file (XLSX)
+     * @param path output file path for the generated Excel workbook (*.xlsx)
+     * @throws RuntimeException if Excel generation or file writing fails
      */
     public void exportAsExcel(String path) {
         try {
@@ -131,11 +220,35 @@ public class EvaluationExporter {
         }
     }
 
+    /**
+     * Generates custom multi-label evaluation metrics for a classification run.
+     * <p>
+     * This method performs advanced evaluation considering multiple annotators:
+     * <ol>
+     *   <li>Retrieves all classification results for the specified run</li>
+     *   <li>Fetches corresponding QAs with ground truth and annotator labels</li>
+     *   <li>Filters QAs with complete annotation data (all 3 annotators)</li>
+     *   <li>Computes multi-label macro F1 using {@link ModelEvaluator}</li>
+     * </ol>
+     * <p>
+     * Useful for evasion-level evaluation where multiple valid interpretations exist.
+     *
+     * @param classificationPropertiesPath path to classification properties YAML file
+     * @throws IOException if properties file cannot be loaded
+     */
     public void generateCustomEvaluation(String classificationPropertiesPath) throws IOException {
         ClassificationProperties classificationProperties = ClassificationProperties.load(classificationPropertiesPath);
         generateCustomEvaluation(classificationProperties);
     }
 
+    /**
+     * Generates custom multi-label evaluation metrics for a classification run.
+     * <p>
+     * Overloaded version accepting a ClassificationProperties object directly.
+     *
+     * @param properties the classification properties object
+     * @see #generateCustomEvaluation(String)
+     */
     public void generateCustomEvaluation(ClassificationProperties properties) {
         log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
             properties.getName());
@@ -229,11 +342,41 @@ public class EvaluationExporter {
 
     }
 
+    /**
+     * Exports classification predictions to a ZIP file.
+     * <p>
+     * This method:
+     * <ol>
+     *   <li>Retrieves all classification results for the specified run (ordered by QA index)</li>
+     *   <li>Maps predicted labels using taxonomy mapping if enabled</li>
+     *   <li>Writes predictions to a temporary text file (one label per line)</li>
+     *   <li>Creates a ZIP archive containing the prediction file</li>
+     *   <li>Cleans up temporary files</li>
+     * </ol>
+     * <p>
+     * The ZIP format is designed for competition submissions and contains a single
+     * file named "prediction" with newline-separated labels.
+     *
+     * @param classificationPropertiesPath path to classification properties YAML file
+     * @param outputFile                   path for the output ZIP file
+     * @throws IOException      if file operations fail
+     * @throws RuntimeException if required taxonomy categories or mappings are missing
+     */
     public void exportResult(String classificationPropertiesPath, String outputFile) throws IOException {
         ClassificationProperties classificationProperties = ClassificationProperties.load(classificationPropertiesPath);
         exportResult(classificationProperties, outputFile);
     }
 
+    /**
+     * Exports classification predictions to a ZIP file.
+     * <p>
+     * Overloaded version accepting a ClassificationProperties object directly.
+     *
+     * @param classificationProperties the classification properties object
+     * @param outputFile path for the output ZIP file
+     * @throws IOException if file operations fail
+     * @see #exportResult(String, String)
+     */
     public void exportResult(ClassificationProperties classificationProperties, String outputFile) throws IOException {
         log.info("Exporting evaluation data for {}({}) to file", classificationProperties.getName(),
                  classificationProperties.getVersion());
@@ -299,10 +442,13 @@ public class EvaluationExporter {
     }
 
     /**
-     * Read the Evaluation objects from the provided classifications and map them to ExcelRow DTOs.
+     * Collects evaluation data from classification nodes and converts to Excel row DTOs.
+     * <p>
+     * Iterates through all classification runs, retrieves their evaluations,
+     * and formats them for spreadsheet output.
      *
-     * @param classifications list of Classification nodes retrieved from Neo4j
-     * @return list of ExcelRow entries to be written to the spreadsheet
+     * @param classifications list of Classification nodes from Neo4j
+     * @return list of ExcelRow objects ready for Excel export
      */
     private List<ExcelRow> readExcelRows(List<ClassificationProperties.Classification> classifications) {
         return classifications.stream()
@@ -315,10 +461,13 @@ public class EvaluationExporter {
     }
 
     /**
-     * Attempt to retrieve an Evaluation instance from a version node via reflection.
+     * Retrieves the Evaluation object from a version node via reflection.
+     * <p>
+     * Uses reflection to call getEvaluation(Neo4jClient) on version objects,
+     * enabling generic handling of different version node types.
      *
-     * @param version version node object from which to fetch the Evaluation
-     * @return Evaluation instance if available, otherwise null
+     * @param version version node object
+     * @return Evaluation instance if available, null otherwise
      */
     private ClassificationProperties.Evaluation getEvaluation(Object version) {
         try {
@@ -457,9 +606,16 @@ public class EvaluationExporter {
     }
 
     /**
-     * Helper class encapsulating Excel cell styles used during export.
-     *
-     * <p>Style objects are created once per workbook and reused for header, text and numeric cells.</p>
+     * Helper class for managing Excel cell styles during export.
+     * <p>
+     * Creates and caches reusable cell styles for:
+     * <ul>
+     *   <li><b>Header Style</b>: Bold font, centered, gray background</li>
+     *   <li><b>Cell Style</b>: Standard text cells with borders</li>
+     *   <li><b>Number Style</b>: Numeric cells with custom formatting</li>
+     * </ul>
+     * <p>
+     * All styles include thin borders on all sides for a clean table appearance.
      */
     @Getter
     private static class StyleHelper {
@@ -468,6 +624,12 @@ public class EvaluationExporter {
         private final XSSFCellStyle numberStyle;
         private final EvaluationExportProperties options;
 
+        /**
+         * Constructs a StyleHelper with styles configured according to export options.
+         *
+         * @param workbook the Excel workbook for style creation
+         * @param options export options controlling formatting
+         */
         StyleHelper(XSSFWorkbook workbook, EvaluationExportProperties options) {
             if (options == null) {
                 options = new EvaluationExportProperties();
@@ -478,6 +640,12 @@ public class EvaluationExporter {
             this.numberStyle = createNumberStyle(workbook);
         }
 
+        /**
+         * Creates the header row style with bold font and gray background.
+         *
+         * @param workbook the Excel workbook
+         * @return configured header cell style
+         */
         private XSSFCellStyle createHeaderStyle(XSSFWorkbook workbook) {
             XSSFFont headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -492,12 +660,24 @@ public class EvaluationExporter {
             return style;
         }
 
+        /**
+         * Creates the standard cell style for text content.
+         *
+         * @param workbook the Excel workbook
+         * @return configured cell style with borders
+         */
         private XSSFCellStyle createCellStyle(XSSFWorkbook workbook) {
             XSSFCellStyle style = workbook.createCellStyle();
             applyBorders(style);
             return style;
         }
 
+        /**
+         * Creates the numeric cell style with custom number formatting.
+         *
+         * @param workbook the Excel workbook
+         * @return configured numeric cell style
+         */
         private XSSFCellStyle createNumberStyle(XSSFWorkbook workbook) {
             XSSFCellStyle style = workbook.createCellStyle();
             applyBorders(style);
@@ -506,6 +686,11 @@ public class EvaluationExporter {
             return style;
         }
 
+        /**
+         * Applies thin borders to all four sides of a cell style.
+         *
+         * @param style the cell style to modify
+         */
         private void applyBorders(XSSFCellStyle style) {
             style.setBorderBottom(BorderStyle.THIN);
             style.setBorderTop(BorderStyle.THIN);
@@ -515,15 +700,17 @@ public class EvaluationExporter {
     }
 
     /**
-     * Simple immutable DTO representing a single row in the exported Excel file.
+     * Immutable record representing a single row in the exported Excel evaluation file.
+     * <p>
+     * Bundles together all evaluation metrics for a single classification run version.
      *
-     * @param name      classification name
-     * @param version   version identifier
-     * @param accuracy  accuracy metric
-     * @param precision precision metric
-     * @param recall    recall metric
-     * @param macroF1   macro F1 score
-     * @param microF1   micro F1 score
+     * @param name classification run name
+     * @param version version identifier string
+     * @param accuracy overall classification accuracy (0.0 to 1.0)
+     * @param precision weighted precision metric (0.0 to 1.0)
+     * @param recall weighted recall metric (0.0 to 1.0)
+     * @param macroF1 macro-averaged F1 score (0.0 to 1.0)
+     * @param microF1 micro-averaged F1 score (0.0 to 1.0)
      */
     @Builder
     private record ExcelRow(
@@ -536,3 +723,4 @@ public class EvaluationExporter {
             double microF1
     ) {}
 }
+

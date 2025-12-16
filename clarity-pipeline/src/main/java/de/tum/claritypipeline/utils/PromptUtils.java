@@ -58,13 +58,49 @@ public class PromptUtils {
         if (modelProperties.getPrompt() == null || modelProperties.getPrompt().isEmpty()) {
             throw new IllegalArgumentException("Prompt is not set.");
         }
-        if (classificationRequest.getTaxonomy() == null || classificationRequest.getTaxonomy().getCategories()
-                                                                                .isEmpty()) {
-            throw new IllegalArgumentException("Taxonomy is empty.");
-        }
-
         return replacePlaceholders(modelProperties.getPrompt(), modelProperties,
                                    classificationRequest, jsonScheme);
+    }
+
+    public static String replacePlaceholders(
+            String prompt,
+            ModelProperties modelProperties,
+            ClassificationRequest request,
+            String jsonScheme
+    ) {
+        if (modelProperties == null || request == null) {
+            throw new IllegalArgumentException("Arguments must not be null.");
+        }
+        if (request.getTaxonomy() == null || request.getTaxonomy().getCategories()
+                                                    .isEmpty()) {
+            throw new IllegalArgumentException("Taxonomy is empty.");
+        }
+        if (prompt == null || prompt.isEmpty()) {
+            throw new IllegalArgumentException("Prompt must not be null.");
+        }
+
+        prompt = prompt
+                .replace(PLACEHOLDER_CONTEXT,
+                         buildContext(request.getQa().getInterviewQuestion(), request.getQa().getInterviewAnswer()))
+                .replace(PLACEHOLDER_CLEANED_CONTEXT, buildContext(request.getQa().getInterviewQuestionClean(),
+                                                                   request.getQa().getInterviewAnswerClean()))
+                .replace(PLACEHOLDER_ONTOLOGY, buildOntologyString(request.getTaxonomy().getCategories()))
+                .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()))
+                .replace(PLACEHOLDER_RESPONSE_FORMAT,
+                         getResponseFormatInstructions(modelProperties.getResponseFormat(), jsonScheme));
+        if (modelProperties.getRagProperties() != null && modelProperties.getRagProperties().isEnabled()) {
+            prompt = prompt.replace(PLACEHOLDER_EXAMPLES,
+                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request));
+            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
+                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request, true));
+        } else {
+            prompt = prompt
+                    .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()));
+            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
+                                    buildExamplesString(request.getTaxonomy().getCategories()));
+        }
+        prompt = replacePlaceholdersDynamic(prompt, request.getQa());
+        return prompt;
     }
 
     private static String buildOntologyString(List<Taxonomy.Category> categories) {
@@ -104,36 +140,6 @@ public class PromptUtils {
 
     private static String formatCategory(int index, Taxonomy.Category category) {
         return String.format("%d. %s - %s", index, category.getName(), category.getDescription());
-    }
-
-    public static String replacePlaceholders(
-            String prompt,
-            ModelProperties modelProperties,
-            ClassificationRequest request,
-            String jsonScheme
-    ) {
-        prompt = prompt
-                .replace(PLACEHOLDER_CONTEXT,
-                         buildContext(request.getQa().getInterviewQuestion(), request.getQa().getInterviewAnswer()))
-                .replace(PLACEHOLDER_CLEANED_CONTEXT, buildContext(request.getQa().getInterviewQuestionClean(),
-                                                                   request.getQa().getInterviewAnswerClean()))
-                .replace(PLACEHOLDER_ONTOLOGY, buildOntologyString(request.getTaxonomy().getCategories()))
-                .replace(PLACEHOLDER_TAXONOMY, buildOntologyString(request.getTaxonomy().getCategories()))
-                .replace(PLACEHOLDER_RESPONSE_FORMAT,
-                         getResponseFormatInstructions(modelProperties.getResponseFormat(), jsonScheme));
-        if (modelProperties.getRagProperties() != null && modelProperties.getRagProperties().isEnabled()) {
-            prompt = prompt.replace(PLACEHOLDER_EXAMPLES,
-                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request));
-            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
-                                    buildRagExamples(prompt, modelProperties.getRagProperties(), request, true));
-        } else {
-            prompt = prompt
-                    .replace(PLACEHOLDER_EXAMPLES, buildExamplesString(request.getTaxonomy().getCategories()));
-            prompt = prompt.replace(PLACEHOLDER_CLEANED_EXAMPLES,
-                                    buildExamplesString(request.getTaxonomy().getCategories()));
-        }
-        prompt = replacePlaceholdersDynamic(prompt, request.getQa());
-        return prompt;
     }
 
     private static String buildRagExamples(

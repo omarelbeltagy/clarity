@@ -25,16 +25,16 @@ public class EvaluationExporterTest {
     public EvaluationExporterTest() throws IOException {}
 
     /**
-     * Export evaluation results as an Excel file.
-     *
-     * <p>This test writes a sample or current evaluation to the given xlsx path. The produced
-     * file should contain sheets/tables with evaluation metrics and per-example results.</p>
+     * Generates the Excel workbook that aggregates accuracy/precision/recall/F1 across classification runs.
      */
     @Test
     public void testExportEvaluationToExcel() {
         evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_16_2025.xlsx");
     }
 
+    /**
+     * Writes a competition-ready ZIP (“prediction”) by reading the configured classification properties.
+     */
     @Test
     public void testExportResult() throws IOException {
         evaluationExporter.exportResult(
@@ -43,6 +43,9 @@ public class EvaluationExporterTest {
         );
     }
 
+    /**
+     * Computes the evasion-level multi-label evaluation described in the README and persists it back to Neo4j.
+     */
     @Test
     public void testGenerateCustomEvaluation() throws IOException {
         /*

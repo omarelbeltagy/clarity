@@ -1,5 +1,6 @@
 # Unmasking Political Question Evasions
 
+- [📝 Pipeline Documentation](clarity-pipeline/README.md)
 - [📊 SemEval 2026 Task](https://konstantinosftw.github.io/CLARITY-SemEval-2026/)
 - [🤗 Dataset](https://huggingface.co/datasets/ailsntua/QEvasion)
 - [📄 A dataset, taxonomy and baselines on response clarity classification](https://arxiv.org/abs/2409.13879)
@@ -123,8 +124,7 @@ To start the Neo4j database locally in a Docker container:
     ```
 
 The `docker-compose` file is just a helper for local development. You can use any neo4j instance and configure the
-connection
-details using a credentials yaml file and load the properties from
+connection details using a credentials yaml file and load the properties from
 there [@see](clarity-neo4j/src/main/resources/neo4j-credentials.yaml).
 
 ---
@@ -133,14 +133,17 @@ there [@see](clarity-neo4j/src/main/resources/neo4j-credentials.yaml).
 
 > The project is separated into several modules, each responsible for different functionalities:
 
+- [**assets**](assets/README.md): Contains various assets used across the project, including
+  prompt templates and the taxonomy for classification.
 - [**clarity-dataset**](clarity-dataset/README.md): Download cleaning and transforming the dataset
   for clarity classification.
 - [**clarity-models**](clarity-models/README.md): Framework for training and serving classification models. Supports
   encoder models and LLMs with LoRA Fine-Tuning. Provides instructions to train larger models with Together.ai.
-- [**clarity-neo4j**](clarity-neo4j): Handles interactions with the Neo4j database and
-  provides utilities for managing neo4j data.
-- [**clarity-pipeline**](clarity-pipeline): Contains the services and logic used in the classification pipeline. This
-  includes data ingestion, processing of data and the actual classification using different approaches.
+- [**clarity-neo4j**](clarity-neo4j): Java utilities to handle interactions with the Neo4j database.
+- [**clarity-pipeline**](clarity-pipeline/README.md): Contains the services and logic used in the classification
+  pipeline. This
+  includes data ingestion, processing of data and the actual classification using different approaches as well as
+  automatic prompt engineering.
 - [**clarity-utils**](clarity-utils): Contains general java utility classes and functions used across the project.
 
 ---
@@ -149,7 +152,5 @@ there [@see](clarity-neo4j/src/main/resources/neo4j-credentials.yaml).
 
 > The classification pipeline consists of several steps to process the data and classify the clarity of responses
 
-For information on running and setting up the classification pipeline, please refer to the
+For detailed information on the pipeline and how to run it, refer to the
 [README](clarity-pipeline/README.md) in the `clarity-pipeline` module.
-
-![Pipeline Diagram](assets/pipeline.png)

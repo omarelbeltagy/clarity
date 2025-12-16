@@ -48,5 +48,11 @@ public interface ClassificationStrategy {
      */
     ClassificationResult execute(ClassificationRequest request);
 
+    /**
+     * Get the Neo4j node representing this classification strategy.
+     *
+     * @param <T> Type of Neo4jNode
+     * @return Neo4jNode instance for this strategy
+     */
     <T extends Neo4jNode> T getClassificationStrategyNode();
 }

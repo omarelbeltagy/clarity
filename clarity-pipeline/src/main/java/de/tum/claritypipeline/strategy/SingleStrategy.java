@@ -20,15 +20,60 @@ import lombok.*;
 import java.util.Map;
 
 /**
- * Strategy that performs a single-model classification call.
+ * Simple single-model classification strategy that queries one model for direct prediction.
  * <p>
- * Depending on the configured ModelConfig and client type the strategy either:
- * - serializes the request and sends it directly to a LocalClient, or
- * - builds a prompt using PromptUtils and sends it to a remote model client.
- * <p>
- * The strategy supports both structured JSON responses (ResponseFormat.JSON_OBJECT)
- * which are deserialized into a ClassificationResult, and plain text responses
- * which are interpreted as the label name.
+ * This is the most straightforward classification approach, making a single API call to
+ * a configured model to obtain a classification result. It serves as the baseline strategy
+ * and is suitable for most standard classification tasks.
+ *
+ * <h2>Classification Process</h2>
+ * <pre>
+ * Input: Question & Answer
+ *    ↓
+ * Model (single call)
+ *    → Prediction: Category Name
+ *    → Optional: Explanation, Confidence
+ *    ↓
+ * Output: Classification Result
+ * </pre>
+ *
+ * <h2>Client Type Handling</h2>
+ * The strategy adapts its behavior based on the configured client type:
+ * <ul>
+ *   <li><b>LocalClient</b>: Serializes the entire ClassificationRequest as JSON
+ *       and sends it to a local model endpoint. Useful for custom local models
+ *       that expect structured input.</li>
+ *   <li><b>Remote Clients</b>: Uses PromptUtils to build a formatted prompt string
+ *       from templates defined in ModelProperties. Suitable for API-based models
+ *       (OpenAI, Anthropic, etc.).</li>
+ * </ul>
+ *
+ * <h2>Response Format Support</h2>
+ * <ul>
+ *   <li><b>JSON_OBJECT</b>: Expects structured JSON response that is deserialized
+ *       into ClassificationResult. Provides access to label, explanation, and confidence.</li>
+ *   <li><b>Plain Text</b>: Expects raw text response containing only the label name.
+ *       Creates ClassificationResult with just the name field populated.</li>
+ * </ul>
+ *
+ * <h2>Use Cases</h2>
+ * <ul>
+ *   <li>Standard classification tasks with single model</li>
+ *   <li>Baseline for comparing more complex strategies</li>
+ *   <li>Low-latency classification with minimal API calls</li>
+ *   <li>Cost-effective classification for large datasets</li>
+ * </ul>
+ *
+ * <h2>Performance Characteristics</h2>
+ * <ul>
+ *   <li>Single API call per classification</li>
+ *   <li>Lowest latency among all strategies</li>
+ *   <li>Most cost-effective approach</li>
+ * </ul>
+ *
+ * @see ClassificationRequest
+ * @see ClassificationResult
+ * @see ModelProperties
  */
 @Node(label = "SingleStrategy")
 @Getter
@@ -49,21 +94,18 @@ public class SingleStrategy extends Neo4jNode implements ClassificationStrategy 
     private ModelProperties model;
 
     /**
-     * Execute the single-call classification.
+     * Executes single-call classification using the configured model.
      * <p>
-     * Behavior:
-     * - If the configured client is a LocalClient, the method serializes the
-     * entire ClassificationRequest and hands it to the client.
-     * - Otherwise, it calls PromptUtils.replacePrompt to produce the prompt
-     * string to send to the remote client.
-     * - If the model expects JSON_OBJECT output the method deserializes the
-     * response into a ClassificationResult. For non-JSON responses the raw
-     * string is used as the predicted label name.
+     * Behavior varies based on client type and response format:
+     * <ul>
+     *   <li><b>LocalClient</b>: Serializes entire ClassificationRequest and sends to local endpoint</li>
+     *   <li><b>Remote Client + JSON_OBJECT</b>: Builds prompt, sends to API, deserializes JSON response</li>
+     *   <li><b>Remote Client + Plain Text</b>: Builds prompt, sends to API, uses raw text as label</li>
+     * </ul>
      *
-     * @param request the classification request containing text and taxonomy.
-     * @return a ClassificationResult representing the predicted class and any
-     * available metadata (explanation, confidence). For plain text
-     * responses the result will have only the name field populated.
+     * @param request the classification request containing text and taxonomy
+     * @return ClassificationResult with predicted label and available metadata
+     *         (explanation and confidence for JSON responses, label only for plain text)
      */
     @Override
     public ClassificationResult execute(ClassificationRequest request) {

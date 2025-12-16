@@ -15,10 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tests the overall classification pipeline.
- *
- * <p>Includes dataset ingestion, graph import, and running classification experiments using
- * different model/agent configurations defined by properties files.</p>
+ * End-to-end tests mirroring the README “Usage” section: dataset ingestion, graph persistence, and strategy execution.
  */
 public class PipelineTest {
     /**
@@ -45,10 +42,7 @@ public class PipelineTest {
     public PipelineTest() throws IOException {}
 
     /**
-     * Import training, validation and test datasets into the graph importer.
-     *
-     * <p>This merges multiple dataset splits into a single in-memory collection and
-     * imports them into the neo4j database.</p>
+     * Reads every dataset split (train/valid/test) and imports them so the ontology layer mirrors the raw dataset.
      */
     @Test
     public void testImportDatasets() {
@@ -59,6 +53,9 @@ public class PipelineTest {
         datasetGraphImporter.importDataset(data);
     }
 
+    /**
+     * Imports cleaned variants to update existing QA nodes with normalized text, validating the cleaned-data workflow.
+     */
     @Test
     public void testImportCleanedDatasets() {
         List<QA> data = new ArrayList<>();
@@ -71,6 +68,10 @@ public class PipelineTest {
         cleanedDataImporter.importCleanedData(data);
     }
 
+    /**
+     * Iterates over a directory of YAML configs and runs the classification pipeline exactly as described in
+     * “Execute the Pipeline”.
+     */
     @Test
     public void testClassifyFromDirectory() {
         final String baseDir = "src/test/resources/properties/stage2/";
@@ -89,6 +90,10 @@ public class PipelineTest {
          */
     }
 
+    /**
+     * Helper that instantiates {@link ClassificationPipeline} for each YAML file and triggers the full inference +
+     * evaluation loop.
+     */
     private void classifyFromDirectory(String dirPath) {
         final int attempts = 1;
         File dir = new File(dirPath);
@@ -108,6 +113,9 @@ public class PipelineTest {
         }
     }
 
+    /**
+     * Launches a single properties file to validate an individual pipeline configuration (useful for local debugging).
+     */
     @Test
     public void testClassifyFromFile() throws IOException {
         String file = "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.1-reasoning-high.yaml";

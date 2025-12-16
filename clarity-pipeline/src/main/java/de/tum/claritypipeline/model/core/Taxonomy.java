@@ -22,9 +22,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Represents a taxonomy consisting of named categories used for classification.
- *
- * <p>The taxonomy can be loaded from a YAML file via {@link #load(String)}.
+ * Neo4j-backed taxonomy definition providing the category graph used by all strategies (README “Taxonomy”).
+ * <p>Each taxonomy node references its categories, optional mappings, and the QA label property to compare against.</p>
  */
 @Node(label = "Taxonomy")
 @AllArgsConstructor
@@ -57,7 +56,7 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     private String description;
 
     @JsonProperty("mapping")
-    @JsonPropertyDescription("Mapping properties to another taxonomy")
+    @JsonPropertyDescription("Optional mapping config that aligns taxonomy categories to external label sets.")
     @Neo4jIgnore
     private Mapping mapping;
 
@@ -66,7 +65,7 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     private String version;
 
     @JsonProperty("label-property")
-    @JsonPropertyDescription("The property key of the QA Node where the ground truth is found")
+    @JsonPropertyDescription("QA property (e.g., clarityLabel) containing ground-truth labels for evaluation.")
     private String labelProperty;
 
     @AfterDeserialization
@@ -124,12 +123,16 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     @Node(label = "Mapping")
     public static class Mapping extends Neo4jNode {
         @JsonProperty("enabled")
+        @JsonPropertyDescription("Whether label mapping is active for this taxonomy.")
         @Neo4jIgnore
         private boolean enabled;
+
         @JsonProperty("labels")
+        @JsonPropertyDescription("Ordered list of canonical labels the taxonomy categories map to.")
         private List<String> labels = new ArrayList<>();
+
         @JsonProperty("label-property")
-        @JsonPropertyDescription("The property key of the QA Node where the ground truth is found")
+        @JsonPropertyDescription("QA field that stores the mapped ground-truth label.")
         private String labelProperty;
 
         @AfterDeserialization
@@ -257,12 +260,15 @@ public class Taxonomy extends Neo4jNode implements Serializable {
         @Node(label = "TaxonomyExample")
         public static class TaxonomyExample extends Neo4jNode {
             @JsonProperty("question")
+            @JsonPropertyDescription("Example question showcasing the category.")
             private String question;
 
             @JsonProperty("answer")
+            @JsonPropertyDescription("Example answer accompanying the question.")
             private String answer;
 
             @JsonProperty("explanation")
+            @JsonPropertyDescription("Why the example pair belongs to this category.")
             private String explanation;
 
             @AfterDeserialization

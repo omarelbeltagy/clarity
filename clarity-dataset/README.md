@@ -15,6 +15,9 @@ and produces exports compatible with the Together API.
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Processing Options](#processing-options)
+- [Together export format](#together-export-format)
+- [Examples](#examples)
+- [Spacy Cleaner](#spacy-cleaner)
 
 ---
 
@@ -24,28 +27,30 @@ Project structure (relevant files):
 
 ```yaml
 ├── data/                         # Output data directory (configurable via DATA_DIR)
-├── Dockerfile                    # Docker image definition
+├── utils/                        # Helper modules
 ├── app.py                        # Entrypoint: download, clean, split and Together-export
 ├── clean.py                      # Data cleaning and transformation helpers
-├── summary.py                    # BERT-based summary generation
 ├── docker-compose.yaml           # Docker Compose configuration (mounts prompt file)
+├── Dockerfile                    # Docker image definition
 ├── logging.yaml                  # Logging configuration
-├── utils/                        # helper modules
 ├── requirements.txt              # Python dependencies
-└── README.md               # This file
+├── spacy_cleaner.py              # SpaCy-based text cleaner
+├── summary.py                    # BERT-based summary generation
+└── README.md                     # This file
 ```
 
 ---
 
 ## Features
 
-- Dataset download from Hugging Face (`ailsntua/QEvasion`).
+- Dataset download from Hugging Face [(`ailsntua/QEvasion`](https://huggingface.co/datasets/ailsntua/QEvasion)).
 - Train split is shuffled and split 80/20 into train / valid.
 - Data cleaning: filler removal, bracket removal, and redaction of interviewee names.
 - Exports:
-    - Raw JSONs under `full/`
-    - Cleaned JSONs under `cleaned/`
-    - Together-compatible JSONL under `together/` (used for Together API ingestion)
+    - Raw JSONs under [`full/`](data/full)
+    - Cleaned JSONs under [`cleaned/`](data/cleaned)
+    - Together-compatible JSONL under [`together/`](data/together) (used for Together API ingestion)
+    - Bert-based summary embeddings under [`sample/`](data/sample/bert.json)
 
 ---
 
@@ -179,7 +184,6 @@ python app.py # Start the data processing
 - Environment variables:
     - `DATA_DIR`
         - Base directory where outputs are written.
-
     - `LORA_PROMPT_FILE`
         - Path to a YAML file containing the prompt template under the key `prompt`.
         - Expected YAML format:
@@ -247,6 +251,17 @@ docker compose run --rm dataset python app.py --clean-all --use-bert
 # 3. Check the output
 ls -lh ../data/cleaned/
 ```
+
+## Spacy Cleaner
+
+The `spacy_cleaner.py` module provides advanced text cleaning capabilities using the SpaCy library. It is used to remove
+filler words and president names from the interview transcripts.
+
+### Features
+
+- Uses spaCy for intelligent tokenization and stopword handling
+- Adds custom filler words and phrases
+- Allows selective stopword preservation
 
 ---
 

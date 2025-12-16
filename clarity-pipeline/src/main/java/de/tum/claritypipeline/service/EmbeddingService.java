@@ -53,10 +53,6 @@ public class EmbeddingService {
         return instance;
     }
 
-    // ----------------------------------------
-    // Restlicher Code bleibt gleich
-    // ----------------------------------------
-
     public double[] generateEmbeddings(String text) {
         return EmbeddingUtils.createEmbedding(text, model, client);
     }

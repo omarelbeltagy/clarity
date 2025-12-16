@@ -47,11 +47,28 @@ public class PromptEnhancer {
 
     private final PromptEnhancingProperties properties;
 
+    /**
+     * Constructs a PromptEnhancer with configuration loaded from a properties file.
+     *
+     * @param propertiesFilePath path to the prompt enhancing properties YAML file
+     * @throws IOException if the properties file cannot be read or parsed
+     */
     public PromptEnhancer(String propertiesFilePath) throws IOException {
         this.properties = PromptEnhancingProperties.load(propertiesFilePath);
         this.client = GlobalConfig.NEO4J_CLIENT;
     }
 
+    /**
+     * Writes the final enhanced prompt to a file if configured.
+     * <p>
+     * Supports two output formats:
+     * <ul>
+     *   <li><b>YAML</b> (.yaml, .yml): Wraps prompt in YAML structure with indentation</li>
+     *   <li><b>Plain text</b>: Writes raw prompt content</li>
+     * </ul>
+     *
+     * @param prompt the final enhanced prompt text
+     */
     private void outputPromptToFile(String prompt) {
         if (properties.getOutputPrompt() == null || properties.getOutputPrompt().isBlank()) {
             return;
@@ -71,6 +88,14 @@ public class PromptEnhancer {
         }
     }
 
+    /**
+     * Writes the final refined taxonomy to a YAML file if configured.
+     * <p>
+     * Serializes the complete Taxonomy object including all categories,
+     * descriptions, examples, and mappings.
+     *
+     * @param taxonomy the final refined taxonomy structure
+     */
     private void outputTaxonomyToFile(Taxonomy taxonomy) {
         if (properties.getOutputTaxonomy() == null || properties.getOutputTaxonomy().isBlank()) {
             return;
@@ -88,6 +113,21 @@ public class PromptEnhancer {
         }
     }
 
+    /**
+     * Classifies a single QA with retry logic and exponential backoff.
+     * <p>
+     * Implements the same retry mechanism as ClassificationPipeline:
+     * <ul>
+     *   <li>Attempts classification up to configured number of times</li>
+     *   <li>Applies increasing delays between retries (attempt * 1000ms)</li>
+     *   <li>Returns first successful result</li>
+     * </ul>
+     *
+     * @param prompt                the classification prompt to use
+     * @param classificationRequest the request containing question, answer, and taxonomy
+     * @return classification result with predicted label and explanation
+     * @throws RuntimeException if all retry attempts fail
+     */
     private ClassificationResult classifySingle(
             String prompt, ClassificationRequest classificationRequest
     ) {
@@ -120,6 +160,15 @@ public class PromptEnhancer {
         throw new RuntimeException("All classification attempts failed.");
     }
 
+    /**
+     * Builds the diagnosis prompt for failure mode analysis.
+     * <p>
+     * Constructs the prompt template with taxonomy information and
+     * prepares placeholders for failure traces to be filled later.
+     *
+     * @param taxonomy the current taxonomy structure
+     * @return diagnosis prompt template with placeholders
+     */
     private String getDiagnosePrompt(Taxonomy taxonomy) {
         ClassificationRequest dummyRequest = ClassificationRequest.builder()
                                                                   .qa(new QA())
@@ -135,6 +184,15 @@ public class PromptEnhancer {
                                                FailureModesResult.JSON_SCHEME);
     }
 
+    /**
+     * Builds the patch prompt for improvement suggestions.
+     * <p>
+     * Constructs the prompt template with taxonomy information and
+     * prepares placeholders for failure mode analysis to be filled later.
+     *
+     * @param taxonomy the current taxonomy structure
+     * @return patch prompt template with placeholders
+     */
     private String getPatchPrompt(Taxonomy taxonomy) {
         ClassificationRequest dummyRequest = ClassificationRequest.builder()
                                                                   .qa(new QA())
@@ -150,6 +208,28 @@ public class PromptEnhancer {
                                                PatchResult.JSON_SCHEME);
     }
 
+    /**
+     * Executes the complete prompt enhancement workflow.
+     * <p>
+     * Main entry point that orchestrates all enhancement phases:
+     * <ol>
+     *   <li>Fetches QAs from database using configured query</li>
+     *   <li>Shuffles QAs for random sampling across iterations</li>
+     *   <li>For each iteration:
+     *     <ul>
+     *       <li>Creates and saves iteration node</li>
+     *       <li>Classifies N QAs with current prompt/taxonomy</li>
+     *       <li>Persists results with iteration links</li>
+     *       <li>Identifies and formats failures</li>
+     *       <li>Performs LLM-based diagnosis</li>
+     *       <li>Generates and applies patches</li>
+     *     </ul>
+     *   </li>
+     *   <li>Exports final prompt and taxonomy to files</li>
+     * </ol>
+     * <p>
+     * Stops early if no failures occur or no more QAs are available.
+     */
     public void enhance() {
         List<QA> qas = fetchQAs();
         Collections.shuffle(qas);
@@ -240,6 +320,21 @@ public class PromptEnhancer {
         log.info("Prompt enhancement process completed.");
     }
 
+    /**
+     * Validates that the revised taxonomy doesn't add new categories.
+     * <p>
+     * Enforcement rules:
+     * <ul>
+     *   <li>No new category names allowed</li>
+     *   <li>Missing categories from revised taxonomy are restored from original</li>
+     *   <li>Existing categories can only have descriptions/examples refined</li>
+     * </ul>
+     * <p>
+     * Throws IllegalArgumentException if new categories are detected.
+     *
+     * @param taxonomy the revised taxonomy to validate
+     * @throws IllegalArgumentException if new categories are present
+     */
     private void validateNewTaxonomy(Taxonomy taxonomy) {
         Set<String> originalLabels = properties.getTaxonomy().getCategories()
                                                .stream()
@@ -263,6 +358,15 @@ public class PromptEnhancer {
         taxonomy.setCategories(completeCategories);
     }
 
+    /**
+     * Filters classification tasks to only those with misclassifications.
+     * <p>
+     * Compares predicted category against expected ground truth label.
+     * Returns tasks where prediction doesn't match expected (case-insensitive).
+     *
+     * @param tasks list of all classification tasks
+     * @return list of tasks with incorrect predictions
+     */
     private List<ClassificationTask> filterFailedClassifications(List<ClassificationTask> tasks) {
         return tasks.stream()
                     .filter(task -> task.expectedCategory != null
@@ -270,6 +374,19 @@ public class PromptEnhancer {
                     .toList();
     }
 
+    /**
+     * Formats failure mode analysis into a readable string for the patch prompt.
+     * <p>
+     * Structures failure modes with:
+     * <ul>
+     *   <li>Failure mode name and description</li>
+     *   <li>Prompt drivers with specific problematic lines</li>
+     *   <li>Explanations of why each driver matters</li>
+     * </ul>
+     *
+     * @param failureModesResult the LLM-generated failure analysis
+     * @return formatted multi-line string for prompt inclusion
+     */
     private String buildFailureModes(FailureModesResult failureModesResult) {
         StringBuilder sb = new StringBuilder();
         if (failureModesResult.getFailureModes() != null) {
@@ -289,6 +406,20 @@ public class PromptEnhancer {
         return sb.toString();
     }
 
+    /**
+     * Formats misclassification traces for the diagnosis prompt.
+     * <p>
+     * For each failed classification, includes:
+     * <ul>
+     *   <li>Original question and answer</li>
+     *   <li>Assigned (incorrect) category</li>
+     *   <li>Expected (correct) category</li>
+     *   <li>Model's explanation for its choice</li>
+     * </ul>
+     *
+     * @param tasks list of failed classification tasks
+     * @return formatted multi-line string of failure traces
+     */
     private String buildFailureTraces(List<ClassificationTask> tasks) {
         StringBuilder sb = new StringBuilder();
         for (ClassificationTask task : tasks) {
@@ -304,12 +435,38 @@ public class PromptEnhancer {
         return sb.toString();
     }
 
+    /**
+     * Persists an iteration node and links it to the properties node.
+     * <p>
+     * Creates:
+     * <ul>
+     *   <li>PromptEnhancingIteration node in Neo4j</li>
+     *   <li>HAS_ITERATION relationship from properties to iteration</li>
+     * </ul>
+     *
+     * @param iteration the iteration object to save
+     */
     private void saveIteration(PromptEnhancingIteration iteration) {
         client.saveNode(iteration);
         client.createRelation(createRelationObject(new HasIteration(),
                                                    properties.getElementId(), iteration.getElementId()));
     }
 
+    /**
+     * Batch saves classification results and creates all relevant relationships.
+     * <p>
+     * Creates nodes and relationships:
+     * <ul>
+     *   <li>ClassificationResult nodes (batch save)</li>
+     *   <li>QA --[HAS_CLASSIFICATION]→ ClassificationResult</li>
+     *   <li>ClassificationResult --[BELONGS_TO]→ Category</li>
+     *   <li>ClassificationResult --[GENERATED_BY]→ Properties</li>
+     *   <li>ClassificationResult --[BELONGS_TO_ITERATION]→ Iteration</li>
+     * </ul>
+     *
+     * @param tasks list of classification tasks with results
+     * @param iteration the current enhancement iteration
+     */
     private void batchSaveClassifications(List<ClassificationTask> tasks, PromptEnhancingIteration iteration) {
         client.batchSaveNodes(tasks.stream().map(t -> t.result).toList());
 
@@ -331,13 +488,15 @@ public class PromptEnhancer {
     }
 
     /**
-     * Create a relation object with the specified start and end node IDs.
+     * Creates a relationship object with specified start and end node IDs.
+     * <p>
+     * Helper method for batch relationship creation.
      *
-     * @param relation    The relation object to set the IDs on.
-     * @param startNodeId The start node ID.
-     * @param endNodeId   The end node ID.
-     * @param <T>         The type of the relation.
-     * @return The relation object with the IDs set.
+     * @param relation the relationship instance to configure
+     * @param startNodeId element ID of the start node
+     * @param endNodeId element ID of the end node
+     * @param <T> relationship type extending Neo4jRelation
+     * @return the configured relationship object
      */
     private <T extends Neo4jRelation> T createRelationObject(T relation, String startNodeId, String endNodeId) {
         relation.setStartNodeId(startNodeId);
@@ -345,6 +504,26 @@ public class PromptEnhancer {
         return relation;
     }
 
+    /**
+     * Classifies a batch of QAs for a single enhancement iteration.
+     * <p>
+     * Workflow:
+     * <ol>
+     *   <li>Selects up to N QAs from unused set</li>
+     *   <li>Classifies in parallel using thread pool</li>
+     *   <li>Matches predictions to taxonomy categories</li>
+     *   <li>Retrieves expected labels from ground truth</li>
+     *   <li>Filters out failed classifications</li>
+     * </ol>
+     * <p>
+     * Updates the unusedQAs list by removing processed QAs.
+     *
+     * @param unusedQAs mutable list of QAs not yet used (modified in place)
+     * @param taxonomy the current taxonomy structure
+     * @param prompt the current classification prompt
+     * @param i iteration number (for logging)
+     * @return list of classification tasks with results and expected labels
+     */
     private List<ClassificationTask> classifyQAsForIteration(
             List<QA> unusedQAs, Taxonomy taxonomy, String prompt, int i) {
         List<QA> selectedQAs = unusedQAs.stream()
@@ -398,6 +577,22 @@ public class PromptEnhancer {
         return tasks;
     }
 
+    /**
+     * Builds a classification request for a single QA.
+     * <p>
+     * Constructs the request with:
+     * <ul>
+     *   <li>QA reference</li>
+     *   <li>Extracted question text</li>
+     *   <li>Formatted interview context</li>
+     *   <li>Current taxonomy</li>
+     *   <li>Answer text</li>
+     * </ul>
+     *
+     * @param qa the QA to classify
+     * @param taxonomy the current taxonomy
+     * @return complete classification request
+     */
     private ClassificationRequest buildRequest(QA qa, Taxonomy taxonomy) {
         return ClassificationRequest.builder()
                                     .qa(qa)
@@ -409,6 +604,20 @@ public class PromptEnhancer {
                                     .build();
     }
 
+    /**
+     * Builds interview context string from question and answer.
+     * <p>
+     * Formats as:
+     * <pre>
+     * Interviewer: [question]
+     * Answer: [answer]
+     * </pre>
+     * Removes "Q. " prefix if present.
+     *
+     * @param interviewQuestion the interview question
+     * @param interviewAnswer the interview answer
+     * @return formatted context string
+     */
     private String buildContext(String interviewQuestion, String interviewAnswer) {
         StringBuilder contextBuilder = new StringBuilder();
         if (interviewQuestion.startsWith("Q. ")) {
@@ -419,10 +628,28 @@ public class PromptEnhancer {
         return contextBuilder.toString();
     }
 
+    /**
+     * Fetches QAs from Neo4j using the configured query.
+     * <p>
+     * The query is defined in PromptEnhancingProperties and typically
+     * filters by dataset split or other criteria.
+     *
+     * @return list of QA records matching the query
+     */
     private List<QA> fetchQAs() {
         return client.executeQuery(properties.getQuery(), QA.class);
     }
 
+    /**
+     * Filters QAs to exclude those already classified by this enhancement run.
+     * <p>
+     * Queries Neo4j to find QAs with existing classifications generated by
+     * this PromptEnhancingProperties instance, ensuring each QA is only
+     * used once across all iterations.
+     *
+     * @param qas the complete list of QAs
+     * @return list of QAs not yet used by this enhancement run
+     */
     private List<QA> filterNotUsedQAs(List<QA> qas) {
         String qaIds = qas.stream()
                           .map(qa -> "'" + qa.getElementId() + "'")
@@ -451,6 +678,18 @@ public class PromptEnhancer {
                   .collect(Collectors.toCollection(ArrayList::new));
     }
 
+    /**
+     * Finds the taxonomy category matching a predicted label name.
+     * <p>
+     * Implements flexible matching with normalization:
+     * <ol>
+     *   <li>Exact match after removing spaces, underscores, hyphens</li>
+     *   <li>Substring match (contains) as fallback</li>
+     * </ol>
+     *
+     * @param name the predicted category name
+     * @return matching Category or null if no match found
+     */
     private Taxonomy.Category findAssignedCategory(String name) {
         String normalizedName = name.replaceAll("[ _-]", "");
         for (Taxonomy.Category category : properties.getTaxonomy().getCategories()) {
@@ -469,6 +708,16 @@ public class PromptEnhancer {
         return null;
     }
 
+    /**
+     * Retrieves the expected ground truth label for a QA.
+     * <p>
+     * Uses reflection to access the field specified by taxonomy's labelProperty.
+     * Typically accesses "clarityLabel" or "evasionLabel" field.
+     *
+     * @param qa the QA record
+     * @return ground truth label string or null if not available
+     * @throws RuntimeException if reflection access fails
+     */
     private String findExpectedCategory(QA qa) {
         String propertyLabel = properties.getTaxonomy().getLabelProperty();
         try {
@@ -484,6 +733,17 @@ public class PromptEnhancer {
         }
     }
 
+    /**
+     * Internal record bundling a complete classification task with ground truth.
+     * <p>
+     * Used to track classification results alongside their expected labels
+     * for failure analysis.
+     *
+     * @param qa the question-answer pair
+     * @param result the classification result from the model
+     * @param category the matched taxonomy category
+     * @param expectedCategory the ground truth label from the dataset
+     */
     private record ClassificationTask(QA qa, ClassificationResult result, Taxonomy.Category category,
                                       String expectedCategory) {}
 }

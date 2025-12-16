@@ -6,9 +6,16 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+/**
+ * Verifies the embedding subsystem mentioned in the README (“RAG Support”) can populate Neo4j indices.
+ */
 public class EmbeddingServiceTest {
     public EmbeddingServiceTest() {}
 
+    /**
+     * Boots the embedding service and generates vectors for all QA nodes so downstream RAG-enabled models can
+     * retrieve examples.
+     */
     @Test
     public void testGenerateEmbeddingsForQAs() throws IOException {
         EmbeddingService.initialize(Neo4jCredentials.getDefault(),

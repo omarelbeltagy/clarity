@@ -23,15 +23,36 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Strategy that performs a single-model classification call.
+ * Classification strategy that generates multiple top-k predictions and selects the most common mapped label.
  * <p>
- * Depending on the configured ModelConfig and client type the strategy either:
- * - serializes the request and sends it directly to a LocalClient, or
- * - builds a prompt using PromptUtils and sends it to a remote model client.
- * <p>
- * The strategy supports both structured JSON responses (ResponseFormat.JSON_OBJECT)
- * which are deserialized into a ClassificationResult, and plain text responses
- * which are interpreted as the label name.
+ * This strategy is designed for scenarios where:
+ * <ul>
+ *   <li>The taxonomy has a mapping configuration enabled</li>
+ *   <li>Multiple category predictions can be aggregated to improve accuracy</li>
+ *   <li>The model can return structured JSON with top-k predictions</li>
+ * </ul>
+ *
+ * <h2>Classification Process</h2>
+ * <ol>
+ *   <li><b>Generate Top-K Predictions</b>: Request k best guesses from the model</li>
+ *   <li><b>Map to Target Labels</b>: Map each predicted category to its target label via taxonomy mapping</li>
+ *   <li><b>Aggregate by Frequency</b>: Count occurrences of each mapped label</li>
+ *   <li><b>Select Most Common</b>: Return the most frequently occurring mapped label</li>
+ * </ol>
+ *
+ * <h2>Example</h2>
+ * Given k=3 predictions: ["CategoryA", "CategoryB", "CategoryA"] which map to ["LabelX", "LabelY", "LabelX"],
+ * the strategy returns "LabelX" as it appears twice.
+ *
+ * <h2>Requirements</h2>
+ * <ul>
+ *   <li>Response format must be JSON_OBJECT (to parse structured top-k results)</li>
+ *   <li>Taxonomy mapping must be enabled</li>
+ *   <li>LocalClient is not supported (requires remote model API)</li>
+ * </ul>
+ *
+ * @see BestGuessClassificationResult
+ * @see Taxonomy.Mapping
  */
 @Node(label = "BestGuessStrategy")
 @Getter
@@ -40,15 +61,42 @@ import java.util.Map;
 @NoArgsConstructor
 @Builder
 public class BestGuessStrategy extends Neo4jNode implements ClassificationStrategy {
+    /**
+     * Model configuration for generating top-k predictions.
+     * Must support JSON response format to return structured results.
+     */
     @JsonProperty("model")
     @JsonPropertyDescription("The model configuration to use for classification.")
     @Neo4jIgnore
     private ModelProperties model;
 
+    /**
+     * Number of best guesses to request from the model.
+     * Higher values provide more data for aggregation but increase API costs.
+     * Typical values: 3-5.
+     */
     @JsonProperty("k")
     @JsonPropertyDescription("The number of guesses for the model")
     private int k = 3;
 
+    /**
+     * Executes the best-guess classification with label aggregation.
+     * <p>
+     * Steps:
+     * <ol>
+     *   <li>Validates configuration (JSON format, mapping enabled, not LocalClient)</li>
+     *   <li>Builds prompt with k parameter for top-k predictions</li>
+     *   <li>Requests structured response with multiple label predictions</li>
+     *   <li>Maps each predicted label to its target via taxonomy mapping</li>
+     *   <li>Aggregates mapped labels by frequency</li>
+     *   <li>Returns the most common mapped label as final result</li>
+     * </ol>
+     *
+     * @param request the classification request with question, answer, and taxonomy
+     * @return classification result with the most frequently mapped label
+     * @throws UnsupportedOperationException if configuration requirements are not met
+     * @throws IllegalStateException         if no valid labels can be extracted
+     */
     @Override
     public ClassificationResult execute(ClassificationRequest request) {
         validateConfiguration(request);
@@ -84,6 +132,14 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
                                    .build();
     }
 
+    /**
+     * Determines the most frequently occurring label in the list.
+     * <p>
+     * In case of ties, returns the first label that achieved the maximum count.
+     *
+     * @param labels list of mapped labels from top-k predictions
+     * @return the most common label
+     */
     private String mostCommonLabel(List<String> labels) {
         Map<String, Integer> counts = new HashMap<>();
         for (String label : labels) {
@@ -106,7 +162,18 @@ public class BestGuessStrategy extends Neo4jNode implements ClassificationStrate
 
 
     /**
-     * Validates that the model configuration is compatible with best guess strategy.
+     * Validates that the configuration supports best-guess strategy requirements.
+     * <p>
+     * Checks:
+     * <ul>
+     *   <li>Client is not LocalClient (unsupported)</li>
+     *   <li>Response format is JSON_OBJECT (required for structured top-k output)</li>
+     *   <li>Taxonomy is provided</li>
+     *   <li>Taxonomy mapping is enabled</li>
+     * </ul>
+     *
+     * @param request the classification request
+     * @throws UnsupportedOperationException if any requirement is not met
      */
     private void validateConfiguration(ClassificationRequest request) {
         if (model.getClient() instanceof LocalClient) {

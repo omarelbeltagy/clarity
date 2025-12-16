@@ -33,16 +33,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Represents the configuration and runtime properties for a classification task.
+ * Central configuration node for a classification run as described in the README’s “Configuration” section.
+ * <p>
+ * Encapsulates everything required to reproduce a pipeline execution: dataset query, taxonomy snapshot,
+ * strategy wiring, retry/thread settings, and Neo4j provenance metadata. Instances are loaded from YAML,
+ * validated, persisted as {@code ClassificationProperties} nodes, and linked to their taxonomy, strategy,
+ * and evaluation objects so that every run can later be audited or exported.
+ * </p>
  *
- * <p>This class is populated from a YAML file and contains both persisted configuration
- * fields (serialized) and transient runtime objects (ignored for serialization).
- *
- * <p>Usage:
- * - Load an instance from a YAML file using {@link #load(String)} which validates and
- * initializes necessary fields.
- *
- * <p>The class extends {@link Neo4jNode} and is annotated with {@link Node} for Neo4j mapping.
+ * @see de.tum.claritypipeline.service.ClassificationPipeline
+ * @see de.tum.claritypipeline.strategy.ClassificationStrategy
  */
 @Node(label = "ClassificationProperties")
 @Getter
@@ -55,7 +55,7 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
      * <p>This is a required field and used to identify the classification run.
      */
     @JsonProperty(value = "name", index = 4)
-    @JsonPropertyDescription("The name of the classification task.")
+    @JsonPropertyDescription("Human-readable classification run name used for grouping versions in Neo4j.")
     @Setter(AccessLevel.NONE)
     private String name;
 
@@ -430,4 +430,3 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
         }
     }
 }
-

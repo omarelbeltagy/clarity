@@ -16,6 +16,17 @@ import java.util.Map;
  *
  * <p>Holds the chosen category name, an explanation for the decision,
  * a confidence score and optional per-category scores that are not persisted in Neo4j.
+ *
+ * Canonical representation of a single prediction stored in Neo4j and exported via the pipeline.
+ * <p>
+ * Captures the selected taxonomy category, a free-form explanation, confidence score,
+ * and optional runtime metadata (per-class scores, judgement annotations). Instances are
+ * created by all strategies, persisted through {@link de.tum.claritypipeline.service.ClassificationPipeline},
+ * and later consumed by evaluators, exporters, or prompt enhancers.
+ * </p>
+ *
+ * <p>Neo4j persistence (through {@link de.tum.clarityneo4j.core.Neo4jNode}) ensures end-to-end provenance
+ * linking QA nodes, strategy configurations, and evaluation artifacts.</p>
  */
 @Node(label = "ClassificationResult")
 @AllArgsConstructor

@@ -7,10 +7,12 @@ import lombok.*;
 import java.io.Serializable;
 
 /**
- * Represents the result of another LLM judging a prior classification.
- *
- * <p>Holds the (possibly corrected) category name, an explanation for the judgement,
- * a confidence score, and whether the initial classification was confirmed or adjusted.
+ * Output schema for the second-stage judge inside {@link de.tum.claritypipeline.strategy.JudgementStrategy}.
+ * <p>
+ * Stores whether the initial classification was confirmed, the final category name, reasoning,
+ * and the judge's confidence. This enables downstream provenance (who overruled whom) as well as
+ * richer evaluation metrics that distinguish between raw predictions and validated outcomes.
+ * </p>
  */
 @AllArgsConstructor
 @NoArgsConstructor

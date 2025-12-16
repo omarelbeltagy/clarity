@@ -30,21 +30,30 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 
+/**
+ * YAML-driven configuration for the iterative prompt enhancer (README “Prompt Enhancement”).
+ * <p>Defines which QAs to sample, how many iterations to run, which LLM to use, and where to persist
+ * the refined prompt/taxonomy artifacts.</p>
+ */
 @Node(label = "PromptEnhancingProperties")
 @Getter
 @Setter
 public class PromptEnhancingProperties extends Neo4jNode implements Serializable {
 
     @JsonProperty(value = "name", index = 4)
+    @JsonPropertyDescription("Logical name of the enhancement run used for Neo4j provenance.")
     private String name;
 
     @JsonProperty("version")
+    @JsonPropertyDescription("Version tag of this enhancement configuration.")
     private String version;
 
     @JsonProperty("output-prompt")
+    @JsonPropertyDescription("Optional file path where the final enhanced prompt should be written.")
     private String outputPrompt;
 
     @JsonProperty("output-taxonomy")
+    @JsonPropertyDescription("Optional file path where the refined taxonomy YAML should be stored.")
     private String outputTaxonomy;
 
     @JsonProperty("query")
@@ -63,7 +72,7 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
      * <p>Defines how the classification is performed (e.g., zero-shot, few-shot).
      */
     @JsonProperty(value = "model", index = 1)
-    @JsonPropertyDescription("The classification strategy to use for this classification run.")
+    @JsonPropertyDescription("LLM configuration used for both classification and enhancement prompts.")
     @Neo4jIgnore
     private ModelProperties model;
 
@@ -80,14 +89,17 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
     private int workerThreads = 12;
 
     @JsonProperty("classification-prompt")
+    @JsonPropertyDescription("Prompt template (inline or file) used during each evaluation iteration.")
     @Setter(AccessLevel.NONE)
     private String classificationPrompt;
 
     @JsonProperty("enhancement-prompt-diagnose")
+    @JsonPropertyDescription("Template guiding the LLM failure analysis phase.")
     @Setter(AccessLevel.NONE)
     private String enhancementPromptDiagnose;
 
     @JsonProperty("enhancement-prompt-patch")
+    @JsonPropertyDescription("Template guiding the LLM patch proposal phase.")
     @Setter(AccessLevel.NONE)
     private String enhancementPromptPatch;
 
@@ -130,12 +142,12 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
      * <p>Uses Jackson YAML mapper with case-insensitive enum deserialization.
      *
      * @param path path to the YAML file
-     * @return deserialized ClassificationProperties
+     * @return deserialized PromptEnhancingProperties instance
      * @throws IOException if reading or mapping fails
      */
     public static PromptEnhancingProperties load(String path) throws IOException {
         if (path == null || path.isEmpty()) {
-            throw new IOException("No path specified for ClassificationProperties file.");
+            throw new IOException("No path specified for PromptEnhancingProperties file.");
         }
         ObjectMapper mapper = JsonMapper.builder(new YAMLFactory())
                                         .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true)
@@ -263,4 +275,3 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
         GlobalConfig.NEO4J_CLIENT.createRelation(relation);
     }
 }
-
