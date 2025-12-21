@@ -29,7 +29,7 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_16_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_21_2025.xlsx");
     }
 
     /**
@@ -48,13 +48,11 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testGenerateCustomEvaluation() throws IOException {
-        /*
         evaluationExporter.generateCustomEvaluation(
                 "src/test/resources/properties/stage1/single-few-shot-evasion-based-rag-reasoning-high/gpt-5.1.yaml"
         );
-         */
         evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.1-reasoning-high.yaml"
+                "src/test/resources/properties/stage2/judgement/gpt-5.1-reasoning-high.yaml"
         );
     }
 }

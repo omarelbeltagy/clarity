@@ -118,7 +118,7 @@ public class PipelineTest {
      */
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.1-reasoning-high.yaml";
+        String file = "src/test/resources/properties/stage2/judgement/gpt-5.1-enhanced-evasion-techniques.yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }

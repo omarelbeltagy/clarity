@@ -1,0 +1,19 @@
+name: "GPT 5.2"
+version: "enhanced-prompt:evasion-based:judgement:few-shot:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+worker-threads: 16
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+strategy:
+  type: "judgement"
+  use-existing: true
+  classification-model:
+    provider: "openai"
+    name: "gpt-5.2"
+    prompt: "../assets/prompts/few-shot.yaml"
+  judgement-model:
+    provider: "openai"
+    name: "gpt-5.2"
+    prompt: "../assets/prompts/judgement-enhanced.yaml"

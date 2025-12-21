@@ -11,10 +11,11 @@ import de.tum.claritypipeline.client.LocalClient;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
 import de.tum.claritypipeline.model.classification.JudgementResult;
+import de.tum.claritypipeline.model.config.ClassificationProperties;
 import de.tum.claritypipeline.model.config.GlobalConfig;
 import de.tum.claritypipeline.model.config.ModelProperties;
-import de.tum.claritypipeline.model.relation.HasClassificationModel;
-import de.tum.claritypipeline.model.relation.HasJudgementModel;
+import de.tum.claritypipeline.model.core.QA;
+import de.tum.claritypipeline.model.relation.*;
 import de.tum.claritypipeline.utils.PromptUtils;
 import de.tum.clarityutils.AfterDeserialization;
 import lombok.*;
@@ -102,6 +103,20 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
     @JsonPropertyDescription("The model configuration to use for the judgement step.")
     @Neo4jIgnore
     private ModelProperties judgementModel;
+
+    /**
+     * If true, checks for an existing classification in the database
+     * before performing a new classification.
+     * <p>
+     * This can help avoid redundant computations if the same input
+     * has already been classified previously.
+     */
+    @JsonProperty("use-existing")
+    @JsonPropertyDescription(
+            "If this is set to true the database will be checked for an existing classification of the same "
+                    + "classification model instead of creating a new one and only perform the judgement step.")
+    @Neo4jIgnore
+    private boolean useExistingInitialClassification;
 
     /**
      * Executes the two-phase judgement-based classification strategy.
@@ -238,6 +253,40 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
      * @return initial classification result with label, explanation, and confidence
      */
     private ClassificationResult performInitialClassification(ClassificationRequest request) {
+        if (useExistingInitialClassification) {
+            String query = """
+                    MATCH (qa:%s)-[:%s]->(n:%s)-[:%s]->(cp:%s)-[:%s]->(s:%s)-[:%s]->(cm:%s)
+                    WHERE elementId(qa) = $qaElementId
+                    AND elementId(cm) = $classificationModelElementId
+                    RETURN n
+                    LIMIT 1
+                    """.formatted(
+                    Neo4jNode.getLabel(QA.class),
+                    Neo4jRelation.getType(HasClassification.class),
+                    Neo4jNode.getLabel(ClassificationResult.class),
+                    Neo4jRelation.getType(GeneratedBy.class),
+                    Neo4jNode.getLabel(ClassificationProperties.class),
+                    Neo4jRelation.getType(HasClassificationStrategy.class),
+                    Neo4jNode.getLabel(SingleStrategy.class),
+                    Neo4jRelation.getType(HasClassificationModel.class),
+                    Neo4jNode.getLabel(ModelProperties.class)
+            );
+
+            Map<String, Object> params = Map.of(
+                    "qaElementId", request.getQa().getElementId(),
+                    "classificationModelElementId", classificationModel.getElementId()
+            );
+
+            ClassificationResult existingClassification =
+                    GlobalConfig.NEO4J_CLIENT.executeQuery(query, params, ClassificationResult.class).stream()
+                                             .findFirst()
+                                             .orElse(null);
+
+            if (existingClassification != null) {
+                return existingClassification;
+            }
+        }
+
         String prompt = PromptUtils.replacePrompt(
                 request,
                 classificationModel,
@@ -251,7 +300,7 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
     /**
      * Performs the judgement step to evaluate the initial classification.
      *
-     * @param request the original classification request
+     * @param request       the original classification request
      * @param initialResult the initial classification to be judged
      * @return judgement result indicating confirmation or override
      */
@@ -272,7 +321,7 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
      * Replaces the {classification_result} placeholder with formatted information
      * about the initial prediction and its reasoning.
      *
-     * @param request the classification request
+     * @param request       the classification request
      * @param initialResult the initial classification result
      * @return complete prompt for the judgement model
      */
@@ -320,7 +369,7 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
      *   <li>If judgement overrides: Returns new classification from judgement result</li>
      * </ul>
      *
-     * @param initialResult the initial classification
+     * @param initialResult   the initial classification
      * @param judgementResult the judgement decision
      * @return merged final classification result
      */
@@ -345,7 +394,7 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
      *   <li>Judgement result name matches initial result name</li>
      * </ul>
      *
-     * @param initial the initial classification
+     * @param initial   the initial classification
      * @param judgement the judgement decision
      * @return true if judgement confirms initial classification
      */
@@ -358,7 +407,7 @@ public class JudgementStrategy extends Neo4jNode implements ClassificationStrate
      * <p>
      * Preserves initial prediction and adds judgement metadata for traceability.
      *
-     * @param initial the confirmed initial classification
+     * @param initial   the confirmed initial classification
      * @param judgement the confirming judgement
      * @return classification result with judgement metadata
      */
