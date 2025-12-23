@@ -16,7 +16,7 @@ import java.util.Map;
  *
  * <p>Holds the chosen category name, an explanation for the decision,
  * a confidence score and optional per-category scores that are not persisted in Neo4j.
- *
+ * <p>
  * Canonical representation of a single prediction stored in Neo4j and exported via the pipeline.
  * <p>
  * Captures the selected taxonomy category, a free-form explanation, confidence score,

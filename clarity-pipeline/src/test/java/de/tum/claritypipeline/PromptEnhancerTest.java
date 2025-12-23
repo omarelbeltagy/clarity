@@ -17,7 +17,7 @@ public class PromptEnhancerTest {
     public void testEnhancePrompt() throws IOException {
         final String baseDir = "src/test/resources/prompt-enhancing/";
 
-        PromptEnhancer promptEnhancer = new PromptEnhancer(baseDir + "gpt-5.1.yaml");
+        PromptEnhancer promptEnhancer = new PromptEnhancer(baseDir + "gpt-5.2.yaml");
         promptEnhancer.enhance();
     }
 }

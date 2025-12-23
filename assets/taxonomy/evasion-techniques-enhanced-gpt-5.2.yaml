@@ -1,0 +1,96 @@
+name: "Evasion Techniques"
+version: "v1-enhanced-gpt.5.2"
+label-property: "evasionLabel"
+mapping:
+  enabled: true
+  label-property: "clarityLabel"
+  labels:
+    - "Clear Reply"
+    - "Ambivalent"
+    - "Clear Non-Reply"
+categories:
+  - name: "Explicit"
+    map-to: "Clear Reply"
+    description: "The information requested is explicitly stated in the form the question\
+    \ calls for (e.g., a clear yes/no when asked yes/no; a concrete date when asked\
+    \ for a date)."
+    examples:
+      - question: "Do you have your own views about PR at Westminster don’t you?"
+        answer: "I do."
+        explanation: "The answer directly gives the info requested."
+  - name: "Implicit"
+    map-to: "Ambivalent"
+    description: "The information requested is provided indirectly (not in the expected\
+    \ form), but a reasonable listener can confidently infer the specific requested\
+    \ value (not merely a general impression)."
+    examples:
+      - question: "Are you going to watch television?"
+        answer: "What else is there to do?"
+        explanation: "They suggest planning to watch TV, despite not explicitly stating\
+      \ it."
+  - name: "General"
+    description: "The response relates to the question but is too broad, vague, or non-specific\
+    \ to resolve what was asked (the requested variable remains undetermined)."
+    map-to: "Ambivalent"
+    examples:
+      - question: "What’s your favorite film?"
+        answer: "I like a lot of different kinds of films—depends on the mood."
+        explanation: "The response is on-topic but provides no specific favorite, so the\
+      \ requested variable remains undetermined."
+  - name: "Partial/half-answer"
+    description: "Answers only part of what is requested or addresses only one component/aspect\
+    \ of the demanded information, leaving the core request incomplete."
+    map-to: "Ambivalent"
+    examples:
+      - question: "Did you enjoy the film?"
+        answer: "The directing was great."
+        explanation: "Directing is only part of what constitutes a film."
+  - name: "Dodging"
+    description: "Does not supply the requested variable. May ignore the question entirely\
+    \ or may stay near the topic while avoiding the specific judgment/detail being\
+    \ asked for (common in political interviews: reframing, repeating talking points,\
+    \ attacking the premise, non-commitment)."
+    map-to: "Ambivalent"
+    examples:
+      - question: "Do you like my new dress?"
+        answer: "We are late."
+        explanation: "Does not even acknowledge the question and goes straight to another\
+      \ topic."
+  - name: "Deflection"
+    description: "Briefly engages with the question or its surface premise, then shifts\
+    \ focus to another point/issue, making a different argument instead of answering\
+    \ the demanded variable."
+    map-to: "Ambivalent"
+    examples:
+      - question: "Did you eat the last piece of pie?"
+        answer: "I have to admit that this was a great recipe, I always like it when there\
+      \ are chocolate chips in the dough."
+        explanation: "Acknowledges the question but goes on a tangent about the chips,\
+      \ without answering."
+  - name: "Declining to answer"
+    description: "Acknowledges the question but refuses to answer (now or at all), explicitly\
+    \ or implicitly (e.g., “I’m not going to comment,” “I won’t speculate,” “I can’\
+    t discuss that”)."
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: "The hypothesis I was discussing, wouldn’t you regard that as a defeat?"
+        answer: "I am not going to prophesy what will happen."
+        explanation: "Directly stating they won’t answer."
+  - name: "Claims ignorance"
+    description: "States they do not know / cannot recall / lack the information requested\
+    \ (may add they will check later)."
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: "On what precise date did the government order the refit of the HMAS\
+      \ Kanimbla in preparation for its forward deployment to a possible war against\
+      \ Iraq?"
+        answer: "I do not know that date. I will find out and let the House know."
+        explanation: "Claims or admits they don’t have the information."
+  - name: "Clarification"
+    description: "Does not provide the requested information and instead asks for clarification\
+    \ about the question’s meaning, scope, or a term used."
+    map-to: "Clear Non-Reply"
+    examples:
+      - question: "Was it your decision to release the fund?"
+        answer: "You mean the public fund?"
+        explanation: "Gives no data, asks for clarification."

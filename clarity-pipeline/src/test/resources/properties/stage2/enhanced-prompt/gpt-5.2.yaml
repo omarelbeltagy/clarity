@@ -1,6 +1,6 @@
 name: "GPT 5.2"
-version: "single:few-shot:enhanced-prompt:v1"
-taxonomy: "../assets/taxonomy/evasion-techniques-enhanced.yaml"
+version: "single:few-shot:enhanced-prompt-for-gpt-5.2:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques-enhanced-gpt-5.2.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.test = true
@@ -10,4 +10,4 @@ strategy:
   model:
     provider: "openai"
     name: "gpt-5.2"
-    prompt: "../assets/prompts/prompt-enhancement-v1.yaml"
+    prompt: "../assets/prompts/prompt-enhancement-v1-gpt-5.2.yaml"

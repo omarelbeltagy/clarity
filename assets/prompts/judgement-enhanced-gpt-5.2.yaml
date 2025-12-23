@@ -1,0 +1,87 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Based on a segment of the interview in which the interviewer poses a series of questions, the type of response provided by the interviewee for the question has already been classified.
+  Your task is to check the correctness of this classification using the provided taxonomy and provide a chain of thought explanation for your decision. If the classification is incorrect, provide the correct classification.
+  Use the taxonomy, examples, and detailed instructions below to guide your analysis.
+  
+  Use the following taxonomy and examples as the base reference:
+  
+  {taxonomy}
+  
+  ---
+  Here is one small example for each term of the taxonomy:
+  
+  {examples}
+  
+  ---
+  
+  The answer has been classified as:
+  {classification_result}
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  ### Part of the Interview
+  {context}
+  
+  ### Question
+  {question}
+  
+  ---
+  
+  **Instructions (apply in order):**
+  
+  0) Settlement-first principle (prevents false “evasion” labels):
+     - Your central job is to decide whether the response settles the question’s demanded variable.
+     - If the demanded variable is clearly settled (Explicit or Implicit), you MUST choose Explicit/Implicit even if the speaker also adds long messaging, process talk, attacks, or other topics.
+     - Only use Dodging/Deflection/Declining/Claims ignorance when the demanded variable is NOT settled.
+  
+  1) Identify the question’s demand:
+     - Determine the *primary demanded variable* (e.g., yes/no stance, degree/extent, cause/why, who/when/what, justification, plan/next step).
+     - If the question is underspecified, elliptical, or reads like a topic prompt/summary, treat it as asking for the most natural implied demanded variable (often a yes/no confirmation or a concrete stance about the referenced claim/topic). Do **not** invent extra sub-questions beyond what is needed to make the prompt coherent.
+     - If the question has multiple parts, decide whether it is (i) one primary demand with secondary follow-ups, or (ii) **co-primary demands**.
+       - Treat demands as co-primary when two distinct facts/commitments are both required for a complete answer (even if asked in one sentence).
+  
+  2) Decide whether the demanded variable is *settled* by the response:
+     - Read the entire answer.
+     - Treat an early fragment as overridden only if later text **contradicts it, retracts it, or adds a material qualification** that makes the demanded value no longer determinable.
+     - “Implicit settlement” test: if you can restate the demanded value in ONE short clause (e.g., “Yes, they support it”; “No, they won’t”; “They think X caused it”; “They expect it this year”) with high confidence from the answer, then the variable is settled (Implicit if not directly stated).
+     - A “token” fragment (e.g., a vague condition like “as long as it takes,” “we’ll see,” “in due course”) does **not** settle the variable if it fails to provide a determinate value in the terms the question seeks.
+  
+  3) Choose exactly one label using this hierarchy and boundary tests:
+  
+     A) **Clarification**: the answer primarily asks what the question means / defines a term / narrows scope, without providing the demanded value.
+  
+     B) **Claims ignorance**: the answer’s core content is that they lack the information requested (do not know / cannot recall / have not been briefed / cannot predict because they don’t have the facts). This includes common idioms (e.g., “I don’t have a crystal ball,” “I haven’t seen the report,” “I’ve not been briefed yet”) when they function as “I don’t know.”
+        - If they say they will check/find out later because they do not currently know, label Claims ignorance.
+  
+     C) **Declining to answer**: the answer refuses to provide the demanded value (now or at all), even if it comments around the topic. Use this when the speaker signals unwillingness rather than inability (e.g., “I’m not going to comment,” “I won’t discuss that,” “I won’t answer that,” “I can’t discuss that”).
+        - If they refuse only DETAILS but still clearly provide the demanded value, do NOT use Declining; use Explicit/Implicit.
+  
+     D) **Deflection (pivot test; only if UNSETTLED)**: use Deflection when:
+        (i) the response briefly engages with the question/premise (even minimally), then
+        (ii) pivots to a meaningfully different issue/agenda that is not needed to supply the demanded variable, and
+        (iii) the demanded variable remains unsettled after considering the full response.
+        - **Token-answer then pivot**: if the speaker gives only a token/indeterminate fragment that does not settle the demanded variable and then pivots, label Deflection.
+        - If the demanded variable is settled (Explicit or Implicit), do NOT call it Deflection even if a pivot dominates the remainder.
+  
+     E) If no Deflection applies, classify the degree to which the demanded variable is provided:
+        - **Explicit**: the demanded variable is directly and unambiguously provided in the form requested (or in an equivalent direct form).
+        - **Implicit**: the demanded variable is not stated in the requested form, but a reasonable listener can confidently infer the specific value from what is said.
+        - **Partial/half-answer**:
+           * For one primary + follow-ups: the response answers only a secondary component while leaving the primary demanded variable unresolved.
+           * For true co-primary demands: answers one required component but not the other, and does so without a substantive pivot to a different agenda.
+        - **General**: the response stays on the question’s subject but is too vague/non-specific to determine the demanded value (platitudes, broad aspirations, “it’s complicated,” non-quantified claims) and shows no clear avoidance maneuver.
+  
+     F) **Dodging** (same-frame avoidance; only if UNSETTLED and no Deflection): the response stays within the same general frame/premise but avoids committing to the demanded variable through a recognizable avoidance maneuver, such as:
+        - reframing what is being asked into a different question,
+        - attacking or rejecting the premise/question instead of answering,
+        - substituting a different criterion/standard than the one requested,
+        - process/procedure-as-answer (“we’re reviewing,” “we’re considering,” “we’ll announce soon,” “we’ll get back to you”) when it substitutes for the demanded value,
+        - non-committal hedging that functions to avoid commitment (not merely normal uncertainty).
+        - **General vs Dodging rule**: if it is merely vague/unspecific yet still tries to address the demanded variable, prefer **General**. Use **Dodging** only when you can name the avoidance maneuver.
+  
+  ---
+  
+  ### Output
+  {response_format}

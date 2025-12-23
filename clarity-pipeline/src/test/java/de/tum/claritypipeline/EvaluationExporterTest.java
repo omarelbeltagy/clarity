@@ -29,7 +29,7 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_21_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_22_2025.xlsx");
     }
 
     /**
