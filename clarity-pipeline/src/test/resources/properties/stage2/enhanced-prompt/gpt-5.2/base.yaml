@@ -1,0 +1,15 @@
+name: "GPT 5.2"
+version: "single:few-shot:enhanced-prompt-base:v1"
+taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+worker-threads: 50
+query: |
+  MATCH (n:QA)
+  WHERE n.test = true
+  RETURN n
+  LIMIT 150
+strategy:
+  type: "single"
+  model:
+    provider: "openai"
+    name: "gpt-5.2"
+    prompt: "../assets/prompts/prompt-enhancement/base.yaml"

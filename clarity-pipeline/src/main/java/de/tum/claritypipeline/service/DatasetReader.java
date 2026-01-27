@@ -2,13 +2,16 @@ package de.tum.claritypipeline.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.bean.CsvToBeanBuilder;
 import de.tum.claritypipeline.model.config.DatasetType;
 import de.tum.claritypipeline.model.core.QA;
 import lombok.NoArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -111,6 +114,7 @@ public class DatasetReader {
             case TEST -> readDatasetHelper("test.json", DatasetType.TEST);
             case VALID -> readDatasetHelper("valid.json", DatasetType.VALID);
             case TRAIN -> readDatasetHelper("train.json", DatasetType.TRAIN);
+            case EVALUATION -> readDatasetHelper("../evaluation/evaluation.csv", DatasetType.EVALUATION);
             default -> readDatasetHelper("unknown.json", DatasetType.GENERIC);
         };
     }
@@ -122,9 +126,9 @@ public class DatasetReader {
      * while maintaining proper dataset type metadata.
      *
      * @param fileName the name of the JSON file (relative to base path)
-     * @param type the dataset type to assign to all loaded records
+     * @param type     the dataset type to assign to all loaded records
      * @return list of QA records with specified dataset type flags set,
-     *         or empty list if file cannot be read
+     * or empty list if file cannot be read
      */
     public List<QA> readDataset(String fileName, DatasetType type) {
         return readDatasetHelper(fileName, type);
@@ -138,7 +142,7 @@ public class DatasetReader {
      *
      * @param fileName the name of the JSON file (relative to base path)
      * @return list of QA records with generic (no split) type flags,
-     *         or empty list if file cannot be read
+     * or empty list if file cannot be read
      */
     public List<QA> readDataset(String fileName) {
         return readDatasetHelper(fileName, DatasetType.GENERIC);
@@ -156,21 +160,45 @@ public class DatasetReader {
      * </ul>
      *
      * @param fileName the JSON file name
-     * @param type the dataset type to assign
+     * @param type     the dataset type to assign
      * @return list of loaded QA records or empty list on failure
      */
     private List<QA> readDatasetHelper(String fileName, DatasetType type) {
         Path filePath = Paths.get(basePath, fileName);
+
         try {
-            List<QA> records = MAPPER.readValue(filePath.toFile(), new TypeReference<>() {});
+            List<QA> records;
+
+            if (fileName.toLowerCase().endsWith(".csv")) {
+                records = readFromCsv(filePath);
+            } else {
+                records = readFromJson(filePath);
+            }
+
             records.forEach(record -> applyDatasetType(record, type));
             log.info("Loaded {} records from {}", records.size(), fileName);
             return records;
-        } catch (IOException e) {
+
+        } catch (Exception e) {
             log.error("Error reading dataset from {}: {}", fileName, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
+
+    private List<QA> readFromJson(Path filePath) throws IOException {
+        return MAPPER.readValue(filePath.toFile(), new TypeReference<List<QA>>() {});
+    }
+
+    private List<QA> readFromCsv(Path filePath) throws IOException {
+        try (Reader reader = new FileReader(filePath.toFile())) {
+            return new CsvToBeanBuilder<QA>(reader)
+                    .withType(QA.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build()
+                    .parse();
+        }
+    }
+
 
     /**
      * Applies dataset type flags to a QA record.
@@ -180,11 +208,12 @@ public class DatasetReader {
      * is set to true; all others are false.
      *
      * @param record the QA record to tag
-     * @param type the dataset type determining which flags to set
+     * @param type   the dataset type determining which flags to set
      */
     private void applyDatasetType(QA record, DatasetType type) {
         record.setTest(type == DatasetType.TEST);
         record.setValid(type == DatasetType.VALID);
         record.setTrain(type == DatasetType.TRAIN);
+        record.setEvaluation(type == DatasetType.EVALUATION);
     }
 }

@@ -3,7 +3,6 @@ package de.tum.claritypipeline.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import de.tum.clarityneo4j.core.Neo4jClient;
-import de.tum.clarityneo4j.core.Neo4jNode;
 import de.tum.clarityneo4j.core.Neo4jRelation;
 import de.tum.claritypipeline.model.classification.ClassificationRequest;
 import de.tum.claritypipeline.model.classification.ClassificationResult;
@@ -25,12 +24,10 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class PromptEnhancer {
     private final static String PLACEHOLDER_PROMPT = "{dump_prompt}";
@@ -69,19 +66,19 @@ public class PromptEnhancer {
      *
      * @param prompt the final enhanced prompt text
      */
-    private void outputPromptToFile(String prompt) {
+    private void outputPromptToFile(String prompt, String path) {
         if (properties.getOutputPrompt() == null || properties.getOutputPrompt().isBlank()) {
             return;
         }
         try {
-            if (properties.getOutputPrompt().endsWith(".yaml") || properties.getOutputPrompt().endsWith(".yml")) {
+            if (path.endsWith(".yaml") || path.endsWith(".yml")) {
                 StringBuilder yamlContent = new StringBuilder("prompt: |\n");
                 for (String line : prompt.split("\n")) {
                     yamlContent.append("  ").append(line).append("\n");
                 }
-                SerializationUtils.writeStringToFile(properties.getOutputPrompt(), yamlContent.toString());
+                SerializationUtils.writeStringToFile(path, yamlContent.toString());
             } else {
-                SerializationUtils.writeStringToFile(properties.getOutputPrompt(), prompt);
+                SerializationUtils.writeStringToFile(path, prompt);
             }
         } catch (Exception e) {
             log.error("Failed to write prompt to file: {}", e.getMessage(), e);
@@ -96,8 +93,8 @@ public class PromptEnhancer {
      *
      * @param taxonomy the final refined taxonomy structure
      */
-    private void outputTaxonomyToFile(Taxonomy taxonomy) {
-        if (properties.getOutputTaxonomy() == null || properties.getOutputTaxonomy().isBlank()) {
+    private void outputTaxonomyToFile(Taxonomy taxonomy, String path) {
+        if (path == null || path.isBlank()) {
             return;
         }
         try {
@@ -105,7 +102,7 @@ public class PromptEnhancer {
             yamlMapper.findAndRegisterModules();
             yamlMapper.writerWithDefaultPrettyPrinter();
             yamlMapper.writeValue(
-                    new File(properties.getOutputTaxonomy()),
+                    new File(path),
                     taxonomy
             );
         } catch (IOException e) {
@@ -292,70 +289,39 @@ public class PromptEnhancer {
                     } else {
                         log.warn("Revised prompt in patch result was null or empty, retaining current prompt.");
                     }
-                    if (patchResult.getRevisedTaxonomy() != null) {
-                        currentTaxonomy = Taxonomy.builder()
-                                                  .name(currentTaxonomy.getName())
-                                                  .description(currentTaxonomy.getDescription())
-                                                  .version(currentTaxonomy.getVersion())
-                                                  .labelProperty(currentTaxonomy.getLabelProperty())
-                                                  .categories(patchResult.getRevisedTaxonomy())
-                                                  .build();
-                        validateNewTaxonomy(currentTaxonomy);
-                        iteration.setRevisedTaxonomy(SerializationUtils.serialize(currentTaxonomy));
-                    } else {
-                        log.warn("Revised taxonomy in patch result was null, retaining current taxonomy.");
-                    }
                     iteration.setRevisedPrompt(currentClassificationPrompt);
                     client.updateNode(iteration);
+                    if (!currentClassificationPrompt.contains("{question}") || !currentClassificationPrompt.contains(
+                            "{context}")) {
+                        log.error(
+                                "The revised prompt does not contain required placeholders {question} or {context}. "
+                                        + "Stopping enhancement process.");
+                        break;
+                    }
                 } else {
                     log.warn("Patch result was null or empty, retaining current prompt.");
                 }
             }
 
             log.info("Enhancement iteration {} completed with {} QAs.", i + 1, tasks.size());
+
+            if (properties.isSaveTemporaryResults()) {
+                log.debug("Saving temporary prompt and taxonomy after iteration {}.", i + 1);
+                String classificationFileExtension = properties.getOutputPrompt() != null
+                        ? properties.getOutputPrompt().substring(
+                        properties.getOutputPrompt().lastIndexOf('.'))
+                        : ".txt";
+                String classificationFileBaseName = properties.getOutputPrompt() != null
+                        ? properties.getOutputPrompt().substring(0,
+                                                                 properties.getOutputPrompt().lastIndexOf('.'))
+                        : "enhanced_prompt";
+                outputPromptToFile(currentClassificationPrompt,
+                                   classificationFileBaseName + "_iteration_" + (i + 1) + classificationFileExtension);
+            }
         }
-        outputPromptToFile(currentClassificationPrompt);
-        outputTaxonomyToFile(currentTaxonomy);
+        outputPromptToFile(currentClassificationPrompt, properties.getOutputPrompt());
 
         log.info("Prompt enhancement process completed.");
-    }
-
-    /**
-     * Validates that the revised taxonomy doesn't add new categories.
-     * <p>
-     * Enforcement rules:
-     * <ul>
-     *   <li>No new category names allowed</li>
-     *   <li>Missing categories from revised taxonomy are restored from original</li>
-     *   <li>Existing categories can only have descriptions/examples refined</li>
-     * </ul>
-     * <p>
-     * Throws IllegalArgumentException if new categories are detected.
-     *
-     * @param taxonomy the revised taxonomy to validate
-     * @throws IllegalArgumentException if new categories are present
-     */
-    private void validateNewTaxonomy(Taxonomy taxonomy) {
-        Set<String> originalLabels = properties.getTaxonomy().getCategories()
-                                               .stream()
-                                               .map(Taxonomy.Category::getName)
-                                               .collect(Collectors.toSet());
-        for (Taxonomy.Category category : taxonomy.getCategories()) {
-            if (!originalLabels.contains(category.getName())) {
-                throw new IllegalArgumentException(
-                        "New categories cannot be added to the taxonomy during prompt enhancement. "
-                                + "Offending category: " + category.getName());
-            }
-        }
-        List<Taxonomy.Category> completeCategories = new ArrayList<>(taxonomy.getCategories());
-        for (Taxonomy.Category originalCategory : properties.getTaxonomy().getCategories()) {
-            boolean exists = taxonomy.getCategories().stream()
-                                     .anyMatch(cat -> cat.getName().equals(originalCategory.getName()));
-            if (!exists) {
-                completeCategories.add(originalCategory);
-            }
-        }
-        taxonomy.setCategories(completeCategories);
     }
 
     /**
@@ -464,7 +430,7 @@ public class PromptEnhancer {
      *   <li>ClassificationResult --[BELONGS_TO_ITERATION]→ Iteration</li>
      * </ul>
      *
-     * @param tasks list of classification tasks with results
+     * @param tasks     list of classification tasks with results
      * @param iteration the current enhancement iteration
      */
     private void batchSaveClassifications(List<ClassificationTask> tasks, PromptEnhancingIteration iteration) {
@@ -492,10 +458,10 @@ public class PromptEnhancer {
      * <p>
      * Helper method for batch relationship creation.
      *
-     * @param relation the relationship instance to configure
+     * @param relation    the relationship instance to configure
      * @param startNodeId element ID of the start node
-     * @param endNodeId element ID of the end node
-     * @param <T> relationship type extending Neo4jRelation
+     * @param endNodeId   element ID of the end node
+     * @param <T>         relationship type extending Neo4jRelation
      * @return the configured relationship object
      */
     private <T extends Neo4jRelation> T createRelationObject(T relation, String startNodeId, String endNodeId) {
@@ -519,9 +485,9 @@ public class PromptEnhancer {
      * Updates the unusedQAs list by removing processed QAs.
      *
      * @param unusedQAs mutable list of QAs not yet used (modified in place)
-     * @param taxonomy the current taxonomy structure
-     * @param prompt the current classification prompt
-     * @param i iteration number (for logging)
+     * @param taxonomy  the current taxonomy structure
+     * @param prompt    the current classification prompt
+     * @param i         iteration number (for logging)
      * @return list of classification tasks with results and expected labels
      */
     private List<ClassificationTask> classifyQAsForIteration(
@@ -589,7 +555,7 @@ public class PromptEnhancer {
      *   <li>Answer text</li>
      * </ul>
      *
-     * @param qa the QA to classify
+     * @param qa       the QA to classify
      * @param taxonomy the current taxonomy
      * @return complete classification request
      */
@@ -615,7 +581,7 @@ public class PromptEnhancer {
      * Removes "Q. " prefix if present.
      *
      * @param interviewQuestion the interview question
-     * @param interviewAnswer the interview answer
+     * @param interviewAnswer   the interview answer
      * @return formatted context string
      */
     private String buildContext(String interviewQuestion, String interviewAnswer) {
@@ -638,44 +604,6 @@ public class PromptEnhancer {
      */
     private List<QA> fetchQAs() {
         return client.executeQuery(properties.getQuery(), QA.class);
-    }
-
-    /**
-     * Filters QAs to exclude those already classified by this enhancement run.
-     * <p>
-     * Queries Neo4j to find QAs with existing classifications generated by
-     * this PromptEnhancingProperties instance, ensuring each QA is only
-     * used once across all iterations.
-     *
-     * @param qas the complete list of QAs
-     * @return list of QAs not yet used by this enhancement run
-     */
-    private List<QA> filterNotUsedQAs(List<QA> qas) {
-        String qaIds = qas.stream()
-                          .map(qa -> "'" + qa.getElementId() + "'")
-                          .collect(Collectors.joining(","));
-
-        String query = String.format("""
-                                             MATCH (n:%s)-[:%s]->(:%s)-[:%s]->(pep:%s)
-                                             WHERE elementId(n) IN [%s]
-                                             AND elementId(pep) = '%s'
-                                             RETURN n
-                                             """,
-                                     Neo4jNode.getLabel(QA.class),
-                                     Neo4jRelation.getType(HasClassification.class),
-                                     Neo4jNode.getLabel(ClassificationResult.class),
-                                     Neo4jRelation.getType(GeneratedBy.class),
-                                     Neo4jNode.getLabel(PromptEnhancingProperties.class),
-                                     qaIds,
-                                     properties.getElementId()
-        );
-
-        Set<String> used = client.executeQuery(query, QA.class)
-                                 .stream().map(QA::getElementId).collect(Collectors.toSet());
-
-        return qas.stream()
-                  .filter(qa -> !used.contains(qa.getElementId()))
-                  .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -739,9 +667,9 @@ public class PromptEnhancer {
      * Used to track classification results alongside their expected labels
      * for failure analysis.
      *
-     * @param qa the question-answer pair
-     * @param result the classification result from the model
-     * @param category the matched taxonomy category
+     * @param qa               the question-answer pair
+     * @param result           the classification result from the model
+     * @param category         the matched taxonomy category
      * @param expectedCategory the ground truth label from the dataset
      */
     private record ClassificationTask(QA qa, ClassificationResult result, Taxonomy.Category category,

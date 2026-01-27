@@ -1,0 +1,115 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+  
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response
+  provided by the interviewee for the following question using the following taxonomy and then provide a brief, evidence-based explanation for your decision (1–3 sentences). Quote or paraphrase the key phrase(s) that justify the label.
+  
+  Taxonomy (category names must be used exactly):
+  1. Explicit - The requested information is directly stated (including direct yes/no or a direct attribute/value), even if phrased differently than the question.
+  2. Implicit - The requested information is not directly stated but is nevertheless clearly committed to and can be inferred unambiguously from what is said in context.
+  3. General - The response attempts to address the requested variable but remains too vague/unspecific to supply the requested value.
+  4. Partial/half-answer - Answers at least one requested component/sub-question of the requested variable but not all, or provides an incomplete specification.
+  5. Dodging - Does not answer the requested variable; may talk around it or provide adjacent/related context, but does not provide the asked-for information.
+  6. Deflection - Briefly engages with the question/topic but pivots to a different main point/talking point instead of answering the requested variable.
+  7. Declining to answer - Acknowledges the question but refuses to answer or indicates they cannot discuss it (e.g., “I won’t comment,” “I can’t discuss that,” “I can’t answer that,” “that’s not appropriate,” “I’m not allowed to say,” or directing the interviewer elsewhere as a substitute for answering, e.g., “ask X / read the report” instead of giving the information).
+  8. Claims ignorance - States they do not know, are not aware of, or do not have the information needed for the requested variable.
+  9. Clarification - Asks a genuine clarifying question needed to understand what is being asked and does not provide the requested information yet.
+  
+  Decision rules (apply in order):
+  - First, identify exactly what specific information the question requests (the “requested variable”), including each sub-part, condition, timeframe, or forced-choice option.
+  
+  - Count as answering only if the response instantiates the requested variable with a clear commitment (e.g., a yes/no, named choice, concrete stance, number/date/name, or clearly stated judgment).
+    - Do NOT treat as answering: mere topic alignment, generic values, policy/process descriptions, future intent (“we’ll look at it”), promises to decide later, or conditional/hedged non-commitments (“it depends,” “we’ll see,” “in due course”) unless they still clearly commit to a present stance/value.
+    - IMPORTANT: If the response contains a clear bottom-line commitment on the requested variable, treat it as an answer even if the speaker rejects the question’s premise, reframes the issue, or gives a different rationale than the interviewer seems to assume.
+  
+  - For Implicit: use when the intended value/stance is pragmatically unambiguous from the response (i.e., a reasonable listener would recover one clear commitment). If multiple materially different values remain plausible, do NOT use Implicit; instead use General (if attempting but vague) or Dodging/Deflection (if avoiding).
+  
+  - For forced-choice or yes/no questions: the response must clearly commit to one side (explicitly OR implicitly). A non-committal “maybe/it depends/we’ll decide later” is not an answer.
+  
+  - For multi-part or conditional questions:
+    - Explicit = all requested parts/conditions are answered with clear commitments.
+    - Partial/half-answer = at least one requested part/condition is answered with a clear commitment, but not all.
+    - Guardrail: Use Partial/half-answer only when the question truly asks multiple components (e.g., multiple explicit sub-questions, multiple named items, or a conditional + an unconditional part). Do NOT use Partial merely because the speaker addressed one “angle,” one example, or one sub-aspect of a single-variable “why/how/appropriate” prompt.
+    - If the speaker answers a different version of the question (e.g., answers the unconditional or a preferred condition like “with a deal” while avoiding the asked condition like “if no deal by date”), treat that as Deflection unless they also clearly commit on the asked condition.
+  
+  - If none of the requested parts are answered:
+    - Use Clarification if the response is a genuine question to understand what is being asked and does not yet provide the requested information.
+    - Use Claims ignorance when the speaker indicates lack of knowledge/awareness/information about the requested variable (“I don’t know,” “I’m not aware,” “I haven’t seen,” “I don’t have that information”).
+      - If the speaker mixes ignorance with temporality (e.g., “I can’t answer yet” because they don’t have the information), prefer Claims ignorance unless they also indicate a refusal/constraint (e.g., “can’t discuss,” “not allowed,” “won’t say”).
+    - Use Declining to answer when the speaker refuses or indicates a discussion constraint (won’t/can’t discuss/allowed), including when they direct the interviewer elsewhere in lieu of answering.
+    - Otherwise, choose among General, Dodging, and Deflection using this operational test:
+      - General = the speaker is still trying to answer the same requested variable, but the value remains underspecified/vague.
+      - Deflection = after briefly engaging, the speaker’s main thrust becomes a different central claim/frame/talking point (the requested variable is no longer what they are primarily trying to answer).
+      - Dodging = neither a clear attempt to provide the requested variable nor a clear pivot to a new central point; includes stalling, ultra-short acknowledgements (“good question,” “I hear you”), or adjacent remarks that never instantiate the requested value.
+  
+  - For open-ended prompts (e.g., “comment on…,” “how can X help…,” “what do you say to…”) do not treat any relevant statement as an answer by default. The response must address the focal ask (the specific thing the interviewer is requesting), not merely provide adjacent context.
+  
+  - If the interviewee provides the requested information anywhere in the answer, label accordingly even if they add tangents; however, only treat it as “provided” when it is clear and not materially undermined by ambiguity/hedging.
+  
+  - Evidence requirement: In your 1–3 sentence explanation, quote or paraphrase the exact phrase(s) that contain the commitment (for Explicit/Partial/Implicit) or the refusal/ignorance/clarifying question/pivot/vagueness (for Declining/Claims ignorance/Clarification/Deflection/General/Dodging).
+  
+  ---
+  Here is one small example for each term of the taxonomy:
+  
+  Question: Do you have your own views about PR at Westminster don’t you?
+  Answer: I do.
+  Label: Explicit
+  Explanation: The answer directly provides the requested yes/no information.
+  
+  Question: Are you going to watch television?
+  Answer: What else is there to do?
+  Label: Implicit
+  Explanation: The answer implies “yes” with essentially no other plausible interpretation.
+  
+  Question: What’s your favorite film?
+  Answer: I like all kinds of movies—hard to pick just one.
+  Label: General
+  Explanation: The reply stays on the requested variable but is too vague to identify a specific favorite.
+  
+  Question: Did you enjoy the film?
+  Answer: The directing was great.
+  Label: Partial/half-answer
+  Explanation: It provides a clear evaluation of one sub-aspect but does not state overall enjoyment.
+  
+  Question: Do you like my new dress?
+  Answer: We are late.
+  Label: Dodging
+  Explanation: The answer does not address the question.
+  
+  Question: Did you eat the last piece of pie?
+  Answer: Look, the real issue is that we need healthier options in this house.
+  Label: Deflection
+  Explanation: The speaker pivots to a different main point (“the real issue… healthier options”) instead of answering whether they ate it.
+  
+  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+  Answer: I am not going to prophesy what will happen.
+  Label: Declining to answer
+  Explanation: The speaker explicitly refuses to answer.
+  
+  Question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+  Answer: I do not know that date. I will find out and let the House know.
+  Label: Claims ignorance
+  Explanation: The speaker explicitly states they do not know.
+  
+  Question: Was it your decision to release the fund?
+  Answer: You mean the public fund?
+  Label: Clarification
+  Explanation: The speaker asks what the term refers to before answering.
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Explanation for the classification decision>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

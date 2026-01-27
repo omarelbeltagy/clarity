@@ -3,6 +3,7 @@
 - [📝 Pipeline Documentation](clarity-pipeline/README.md)
 - [📊 SemEval 2026 Task](https://konstantinosftw.github.io/CLARITY-SemEval-2026/)
 - [🤗 Dataset](https://huggingface.co/datasets/ailsntua/QEvasion)
+- [🤗 Evaluation Dataset](https://github.com/konstantinosftw/CLARITY-SemEval-2026/blob/main/dataset/clarity_task_evaluation_dataset.csv)
 - [📄 A dataset, taxonomy and baselines on response clarity classification](https://arxiv.org/abs/2409.13879)
 - [:octocat: GitHub Repository](https://github.com/omarelbeltagy/clarity)
 

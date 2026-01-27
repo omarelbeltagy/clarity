@@ -1,0 +1,83 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Based on a segment of the interview in which the interviewer poses a series of questions, the type of response provided by the interviewee for the question has already been classified.
+  Your task is to check the correctness of this classification using the provided taxonomy and provide a chain of thought explanation for your decision. If the classification is incorrect, provide the correct classification.
+  Use the taxonomy, examples, and detailed instructions below to guide your analysis.
+  
+  Use the following taxonomy and examples as the base reference:
+  
+  {taxonomy}
+  
+  ---
+  Here is one small example for each term of the taxonomy:
+  
+  {examples}
+  
+  ---
+  
+  The answer has been classified as:
+  {classification_result}
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  ### Part of the Interview
+  {context}
+  
+  ### Question
+  {question}
+  
+  ---
+  
+  Decision rules (apply in order):
+  
+  1) Identify the “requested variable” (slot)
+  - First, identify exactly what specific information the question requests (the “requested variable”), including each sub-part, condition, timeframe, or forced-choice option. Treat this as a concrete slot that must be filled (e.g., a specific yes/no, named choice, actor, date/number, stance, or action).
+  
+  2) Check for a slot-fill FIRST (hard precedence)
+  - Before considering Dodging/Deflection/General, scan the entire response for ANY clear commitment that fills the requested slot at the specificity level demanded.
+    - If all parts are filled → Explicit (or Implicit if only inferable under the strict rule below).
+    - If some (but not all) explicitly requested parts/conditions are filled → Partial/half-answer.
+  - Only if there is NO clear slot-fill anywhere should you choose among General/Dodging/Deflection (or Declining/Claims ignorance/Clarification).
+  
+  3) What counts as a slot-fill (and what does NOT)
+  - Count as answering only if the response fills the slot with a clear commitment at the same specificity level the question demands.
+    - Do NOT treat as answering: mere topic alignment, reassurance, rhetorical soothing, slogans, broad principles, policy/process descriptions, meta-commentary about discussion, future intent (“we’ll look at it”), promises to decide later, or conditional/hedged non-commitments (“it depends,” “we’ll see,” “in due course”), unless they STILL clearly commit to a particular value/side now.
+    - Specificity match: If the question asks for concrete details (e.g., who/what/when/which terms/what exactly was said), then abstract aspirations, broad principles, or “we discussed X” without the requested specifics are NOT an answer.
+    - Reframing is not automatically an answer: A response can reject the premise or reframe the issue and STILL answer—BUT only if it clearly commits to the requested value/side. Directionally aligned messaging is not enough.
+  
+  4) Implicit (use narrowly)
+  - For Implicit: use ONLY when the response leaves only one materially plausible value/side for the requested variable.
+    - If the statement could reasonably be consistent with multiple values/sides (e.g., reassurance, optimism, “we’re working on it,” “we take it seriously,” “we’re making progress,” “we’ll review”), do NOT label Implicit.
+    - In those cases: use General (if they attempt to give the value but remain vague) or Dodging/Deflection (if they avoid giving the value).
+  
+  5) Forced-choice / yes-no / evaluative questions (extra guardrail)
+  - For forced-choice or yes/no questions: the response must clearly commit to one side (explicitly OR implicitly under the strict rule above). Non-committal hedging (“maybe/it depends/we’ll decide later”) is not an answer.
+  - For evaluative yes/no asks (e.g., “is there a problem?”, “should people worry?”, “was that a mistake?”): citing related facts, describing efforts, or expressing confidence/concern does NOT automatically equal “yes” or “no” unless the speaker actually makes that judgment.
+  
+  6) Multi-part or conditional questions
+  - Explicit = all requested parts/conditions are answered with clear commitments.
+  - Partial/half-answer = at least one explicitly requested part/condition is answered with a clear commitment, but not all.
+  - Guardrail: Do NOT use Partial/half-answer merely because the speaker addressed one angle, example, or rationale for a single requested value. Use Partial only when the question truly contains multiple explicit asks or an explicit condition + an unconditional component.
+  - If the speaker answers a different condition/version than asked (e.g., answers “with a deal” while avoiding the asked “if no deal by date”), treat that as Deflection unless they also clearly commit on the asked condition.
+  
+  7) If none of the requested parts are answered
+  - Use Clarification if the response is a genuine question to understand what is being asked and does not yet provide the requested information.
+  - Use Claims ignorance when the speaker indicates lack of knowledge/awareness/certainty about the requested variable (including “I don’t know,” “I’m not aware,” “I haven’t seen,” “I don’t have that information,” “I’m not sure,” “as far as I know,” “I assume,” “I’ve heard,” or other language that signals they cannot vouch for the asked-for fact).
+    - If the speaker mixes ignorance with temporality (e.g., “I can’t answer yet” because they don’t have the information), prefer Claims ignorance unless they also indicate a refusal/constraint.
+  - Use Declining to answer when the speaker refuses or indicates a discussion constraint (won’t/can’t discuss/not allowed), including when they direct the interviewer elsewhere in lieu of answering.
+  - Otherwise, choose among General, Dodging, and Deflection using this operational test:
+    - General = the speaker is trying to answer the same requested variable (i.e., attempting to provide the value/side) but the value remains too vague/underspecified to fill the slot.
+    - Deflection = the speaker pivots to a different main claim/agenda such that the new claim could stand alone as what they want to talk about instead of answering the slot (often signaled by “the real issue is…,” “what matters is…,” attacking the questioner/premise, or switching to broader messaging). If they still clearly commit to the slot, do NOT use Deflection.
+    - Dodging = the speaker does not fill the slot and does not advance a clear alternative main claim; includes stalling, meandering adjacent remarks, or off-variable talk without a new central point.
+  
+  8) Open-ended prompts
+  - For open-ended prompts (e.g., “comment on…,” “how can X help…,” “what do you say to…”): identify the focal ask (what the interviewer is requesting the speaker to provide), and do not treat merely relevant or on-topic statements as an answer unless they directly address that focal ask at the needed specificity.
+  
+  9) Evidence requirement
+  - In your 1–3 sentence explanation, quote or paraphrase the exact phrase(s) that contain the commitment (for Explicit/Partial/Implicit) or the refusal/ignorance/clarifying question/pivot/vagueness (for Declining/Claims ignorance/Clarification/Deflection/General/Dodging).
+  
+  ---
+  
+  ### Output
+  {response_format}

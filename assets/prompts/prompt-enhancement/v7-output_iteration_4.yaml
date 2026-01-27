@@ -1,0 +1,61 @@
+prompt: |
+  <prompt>
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of response given by an interviewee to a specific interview question.
+  
+  **Taxonomy (labels must remain exactly as listed)**
+  1. **Explicit** – The answer directly provides the requested information **in the exact form the question asks for** (e.g., if the question asks “What year…?”, the answer states the year without re‑phrasing; if the question asks “Did you …?”, the answer uses a clear “Yes/No” plus the required detail). The wording should match the structure or key phrase of the question.
+  2. **Implicit** – The answer contains the requested information but is **conveyed indirectly or re‑phrased**, not in the exact form the question expects. It must still give the full detail and must not be vague.
+  3. **General** – The answer is overly broad or vague **and does not contain an acknowledgement cue nor an explicit claim of ignorance**. It fails to give the specific detail the question seeks.
+  4. **Partial/half-answer** – The answer addresses only a portion of the request, leaving the rest unanswered.
+  5. **Deflection** – The answer **acknowledges** the question (see acknowledgement cue below) and then shifts the discussion to a different point, avoiding the original request.
+  6. **Dodging** – The answer moves to a new topic **without acknowledging** the question.
+  7. **Declining to answer** – The respondent explicitly states they will not answer (or will not answer now), regardless of knowledge.
+  8. **Claims ignorance** – The respondent admits they do not know the answer or lack the information. Acceptable phrasing includes “I don’t know”, “I have no idea”, “I’m not sure”, “I can’t recall”, etc.
+  9. **Clarification** – The respondent does not provide the information but asks the interviewer to clarify the question.
+  
+  **Acknowledgement cue**: An answer is considered to acknowledge the question if it:
+  - repeats a key phrase or clause from the question verbatim;
+  - uses explicit reference wording such as “about that”, “regarding your question”, “as for the question you asked…”, “you asked about…”, **or** paraphrased equivalents like “regarding that”, “as you mentioned”, “about what you just asked”;
+  - includes the primary noun phrase or subject of the question (e.g., the question asks about *the funding decision* and the answer says “regarding the funding decision…”).
+  Any of these signals, even if brief, qualifies as acknowledgment.
+  
+  **Decision hierarchy (apply the first applicable rule in the order listed)**:
+  1. If the response **directly fulfills** the request (matches the form of the question) → **Explicit**.
+  2. Else if the same information is given but in **different wording** (and not vague) → **Implicit**.
+  3. Else if the answer **contains an acknowledgement cue** and then diverts to another topic → **Deflection**.
+  4. Else if the answer moves to a new topic **without any acknowledgement cue** → **Dodging**.
+  5. Else if only part of the requested information is supplied → **Partial/half-answer**.
+  6. Else if the respondent admits lack of knowledge (using any phrasing listed under Claims ignorance) → **Claims ignorance**.
+  7. Else if the respondent states they will not answer → **Declining to answer**.
+  8. Else if the respondent asks for clarification → **Clarification**.
+  9. Else → **General**.
+  
+  **Examples (clarified)**
+  - *Explicit*: Q: "Do you have your own views about PR at Westminster?" A: "Yes, I believe the current PR strategy is ineffective." → **Explicit** (answer repeats the request for a view and gives it directly).
+  - *Implicit*: Q: "Are you going to watch television tonight?" A: "I might catch something later on." → **Implicit** (same intent, re‑phrased).
+  - *General*: Q: "What’s your favorite film?" A: "I enjoy thrillers and dramas alike." → **General**.
+  - *Partial/half-answer*: Q: "Did you enjoy the film?" A: "The directing was superb, but the plot was confusing." → **Partial/half-answer**.
+  - *Deflection*: Q: "Did you eat the last piece of pie?" A: "Regarding that, I think the recipe is fantastic, especially the chocolate chips." → **Deflection** (acknowledges the pie question, then shifts).
+  - *Dodging*: Q: "Do you like my new dress?" A: "We’re running late, so let’s hurry." → **Dodging** (no acknowledgment of the dress).
+  - *Declining to answer*: Q: "Will you support the new policy?" A: "I’m not going to comment on that right now." → **Declining to answer**.
+  - *Claims ignorance*: Q: "On what precise date did the government order the refit of HMAS Kanimbla?" A: "I don’t know the exact date, but I’ll look it up." → **Claims ignorance**.
+  - *Clarification*: Q: "Was it your decision to release the fund?" A: "Do you mean the public fund or the research fund?" → **Clarification**.
+  
+  **Task**
+  You will be given a short segment of an interview (the interview segment) and a specific question (the provided question). Using the taxonomy and the decision hierarchy above, determine the single most appropriate label for the interviewee’s answer, provide a concise chain‑of‑thought explanation, and assign a confidence score.
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Explanation for the classification decision>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }
+  </prompt>

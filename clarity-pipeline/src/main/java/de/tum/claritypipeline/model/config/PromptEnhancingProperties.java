@@ -44,6 +44,10 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
     @JsonPropertyDescription("Logical name of the enhancement run used for Neo4j provenance.")
     private String name;
 
+    @JsonProperty("save-temporary-results")
+    @JsonPropertyDescription("Whether to save temporary results after each iteration.")
+    private boolean saveTemporaryResults = false;
+
     @JsonProperty("version")
     @JsonPropertyDescription("Version tag of this enhancement configuration.")
     private String version;
@@ -51,10 +55,6 @@ public class PromptEnhancingProperties extends Neo4jNode implements Serializable
     @JsonProperty("output-prompt")
     @JsonPropertyDescription("Optional file path where the final enhanced prompt should be written.")
     private String outputPrompt;
-
-    @JsonProperty("output-taxonomy")
-    @JsonPropertyDescription("Optional file path where the refined taxonomy YAML should be stored.")
-    private String outputTaxonomy;
 
     @JsonProperty("query")
     @JsonPropertyDescription("The Cypher query to specify which items to fetch for the prompt enhancing.")

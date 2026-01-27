@@ -1,0 +1,103 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+  
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response
+  provided by the interviewee for the following question using the following taxonomy.
+  
+  Important: Provide only a brief, evidence-based justification. Do not provide step-by-step hidden reasoning or speculate about intent beyond what is supported by the text.
+  
+  ## Taxonomy (category names must match exactly)
+  1. Explicit - The response **directly resolves what the question is asking for** (e.g., a clear yes/no to the *asked proposition*, the requested choice, or the requested specific value/stance), stated plainly.
+  2. Implicit - The response resolves what was asked **indirectly**, and the missing answer can be inferred with high confidence (not just guessed from topic overlap).
+  3. General - The response is on-topic but too vague/unspecific to satisfy what was asked.
+  4. Partial/half-answer - Answers only one component of a multi-part request or addresses only part of what is required.
+  5. Dodging - Does not answer the asked proposition/request at all (no attempt to resolve it), even if speaking about a nearby or thematically related topic.
+  6. Deflection - Makes an initial, direct attempt to address the asked proposition/request (even briefly) **but then pivots** so the key requested information remains unanswered.
+  7. Declining to answer - Acknowledges the question but refuses to provide the requested information (or refuses the key part) at this time, directly or indirectly.
+  8. Claims ignorance - States or clearly indicates they do not know / do not have the information.
+  9. Clarification - Requests clarification needed to answer (i.e., asks what the question means, which referent/timeframe/definition applies), instead of answering.
+  
+  ## Decision rules (apply in order)
+  1) Identify the question’s required output: the exact proposition/request (yes/no, choice, value, name, stance, explanation, etc.).
+  2) Proposition test: Does the response provide enough to extract the requested output for the asked subject/scenario?
+     - If yes, label Explicit (or Implicit if only indirectly recoverable).
+     - If no, do **not** label Explicit/Implicit just because it contains agreement, concern, discussion, or topic-related statements.
+  
+  ## Tie-break rules for common confusions
+  - Explicit dominates (narrowed): Use Explicit only when the response unambiguously resolves the question’s proposition (e.g., a clear “yes/no” to *that proposition*, a selected option, or the requested value). A generic affirmation (e.g., “we’re concerned,” “we discussed it,” “I agree generally”) is **not** Explicit unless it answers the specific ask.
+  - Implicit vs Deflection: Use Implicit only if the requested information is actually recoverable from the answer with high confidence (e.g., a clear implied yes/no to the asked proposition, a clearly implied identity/value). If the response merely offers a related talking point and does not resolve what was asked, do NOT use Implicit.
+  - Deflection vs Dodging (sharpened):
+    - Deflection requires an initial, direct attempt to answer the asked proposition/request (e.g., starts giving the requested yes/no/value/stance) before pivoting away.
+    - If the respondent only provides adjacent commentary or a different message without that initial direct attempt, label Dodging.
+  - Specific-value questions (date/number/name/precise definition):
+    - If a precise value is requested and the response does not provide it (and it is not clearly inferable), prefer General.
+    - If the response provides one required element but omits others, prefer Partial/half-answer.
+    - If the response indicates lack of knowledge (even indirectly, e.g., uncertain check-backs that function as not knowing), prefer Claims ignorance.
+  - Clarification vs Claims ignorance (disambiguation):
+    - Clarification: the respondent asks a question that, if answered, would enable them to answer the original question (e.g., “Which fund do you mean?”).
+    - Claims ignorance: the respondent’s question-form reply functions as uncertainty/lack of knowledge (e.g., “About today?” meaning they don’t know the relevant timeframe), without a concrete attempt to answer.
+  - Declining to answer vs General: If the respondent refuses to provide the requested information (or refuses the key part), label Declining to answer. If they provide a substantive response but it is non-committal/vague, label General (or Partial/half-answer if only part is addressed).
+  
+  ## Small examples (one each)
+  Question: Do you have your own views about PR at Westminster don’t you?
+  Answer: I do.
+  Label: Explicit
+  Explanation: The answer directly gives the info requested.
+  
+  Question: Are you going to watch television?
+  Answer: What else is there to do?
+  Label: Implicit
+  Explanation: It clearly implies “yes” without stating it directly.
+  
+  Question: What’s your favorite film?
+  Answer: Fight Club, Filth, and Hereditary.
+  Label: General
+  Explanation: The reply does not provide the requested specificity (one clear favorite).
+  
+  Question: Did you enjoy the film?
+  Answer: The directing was great.
+  Label: Partial/half-answer
+  Explanation: It addresses only one aspect, not overall enjoyment.
+  
+  Question: Do you like my new dress?
+  Answer: We are late.
+  Label: Dodging
+  Explanation: It does not attempt to answer the question.
+  
+  Question: Did you eat the last piece of pie?
+  Answer: I have to admit that this was a great recipe, I always like it when there are chocolate chips in the dough.
+  Label: Deflection
+  Explanation: It engages the topic but shifts to a different point without answering.
+  
+  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+  Answer: I am not going to prophesy what will happen.
+  Label: Declining to answer
+  Explanation: The speaker refuses to provide the requested judgment.
+  
+  Question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+  Answer: I do not know that date. I will find out and let the House know.
+  Label: Claims ignorance
+  Explanation: The speaker states they do not know.
+  
+  Question: Was it your decision to release the fund?
+  Answer: You mean the public fund?
+  Label: Clarification
+  Explanation: The speaker asks for needed clarification instead of answering.
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Brief, text-grounded justification citing the key phrase(s) or the missing required element(s)>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

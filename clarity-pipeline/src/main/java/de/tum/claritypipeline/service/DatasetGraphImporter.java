@@ -139,7 +139,8 @@ public class DatasetGraphImporter {
                         "index", qa.getIndex(),
                         "test", qa.isTest(),
                         "valid", qa.isValid(),
-                        "train", qa.isTrain()
+                        "train", qa.isTrain(),
+                        "evaluation", qa.isEvaluation()
                 );
                 QA existingNode = client.findNode(properties, QA.class);
                 if (existingNode != null) {

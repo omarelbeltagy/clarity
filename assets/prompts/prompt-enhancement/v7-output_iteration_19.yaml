@@ -1,0 +1,59 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of response given by an interviewee to a specific interview question.
+  
+  **Taxonomy (labels must remain exactly as listed)**
+  1. **Explicit** – The answer’s **core content** provides the *exact* datum the question asks for, in the *required format* (e.g., the exact year, a clear Yes/No answer, a specific figure). The datum must be presented **unambiguously**, be the **primary focus** of the response, and not be buried among unrelated commentary. Extra words may appear **only if they do not shift attention away from the required datum**.
+  2. **Implicit** – The answer contains the required datum, but it is expressed indirectly (synonym, paraphrase, different grammatical form). The datum must still be **explicitly mentioned**, **unambiguous**, and the **main point** of the answer. It does **not** meet the exact format required for **Explicit**.
+  3. **Deflection** – The answer **acknowledges** the question **and then** shifts to a different point, avoiding the original request. The acknowledgement must meet the **Acknowledgement cue** criteria (see below).
+  4. **Clarification** – The respondent does **not** provide the information and **explicitly asks for clarification** of the current question (e.g., repeats the question, asks what a term means, requests the question to be restated, or seeks confirmation of which aspect is meant).
+  5. **Partial/half-answer** – The answer satisfies **only a portion** of the request, leaving the rest unanswered. At least one required datum is provided **as the primary focus of the response**; missing parts do not prevent this label.
+  6. **Claims ignorance** – The respondent admits they do not know the answer (e.g., “I don’t know”, “I have no idea”, “I’m not sure”) **and provides no definitive datum nor a clarification request**. Any additional filler sentences (e.g., “but I’ll look it up”) do **not** change the classification as long as no concrete datum is given.
+  7. **Declining to answer** – The respondent explicitly states they will not answer (or will not answer now), regardless of knowledge.
+  8. **Dodging** – The answer moves to a new topic **without any acknowledgement cue** and is not a request for clarification.
+  9. **General** – The answer is overly broad or vague, stays on the same topic, contains no acknowledgement cue nor a claim of ignorance, and fails to give the specific detail the question seeks. It does not provide any datum as the primary focus.
+  
+  **Acknowledgement cue**: An answer is considered to acknowledge the question if it:
+  - repeats a **non‑trivial** key phrase or clause from the question verbatim; **or**
+  - paraphrases the core request **and** includes at least one reference marker (case‑insensitive) from this exact list: “regarding that”, “as you asked”, “to answer your question”, “as for your question”, “about your question”, “about that”, “regarding your question”, “on that point”, “concerning that”, “in response to that”.
+  *Simple topical overlap without a marker does **not** count.*
+  
+  **Decision hierarchy (apply the first applicable rule in the order listed)**:
+  1. **Explicit**
+  2. **Implicit**
+  3. **Deflection**
+  4. **Clarification**
+  5. **Partial/half-answer**
+  6. **Claims ignorance**
+  7. **Declining to answer**
+  8. **Dodging**
+  9. **General**
+  When multiple categories appear possible, select the first that **fully** matches according to this hierarchy and stop evaluating further categories.
+  
+  **Examples (clarified)**
+  - *Explicit*: Q: "Did you attend the meeting?" A: "Sure, I was there at 10 am." → **Explicit**.
+  - *Implicit*: Q: "Are you going to watch television tonight?" A: "I might catch something later on." → **Implicit**.
+  - *Deflection*: Q: "Did you eat the last piece of pie?" A: "Regarding that, I think the recipe is fantastic, especially the chocolate chips." → **Deflection**.
+  - *Clarification*: Q: "Was it your decision to release the fund?" A: "Do you mean the public fund or the research fund?" → **Clarification**.
+  - *Partial/half-answer*: Q: "Did you enjoy the film?" A: "The directing was superb, but the plot was confusing." → **Partial/half-answer**.
+  - *Claims ignorance*: Q: "On what precise date did the government order the refit of HMAS Kanimbla?" A: "I don’t know the exact date, but I’ll look it up." → **Claims ignorance**.
+  - *Declining to answer*: Q: "Will you support the new policy?" A: "I’m not going to comment on that right now." → **Declining to answer**.
+  - *Dodging*: Q: "Do you like my new dress?" A: "We’re running late, so let’s hurry." → **Dodging**.
+  - *General*: Q: "What’s your favorite film?" A: "I enjoy thrillers and dramas alike." → **General**.
+  
+  **Task**
+  You will be given a short segment of an interview (the interview segment) and a specific question (the provided question). Using the taxonomy and the decision hierarchy above, determine the single most appropriate label for the interviewee’s answer, provide a concise chain‑of‑thought explanation, and assign a confidence score.
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Explanation for the classification decision>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

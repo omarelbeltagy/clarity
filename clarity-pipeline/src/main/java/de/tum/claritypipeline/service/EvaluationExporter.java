@@ -165,7 +165,7 @@ public class EvaluationExporter {
      * Creates an exporter with explicit Neo4j credentials and given export options.
      *
      * @param credentials Neo4j credentials for the client
-     * @param options export formatting and behavior options
+     * @param options     export formatting and behavior options
      * @return configured EvaluationExporter
      */
     public static EvaluationExporter create(Neo4jCredentials credentials, EvaluationExportProperties options) {
@@ -251,74 +251,74 @@ public class EvaluationExporter {
      */
     public void generateCustomEvaluation(ClassificationProperties properties) {
         log.info("Generating evaluation for classification run {} of {}", properties.getVersion(),
-            properties.getName());
+                 properties.getName());
         String query = String.format(
                 """
-                MATCH (n:%s)--(cr:%s)--(c:%s)
-                WHERE cr.version = '%s'
-                AND c.name = '%s'
-                RETURN n
-                """,
-            Neo4jNode.getLabel(ClassificationResult.class),
-            Neo4jNode.getLabel(ClassificationProperties.class),
-            Neo4jNode.getLabel(ClassificationProperties.Classification.class),
-            properties.getVersion(),
-            properties.getClassification().getName()
+                        MATCH (n:%s)--(cr:%s)--(c:%s)
+                        WHERE cr.version = '%s'
+                        AND c.name = '%s'
+                        RETURN n
+                        """,
+                Neo4jNode.getLabel(ClassificationResult.class),
+                Neo4jNode.getLabel(ClassificationProperties.class),
+                Neo4jNode.getLabel(ClassificationProperties.Classification.class),
+                properties.getVersion(),
+                properties.getClassification().getName()
         );
 
         List<ClassificationResult> results = client.executeQuery(query, ClassificationResult.class);
         log.info("Found {} classification results for evaluation", results.size());
         List<List<String>> predictionsAndExpected =
-            results.parallelStream()
-                .map(result -> {
-                    String findQAQuery = String.format(
-                            """
-                            MATCH (cr:%s)--(n:%s)
-                            WHERE elementId(cr) = '%s'
-                            RETURN n
-                            """,
-                        Neo4jNode.getLabel(ClassificationResult.class),
-                        Neo4jNode.getLabel(QA.class),
-                        result.getElementId()
-                    );
+                results.parallelStream()
+                       .map(result -> {
+                           String findQAQuery = String.format(
+                                   """
+                                           MATCH (cr:%s)--(n:%s)
+                                           WHERE elementId(cr) = '%s'
+                                           RETURN n
+                                           """,
+                                   Neo4jNode.getLabel(ClassificationResult.class),
+                                   Neo4jNode.getLabel(QA.class),
+                                   result.getElementId()
+                           );
 
-                    QA qa = client.executeQuery(findQAQuery, QA.class)
-                        .stream()
-                        .findFirst()
-                        .orElse(null);
+                           QA qa = client.executeQuery(findQAQuery, QA.class)
+                                         .stream()
+                                         .findFirst()
+                                         .orElse(null);
 
-                    if (qa == null) {
-                        log.warn("No QA found for classification result {}. Could not generate evaluation",
-                                result.getElementId());
-                        return null;
-                    }
-                    List<String> returnList = new ArrayList<>();
-                    returnList.add(result.getName());
-                    returnList.add(qa.getClarityLabel());
-                    returnList.add(qa.getAnnotator1());
-                    returnList.add(qa.getAnnotator2());
-                    returnList.add(qa.getAnnotator3());
-                    return returnList.contains(null) ? null : returnList;
-                })
-                .filter(Objects::nonNull)
-                .toList();
+                           if (qa == null) {
+                               log.warn("No QA found for classification result {}. Could not generate evaluation",
+                                        result.getElementId());
+                               return null;
+                           }
+                           List<String> returnList = new ArrayList<>();
+                           returnList.add(result.getName());
+                           returnList.add(qa.getClarityLabel());
+                           returnList.add(qa.getAnnotator1());
+                           returnList.add(qa.getAnnotator2());
+                           returnList.add(qa.getAnnotator3());
+                           return returnList.contains(null) ? null : returnList;
+                       })
+                       .filter(Objects::nonNull)
+                       .toList();
 
         List<String> predictions = predictionsAndExpected.stream()
-            .map(l -> l.get(0))
-            .toList();
+                                                         .map(l -> l.get(0))
+                                                         .toList();
 
         List<String> expected = predictionsAndExpected.stream()
-            .map(l -> l.get(1))
-            .toList();
+                                                      .map(l -> l.get(1))
+                                                      .toList();
 
         List<List<String>> annotations = predictionsAndExpected.stream()
-            .map(l -> l.subList(2, 5))
-            .toList();
+                                                               .map(l -> l.subList(2, 5))
+                                                               .toList();
 
         List<String> labels = properties.getTaxonomy().getCategories()
-            .stream()
-            .map(Taxonomy.Category::getName)
-            .toList();
+                                        .stream()
+                                        .map(Taxonomy.Category::getName)
+                                        .toList();
 
         try {
             ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
@@ -373,7 +373,7 @@ public class EvaluationExporter {
      * Overloaded version accepting a ClassificationProperties object directly.
      *
      * @param classificationProperties the classification properties object
-     * @param outputFile path for the output ZIP file
+     * @param outputFile               path for the output ZIP file
      * @throws IOException if file operations fail
      * @see #exportResult(String, String)
      */
@@ -413,7 +413,8 @@ public class EvaluationExporter {
                     }
                     String name = category.getMapTo();
                     if (name == null) {
-                        throw new RuntimeException("Could not find mapping for category with name " + result.getName());
+                        throw new RuntimeException(
+                                "Could not find mapping for category with name " + result.getName());
                     }
                     writer.write(name);
                 }
@@ -498,6 +499,7 @@ public class EvaluationExporter {
                        .recall(evaluation.getRecall())
                        .macroF1(evaluation.getMacroF1())
                        .microF1(evaluation.getMicroF1())
+                       .evasionMacroF1(evaluation.getEvasionMacroF1())
                        .build();
     }
 
@@ -529,6 +531,7 @@ public class EvaluationExporter {
                                                   .recall(round(eval.getRecall(), factor))
                                                   .macroF1(round(eval.getMacroF1(), factor))
                                                   .microF1(round(eval.getMicroF1(), factor))
+                                                  .evasionMacroF1(round(eval.getEvasionMacroF1(), factor))
                                                   .build();
     }
 
@@ -579,6 +582,7 @@ public class EvaluationExporter {
         createNumericCell(excelRow, col++, data.recall(), styles.getNumberStyle());
         createNumericCell(excelRow, col++, data.macroF1(), styles.getNumberStyle());
         createNumericCell(excelRow, col++, data.microF1(), styles.getNumberStyle());
+        createNumericCell(excelRow, col++, data.evasionMacroF1(), styles.getNumberStyle());
     }
 
     private void createCell(XSSFRow row, int column, String value, XSSFCellStyle style) {
@@ -628,7 +632,7 @@ public class EvaluationExporter {
          * Constructs a StyleHelper with styles configured according to export options.
          *
          * @param workbook the Excel workbook for style creation
-         * @param options export options controlling formatting
+         * @param options  export options controlling formatting
          */
         StyleHelper(XSSFWorkbook workbook, EvaluationExportProperties options) {
             if (options == null) {
@@ -704,13 +708,14 @@ public class EvaluationExporter {
      * <p>
      * Bundles together all evaluation metrics for a single classification run version.
      *
-     * @param name classification run name
-     * @param version version identifier string
-     * @param accuracy overall classification accuracy (0.0 to 1.0)
-     * @param precision weighted precision metric (0.0 to 1.0)
-     * @param recall weighted recall metric (0.0 to 1.0)
-     * @param macroF1 macro-averaged F1 score (0.0 to 1.0)
-     * @param microF1 micro-averaged F1 score (0.0 to 1.0)
+     * @param name           classification run name
+     * @param version        version identifier string
+     * @param accuracy       overall classification accuracy (0.0 to 1.0)
+     * @param precision      weighted precision metric (0.0 to 1.0)
+     * @param recall         weighted recall metric (0.0 to 1.0)
+     * @param macroF1        macro-averaged F1 score (0.0 to 1.0)
+     * @param microF1        micro-averaged F1 score (0.0 to 1.0)
+     * @param evasionMacroF1 multi-label macro F1 score for evasion-level evaluation (0.0 to 1.0)
      */
     @Builder
     private record ExcelRow(
@@ -720,7 +725,8 @@ public class EvaluationExporter {
             double precision,
             double recall,
             double macroF1,
-            double microF1
+            double microF1,
+            double evasionMacroF1
     ) {}
 }
 

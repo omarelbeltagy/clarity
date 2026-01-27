@@ -6,5 +6,5 @@ package de.tum.claritypipeline.model.config;
  * <p>Defines the different categories of datasets that can be utilized.
  */
 public enum DatasetType {
-    TEST, VALID, TRAIN, GENERIC
+    TEST, VALID, TRAIN, EVALUATION, GENERIC
 }

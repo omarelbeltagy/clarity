@@ -1,0 +1,39 @@
+prompt: |
+  You previously analyzed this prompt and its failure modes.
+
+  1) Prompt:
+  
+    <prompt>
+    {dump_prompt}
+    </prompt>
+  
+    The prompt contains the following placeholders in square brackets:
+    <placeholders>
+      - context
+      - question
+    </placeholders>
+    The placeholders are dynamically filled in at runtime and specific to the Question-Answer pair being classified.
+  
+  2) Failure-mode analysis:
+    <failure-mode-analysis>
+    {dump_failure_mode_analysis}
+    </failure-mode-analysis>
+  
+    Please propose a surgical revision of the prompt that reduces the observed issues while preserving the good behaviors.
+  
+  **Constraints:**
+  
+    - Do not redesign the agent from scratch.
+    - Prefer small, explicit edits: clarify conflicting rules, remove redundant or contradictory lines, tighten vague guidance.
+    - Make tradeoffs explicit (for example, clearly state when to prioritize concision over completeness).
+    - The names of the taxonomy categories MUST remain unchanged.
+    - The response format MUST remain unchanged.
+    - The runtime placeholders (in square brackets) are immutable and must remain verbatim. Treat them as non-editable tokens.
+    - Do NOT mention, reference, describe, or explain placeholders by name anywhere else in the prompt text. When giving instructions about their content, refer to them indirectly, e.g. "the interview segment", "the provided question", etc.
+  
+  **Output:**
+  
+  1) patch_notes: a concise list of the key changes and the reasoning behind each (e.g., "Instruction X was ambiguous and led to Y; revised to Z to clarify intent").
+  2) revised_prompt: the full updated prompt with your edits applied, ready to drop into an agent configuration and all placeholders intact.
+  
+  {response_format}

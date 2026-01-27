@@ -35,15 +35,23 @@ import java.util.Map;
 @Setter
 @Builder
 public class ClassificationResult extends Neo4jNode implements Serializable {
-
-    /**
-     * The name of the predicted category.
-     *
-     * <p>Serialized as "name" in JSON/YAML.
-     */
-    @JsonProperty("name")
-    @JsonPropertyDescription("Name of the classified category")
-    private String name;
+    public static final String JSON_SCHEME = """
+            {
+              "name": <STRING | Name of the classified category>,
+              "explanation": <STRING | Brief, text-grounded justification citing the key phrase(s) or absence of an answer>,
+              "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+            }
+            """;
+    @JsonIgnore
+    private String demandSlot;
+    @JsonIgnore
+    private Boolean settled;
+    @JsonIgnore
+    private String settledValueOneClause;
+    @JsonIgnore
+    private String evidenceQuote;
+    @JsonIgnore
+    private String avoidanceType;
 
     /**
      * A short textual explanation why this category was assigned.
@@ -53,15 +61,14 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
     @JsonProperty("explanation")
     @JsonPropertyDescription("Explanation for the classification decision")
     private String explanation;
-
     /**
-     * A confidence score for the selected category, typically in the range [0.0, 1.0].
+     * The name of the predicted category.
      *
-     * <p>This represents the classifier's confidence in the chosen label.
+     * <p>Serialized as "name" in JSON/YAML.
      */
-    @JsonProperty("confidence")
-    @JsonPropertyDescription("Confidence score of the classification")
-    private Double confidence;
+    @JsonProperty("name")
+    @JsonPropertyDescription("Name of the classified category")
+    private String name;
 
     /**
      * Optional map of category -> score for all considered categories.
@@ -89,12 +96,12 @@ public class ClassificationResult extends Neo4jNode implements Serializable {
      */
     @JsonIgnore
     private Double judgementConfidence;
-
-    public static final String JSON_SCHEME = """
-            {
-                "name": <STRING | Name of the classified category>,
-                "explanation": <STRING | Explanation for the classification decision>,
-                "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
-            }
-            """;
+    /**
+     * A confidence score for the selected category, typically in the range [0.0, 1.0].
+     *
+     * <p>This represents the classifier's confidence in the chosen label.
+     */
+    @JsonProperty("confidence")
+    @JsonPropertyDescription("Confidence score between 0 and 1 inclusive, up to two decimals.")
+    private Double confidence;
 }

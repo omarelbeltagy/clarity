@@ -54,6 +54,12 @@
             <artifactId>anthropic-java</artifactId>
             <version>${version.anthropic}</version>
         </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>${version.opencsv}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

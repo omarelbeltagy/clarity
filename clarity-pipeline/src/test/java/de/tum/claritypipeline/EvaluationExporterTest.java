@@ -29,7 +29,7 @@ public class EvaluationExporterTest {
      */
     @Test
     public void testExportEvaluationToExcel() {
-        evaluationExporter.exportAsExcel("src/test/resources/evaluation/12_22_2025.xlsx");
+        evaluationExporter.exportAsExcel("src/test/resources/evaluation/01_30_2026.xlsx");
     }
 
     /**
@@ -38,7 +38,11 @@ public class EvaluationExporterTest {
     @Test
     public void testExportResult() throws IOException {
         evaluationExporter.exportResult(
-                "src/test/resources/properties/stage1/single-few-shot-evasion-based-rag/gpt-5.1.yaml",
+                "src/test/resources/properties/evaluation/v2.yaml",
+                "src/test/resources/prediction-v2-evasion..zip"
+        );
+        evaluationExporter.exportResult(
+                "src/test/resources/properties/evaluation/v3.yaml",
                 "src/test/resources/prediction.zip"
         );
     }
@@ -53,6 +57,15 @@ public class EvaluationExporterTest {
         );
         evaluationExporter.generateCustomEvaluation(
                 "src/test/resources/properties/stage2/judgement/gpt-5.1-reasoning-high.yaml"
+        );
+        evaluationExporter.generateCustomEvaluation(
+                "src/test/resources/properties/stage2/judgement/gpt-5.2-reasoning-high.yaml"
+        );
+        evaluationExporter.generateCustomEvaluation(
+                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-high.yaml"
+        );
+        evaluationExporter.generateCustomEvaluation(
+                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-auto.yaml"
         );
     }
 }

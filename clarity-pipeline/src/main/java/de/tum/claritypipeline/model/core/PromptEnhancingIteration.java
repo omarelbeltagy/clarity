@@ -33,8 +33,6 @@ public class PromptEnhancingIteration extends Neo4jNode {
 
     private String revisedPrompt;
 
-    private String revisedTaxonomy;
-
     private String initialPrompt;
 
     private String enhancedPrompt;

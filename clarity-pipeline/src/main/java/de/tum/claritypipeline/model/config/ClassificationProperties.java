@@ -269,10 +269,13 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
          */
         private double macroF1;
 
+        private double evasionMacroF1;
+
         /**
          * Macro-averaged F1 score across classes, rounded to 2 decimal places.
          */
         private double macroF1Rounded;
+
 
         /**
          * Micro-averaged F1 score across classes.

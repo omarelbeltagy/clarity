@@ -1,14 +1,14 @@
 name: "GPT 5.2"
-version: "prompt-enhancing:v1"
+version: "prompt-enhancing:v3"
 taxonomy: "../assets/taxonomy/evasion-techniques-no-mapping.yaml"
-iterations: 5
+iterations: 12
 n: 20
-worker-threads: 16
-classification-prompt: "../assets/prompts/few-shot.yaml"
-enhancement-prompt-diagnose: "../assets/prompts/prompt-enhancement-diagnose.yaml"
-enhancement-prompt-patch: "../assets/prompts/prompt-enhancement-patch.yaml"
-output-prompt: "../assets/prompts/prompt-enhancement-v1-gpt.5.2.yaml"
-output-taxonomy: "../assets/taxonomy/prompt-enhancement-evasion-techniques-v1-gpt.5.2.yaml"
+worker-threads: 50
+save-temporary-results: true
+classification-prompt: "../assets/prompts/prompt-enhancement/base.yaml"
+enhancement-prompt-diagnose: "../assets/prompts/prompt-enhancement/diagnose.yaml"
+enhancement-prompt-patch: "../assets/prompts/prompt-enhancement/patch.yaml"
+output-prompt: "../assets/prompts/prompt-enhancement/gpt-5.2-v3-output.yaml"
 query: |
   MATCH (n:QA)
   WHERE n.train = true

@@ -8,6 +8,7 @@ import com.openai.credential.BearerTokenCredential;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.ResponseFormatJsonObject;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import com.openai.models.chat.completions.StructuredChatCompletionCreateParams;
 import de.tum.claritypipeline.model.config.ModelProperties;
 import de.tum.clarityutils.EnvLoader;
 import de.tum.clarityutils.SerializationUtils;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +34,62 @@ import java.util.regex.Pattern;
 @Getter
 @Setter
 public class TogetherClient implements Client {
+    private static final List<String> STRUCTURED_OUTPUT_MODELS = List.of(
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "moonshotai/Kimi-K2-Instruct",
+            "zai-org/GLM-4.5-Air-FP8",
+            "Qwen/Qwen3-Next-80B-A3B-Instruct",
+            "Qwen/Qwen3-Next-80B-A3B-Thinking",
+            "Qwen/Qwen3-235B-A22B-Thinking-2507",
+            "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
+            "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+            "deepseek-ai/DeepSeek-R1",
+            "deepseek-ai/DeepSeek-R1-0528-tput",
+            "deepseek-ai/DeepSeek-V3",
+            "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "Qwen/Qwen2.5-72B-Instruct-Turbo",
+            "Qwen/Qwen2.5-VL-72B-Instruct",
+            "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "deepcogito/cogito-v2-preview-llama-70B",
+            "deepcogito/cogito-v2-preview-llama-109B-MoE",
+            "deepcogito/cogito-v2-preview-llama-405B",
+            "deepcogito/cogito-v2-preview-deepseek-671b",
+            "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+            "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+            "marin-community/marin-8b-instruct",
+            "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            "Qwen/Qwen2.5-7B-Instruct-Turbo",
+            "Qwen/Qwen2.5-Coder-32B-Instruct",
+            "Qwen/QwQ-32B",
+            "Qwen/Qwen3-235B-A22B-fp8-tput",
+            "arcee-ai/coder-large",
+            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+            "meta-llama/Llama-3.2-3B-Instruct-Turbo",
+            "meta-llama/Meta-Llama-3-8B-Instruct-Lite",
+            "meta-llama/Llama-3-70b-chat-hf",
+            "google/gemma-3n-E4B-it",
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.2",
+            "mistralai/Mistral-7B-Instruct-v0.3",
+            "arcee_ai/arcee-spotlight"
+    );
+
+    public static boolean matchesModel(String input) {
+        if (input == null) {
+            return false;
+        }
+
+        for (String model : STRUCTURED_OUTPUT_MODELS) {
+            if (model.equalsIgnoreCase(input)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Base URL for Together chat completions endpoint.
      */
@@ -120,10 +178,13 @@ public class TogetherClient implements Client {
                             + properties.getResponseFormat());
         }
 
-        return extractStructuredResponse(handleRequest(prompt, clazz), clazz);
+        if (matchesModel(properties.getName())) {
+            return handleStructuredRequest(prompt, clazz);
+        }
+        return extractStructuredResponse(handleRequest(prompt), clazz);
     }
 
-    private <T> String handleRequest(String prompt, Class<T> clazz) {
+    private String handleRequest(String prompt) {
         ChatCompletionCreateParams.Builder paramsBuilder = ChatCompletionCreateParams.builder()
                                                                                      .model(properties.getName())
                                                                                      .maxCompletionTokens(
@@ -132,6 +193,32 @@ public class TogetherClient implements Client {
         if (properties.getResponseFormat() == ModelProperties.ResponseFormat.JSON_OBJECT) {
             paramsBuilder.responseFormat(ResponseFormatJsonObject.builder().build());
         }
+        if (properties.getTemperature() != null) {
+            paramsBuilder.temperature(properties.getTemperature());
+        }
+        if (properties.getTopP() != null) {
+            paramsBuilder.topP(properties.getTopP());
+        }
+        if (properties.getReasoningEffort() != null) {
+            paramsBuilder.reasoningEffort(ReasoningEffort.of(properties.getReasoningEffort()));
+        }
+
+        return client.chat().completions().create(paramsBuilder.build()).choices()
+                     .getFirst()
+                     .message()
+                     .content()
+                     .orElse(null);
+    }
+
+    private <T> T handleStructuredRequest(String prompt, Class<T> clazz) {
+        StructuredChatCompletionCreateParams.Builder<T> paramsBuilder = ChatCompletionCreateParams.builder()
+                                                                                                  .model(properties.getName())
+                                                                                                  .maxCompletionTokens(
+                                                                                                          properties.getMaxTokens())
+                                                                                                  .addUserMessage(
+                                                                                                          prompt)
+                                                                                                  .responseFormat(
+                                                                                                          clazz);
         if (properties.getTemperature() != null) {
             paramsBuilder.temperature(properties.getTemperature());
         }

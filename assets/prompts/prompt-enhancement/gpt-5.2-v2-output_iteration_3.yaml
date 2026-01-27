@@ -1,0 +1,111 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+  
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response
+  provided by the interviewee for the following question using the following taxonomy.
+  
+  Important: Provide only a brief, evidence-based justification. Do not provide step-by-step hidden reasoning or speculate about intent beyond what is supported by the text.
+  
+  ## Taxonomy (category names must match exactly)
+  1. Explicit - The response **directly resolves what the question is asking for** (e.g., a clear yes/no to the *asked proposition*, the requested choice, or the requested specific value/stance), stated plainly.
+  2. Implicit - The response resolves what was asked **indirectly**, and the missing answer can be inferred with high confidence (not just guessed from topic overlap).
+  3. General - The response is on-topic but too vague/unspecific to satisfy what was asked.
+  4. Partial/half-answer - Answers only one component of a multi-part request or addresses only part of what is required.
+  5. Dodging - Does not answer the asked proposition/request at all (no attempt to resolve it), even if speaking about a nearby or thematically related topic.
+  6. Deflection - Engages the question in a way that appears aimed at answering (directly **or** via context-setting), **but** the key requested information still remains unanswered and the response pivots to a different point/message.
+  7. Declining to answer - Acknowledges the question but refuses to provide the requested information (or refuses the key part) at this time, directly or indirectly.
+  8. Claims ignorance - States or clearly indicates they do not know / do not have the information.
+  9. Clarification - Requests clarification needed to answer (i.e., asks what the question means, which referent/timeframe/definition applies), instead of answering.
+  
+  ## Decision rules (apply in order)
+  1) Identify the question’s required output: the exact proposition/request (yes/no, choice, value, name, stance, explanation, etc.).
+  2) **Scan the entire response for any direct resolution of that required output (even a short phrase at the start).**
+  3) Proposition test: Can you extract the required output for the asked subject/scenario from the response?
+     - If yes, label Explicit (or Implicit if only indirectly recoverable).
+     - If no, do **not** label Explicit/Implicit just because it contains agreement, concern, discussion, or topic-related statements.
+  4) Only after (2)-(3), if the required output is still not extractable, decide among General / Partial/half-answer / Dodging / Deflection / Declining to answer / Claims ignorance / Clarification.
+  
+  ## Tie-break rules for common confusions
+  - Explicit dominates (clarified): If the response contains an unambiguous resolution of the asked proposition (e.g., clear “yes/no,” a chosen option, or the requested value/stance), label **Explicit** **even if** the speaker then elaborates, justifies, or pivots to other topics. Later digression does not cancel an already-sufficient answer.
+  - Implicit vs Deflection: Use Implicit only if the requested output is actually recoverable from what is said with high confidence. Explanations/justifications count as Implicit **only when** they clearly imply the missing yes/no/value/stance. If the response engages the topic but still leaves the asked output not recoverable, label Deflection or Dodging (see below).
+  - Deflection vs Dodging (revised):
+    - Deflection: the respondent materially engages the asked proposition/request (including context-setting that appears to lead to an answer) but does not ultimately provide the required output.
+    - Dodging: the respondent provides adjacent commentary or a different message with **no material engagement** with the asked proposition/request and no attempt to supply the required output.
+  - Multi-part questions: If at least one required element is answered but others are missing, prefer Partial/half-answer.
+  - Specific-value questions (date/number/name/precise definition):
+    - If the question truly requires a precise value and none is given or inferable, prefer General.
+    - However, if the question is effectively about timing/size/identity and the response provides a clear, usable range or relative timeframe that satisfies the practical request (e.g., “days, not weeks”), you may label Explicit (or Implicit if only indirectly stated).
+  - Claims ignorance (narrowed): Use Claims ignorance only when the speaker lacks the **requested output itself** (or information necessary to provide it). If they claim not to know an adjacent fact but the question is asking for a judgment/stance they could still provide, do not default to Claims ignorance; consider Dodging/Deflection/Declining to answer based on whether they engage and/or refuse.
+  - Clarification vs Claims ignorance (disambiguation):
+    - Clarification: the respondent asks for needed clarification that, if provided, would enable answering the original question.
+    - Claims ignorance: the respondent indicates they cannot provide the requested output due to not knowing.
+  - Declining to answer vs General: If the respondent refuses to provide the requested information (or refuses the key part), label Declining to answer. If they provide a substantive response but it is non-committal/vague, label General (or Partial/half-answer if only part is addressed).
+  
+  ## Small examples (one each)
+  Question: Do you have your own views about PR at Westminster don’t you?
+  Answer: I do.
+  Label: Explicit
+  Explanation: The answer directly gives the info requested.
+  
+  Question: Are you going to watch television?
+  Answer: What else is there to do?
+  Label: Implicit
+  Explanation: It clearly implies “yes” without stating it directly.
+  
+  Question: What’s your favorite film?
+  Answer: Fight Club, Filth, and Hereditary.
+  Label: General
+  Explanation: The reply does not provide the requested specificity (one clear favorite).
+  
+  Question: Did you enjoy the film?
+  Answer: The directing was great.
+  Label: Partial/half-answer
+  Explanation: It addresses only one aspect, not overall enjoyment.
+  
+  Question: Do you like my new dress?
+  Answer: We are late.
+  Label: Dodging
+  Explanation: It does not attempt to answer the question.
+  
+  Question: Did you eat the last piece of pie?
+  Answer: I have to admit that this was a great recipe, I always like it when there are chocolate chips in the dough.
+  Label: Deflection
+  Explanation: It engages the topic but does not answer the asked yes/no.
+  
+  Question: Is there a terror threat right now?
+  Answer: No. But let me put this in context…
+  Label: Explicit
+  Explanation: “No.” resolves the asked proposition; the later context does not change that.
+  
+  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+  Answer: I am not going to prophesy what will happen.
+  Label: Declining to answer
+  Explanation: The speaker refuses to provide the requested judgment.
+  
+  Question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+  Answer: I do not know that date. I will find out and let the House know.
+  Label: Claims ignorance
+  Explanation: The speaker states they do not know.
+  
+  Question: Was it your decision to release the fund?
+  Answer: You mean the public fund?
+  Label: Clarification
+  Explanation: The speaker asks for needed clarification instead of answering.
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Brief, text-grounded justification citing the key phrase(s) or the missing required element(s)>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

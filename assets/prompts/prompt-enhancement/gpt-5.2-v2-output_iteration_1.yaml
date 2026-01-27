@@ -1,0 +1,93 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+  
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response
+  provided by the interviewee for the following question using the following taxonomy.
+  
+  Important: Provide only a brief, evidence-based justification. Do not provide step-by-step hidden reasoning or speculate about intent beyond what is supported by the text.
+  
+  ## Taxonomy (category names must match exactly)
+  1. Explicit - The information requested is explicitly stated (in the requested form).
+  2. Implicit - The information requested is conveyed indirectly and can be inferred with high confidence from what is said, even if not stated in the expected form.
+  3. General - The information provided is on the right topic but too vague/unspecific to satisfy what was asked.
+  4. Partial/half-answer - Answers only one component of a multi-part request or addresses only part of what is required.
+  5. Dodging - Does not answer the asked proposition/request at all (no attempt to resolve it), even if speaking about a nearby or thematically related topic.
+  6. Deflection - Acknowledges or begins to engage the question, but shifts focus to a different point so the asked proposition/request is left unanswered.
+  7. Declining to answer - Acknowledges the question but refuses to answer now (directly or indirectly).
+  8. Claims ignorance - States they do not know / do not have the information.
+  9. Clarification - Requests clarification instead of answering.
+  
+  ## Tie-break rules for common confusions
+  - Explicit dominates: If the question is yes/no (or offers choices) and the response clearly contains an unambiguous yes/no (or a chosen option), label Explicit even if the speaker then pivots or adds unrelated commentary.
+  - Implicit vs Deflection: Use Implicit only if the requested information is actually recoverable from the answer with high confidence (e.g., a clear implication of yes/no, a clear stance, a clear identification). If the response is merely a related talking point and does not resolve what was asked, do NOT use Implicit.
+  - Deflection vs Dodging:
+    - If the respondent never engages the asked proposition/request and instead delivers a different message (even a nearby theme), label Dodging.
+    - If they start to address the question or acknowledge its premise and then pivot away without answering, label Deflection.
+  - Specific-value questions (date/number/name/precise definition):
+    - If a precise value is requested and the response stays vague (“soon”, “a lot”, “we’re working on it”), prefer General.
+    - If the response supplies one required element but omits others, prefer Partial/half-answer.
+    - Use Implicit only when the specific value/answer is clearly inferable.
+  
+  ## Small examples (one each)
+  Question: Do you have your own views about PR at Westminster don’t you?
+  Answer: I do.
+  Label: Explicit
+  Explanation: The answer directly gives the info requested.
+  
+  Question: Are you going to watch television?
+  Answer: What else is there to do?
+  Label: Implicit
+  Explanation: It clearly implies “yes” without stating it directly.
+  
+  Question: What’s your favorite film?
+  Answer: Fight Club, Filth, and Hereditary.
+  Label: General
+  Explanation: The reply does not provide the requested specificity (one clear favorite).
+  
+  Question: Did you enjoy the film?
+  Answer: The directing was great.
+  Label: Partial/half-answer
+  Explanation: It addresses only one aspect, not overall enjoyment.
+  
+  Question: Do you like my new dress?
+  Answer: We are late.
+  Label: Dodging
+  Explanation: It does not attempt to answer the question.
+  
+  Question: Did you eat the last piece of pie?
+  Answer: I have to admit that this was a great recipe, I always like it when there are chocolate chips in the dough.
+  Label: Deflection
+  Explanation: It engages the topic but shifts to a different point without answering.
+  
+  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+  Answer: I am not going to prophesy what will happen.
+  Label: Declining to answer
+  Explanation: The speaker refuses to answer.
+  
+  Question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+  Answer: I do not know that date. I will find out and let the House know.
+  Label: Claims ignorance
+  Explanation: The speaker states they do not know.
+  
+  Question: Was it your decision to release the fund?
+  Answer: You mean the public fund?
+  Label: Clarification
+  Explanation: The speaker asks for clarification instead of answering.
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Brief, text-grounded justification citing the key phrase(s) or absence of an answer>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

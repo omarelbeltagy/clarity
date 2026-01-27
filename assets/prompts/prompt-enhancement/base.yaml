@@ -1,0 +1,82 @@
+prompt: |
+  You are an expert in political sciences and interview analysis.
+  Your task is to classify the type of responses given by interviewees based on the questions posed by the interviewer.
+
+  Based on a segment of the interview in which the interviewer poses a series of questions, classify the type of response
+  provided by the interviewee for the following question using the following taxonomy and then provide a chain of thought explanation for your decision:
+  
+  1. Explicit - The information requested is explicitly stated (in the requested form)
+  2. Implicit - The information requested is given, but without being explicitly stated (not in the expected form)
+  3. General - The information provided is too general/lacks the requested specificity
+  4. Partial/half-answer - Offers only a specific component of the requested information
+  5. Dodging - Ignoring the question altogether
+  6. Deflection - Starts on topic but shifts the focus and makes a different point than what is asked
+  7. Declining to answer - Acknowledge the question but directly or indirectly refusing to answer at the moment
+  8. Claims ignorance - The answerer claims/admits not to know the answer themselves
+  9. Clarification - Does not provide the requested information and asks for clarification
+  
+  ---
+  
+  Here is one small example for each term of the taxonomy:
+  
+  Question: Do you have your own views about PR at Westminster don’t you?
+  Answer: I do.
+  Label: Explicit
+  Explanation: The answer directly gives the info requested.
+  
+  Question: Are you going to watch television?
+  Answer: What else is there to do?
+  Label: Implicit
+  Explanation: They suggest planning to watch TV, despite not explicitly stating it.
+  
+  Question: What’s your favorite film?
+  Answer: Fight Club, Filth, and Hereditary.
+  Label: General
+  Explanation: The reply gives three movies instead of one, which makes the desired information unclear.
+  
+  Question: Did you enjoy the film?
+  Answer: The directing was great.
+  Label: Partial/half-answer
+  Explanation: Directing is only part of what constitutes a film.
+  
+  Question: Do you like my new dress?
+  Answer: We are late.
+  Label: Dodging
+  Explanation: Does not even acknowledge the question and goes straight to another topic.
+  
+  Question: Did you eat the last piece of pie?
+  Answer: I have to admit that this was a great recipe, I always like it when there are chocolate chips in the dough.
+  Label: Deflection
+  Explanation: Acknowledges the question but goes on a tangent about the chips, without answering.
+  
+  Question: The hypothesis I was discussing, wouldn’t you regard that as a defeat?
+  Answer: I am not going to prophesy what will happen.
+  Label: Declining to answer
+  Explanation: Directly stating they won’t answer.
+  
+  Question: On what precise date did the government order the refit of the HMAS Kanimbla in preparation for its forward deployment to a possible war against Iraq?
+  Answer: I do not know that date. I will find out and let the House know.
+  Label: Claims ignorance
+  Explanation: Claims or admits they don’t have the information.
+  
+  Question: Was it your decision to release the fund?
+  Answer: You mean the public fund?
+  Label: Clarification
+  Explanation: Gives no data, asks for clarification.
+  
+  ---
+  Here is the segment of the interview that you should analyze:
+  
+  **Part of the Interview**
+  {context}
+  
+  **Question**
+  {question}
+  
+  **Output**
+  Respond with a JSON object in the following format:
+  {
+    "name": <STRING | Name of the classified category>,
+    "explanation": <STRING | Explanation for the classification decision>,
+    "confidence": <DOUBLE | Confidence score between 0 and 1 inclusive, up to two decimals.>
+  }

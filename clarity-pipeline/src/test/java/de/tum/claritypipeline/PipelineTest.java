@@ -50,6 +50,14 @@ public class PipelineTest {
         for (DatasetType datasetType : DatasetType.values()) {
             data.addAll(datasetReaderService.readDataset(datasetType));
         }
+        System.out.println("Imported " + data.size() + " QA pairs from all dataset splits.");
+        //datasetGraphImporter.importDataset(data);
+    }
+
+    @Test
+    public void testImportEvaluationDataset() {
+        List<QA> data = datasetReaderService.readDataset(DatasetType.EVALUATION);
+        System.out.println("Imported " + data.size() + " QA pairs from evaluation dataset.");
         datasetGraphImporter.importDataset(data);
     }
 
@@ -74,9 +82,9 @@ public class PipelineTest {
      */
     @Test
     public void testClassifyFromDirectory() {
-        final String baseDir = "src/test/resources/properties/stage2/";
+        final String baseDir = "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.2/";
 
-        classifyFromDirectory(baseDir + "custom-evasion-based");
+        classifyFromDirectory(baseDir);
         /*
         classifyFromDirectory(baseDir + "pag-few-shot");
         classifyFromDirectory(baseDir + "pag-few-shot-evasion-based");
@@ -118,7 +126,8 @@ public class PipelineTest {
      */
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/stage2/judgement/gpt-5.2-enhanced-evasion-techniques.yaml";
+        String file = "src/test/resources/properties/stage1/single-few-shot-evasion-based-rag-reasoning-high/gpt-5.2"
+                + ".yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }

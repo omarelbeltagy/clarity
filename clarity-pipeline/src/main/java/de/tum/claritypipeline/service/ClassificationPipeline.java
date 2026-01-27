@@ -287,6 +287,66 @@ public class ClassificationPipeline {
         client.batchCreateRelations(relations);
     }
 
+    private double evasionMacroF1(List<ClassificationResult> results) {
+        List<List<String>> predictionsAndExpected =
+                results.parallelStream()
+                       .map(result -> {
+                           String findQAQuery = String.format(
+                                   """
+                                           MATCH (cr:%s)--(n:%s)
+                                           WHERE elementId(cr) = '%s'
+                                           RETURN n
+                                           """,
+                                   Neo4jNode.getLabel(ClassificationResult.class),
+                                   Neo4jNode.getLabel(QA.class),
+                                   result.getElementId()
+                           );
+
+                           QA qa = client.executeQuery(findQAQuery, QA.class)
+                                         .stream()
+                                         .findFirst()
+                                         .orElse(null);
+
+                           if (qa == null) {
+                               return null;
+                           }
+                           List<String> returnList = new ArrayList<>();
+                           returnList.add(result.getName());
+                           returnList.add(qa.getClarityLabel());
+                           returnList.add(qa.getAnnotator1());
+                           returnList.add(qa.getAnnotator2());
+                           returnList.add(qa.getAnnotator3());
+                           return returnList.contains(null) ? null : returnList;
+                       })
+                       .filter(Objects::nonNull)
+                       .toList();
+
+        List<String> predictions = predictionsAndExpected.stream()
+                                                         .map(l -> l.get(0))
+                                                         .toList();
+
+        List<String> expected = predictionsAndExpected.stream()
+                                                      .map(l -> l.get(1))
+                                                      .toList();
+
+        List<List<String>> annotations = predictionsAndExpected.stream()
+                                                               .map(l -> l.subList(2, 5))
+                                                               .toList();
+
+        List<String> labels = properties.getTaxonomy().getCategories()
+                                        .stream()
+                                        .map(Taxonomy.Category::getName)
+                                        .toList();
+
+        try {
+            ModelEvaluator evaluator = new ModelEvaluator(labels, predictions, expected);
+            return evaluator.multiLabelMacroF1(annotations);
+        } catch (Exception e) {
+            log.error("Error while evaluating classification run {}", properties.getVersion(), e);
+            return 0;
+        }
+    }
+
     /**
      * Generates and persists evaluation metrics for the classification run.
      * <p>
@@ -327,6 +387,14 @@ public class ClassificationPipeline {
         List<ClassificationResult> results = client.executeQuery(query,
                                                                  ClassificationResult.class);
         log.info("Found {} classification results for evaluation", results.size());
+        String propertyLabel =
+                ((properties.getStrategy() instanceof BestGuessStrategy)
+                        || (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
+                                                                                       .getMapping()
+                                                                                       .isEnabled()))
+                        ? properties.getTaxonomy().getMapping().getLabelProperty()
+                        : properties.getTaxonomy().getLabelProperty();
+
         List<String[]> predictionsAndExpected =
                 results.parallelStream()
                        .map(result -> {
@@ -368,13 +436,6 @@ public class ClassificationPipeline {
                            } else {
                                predictedLabel = result.getName();
                            }
-                           String propertyLabel =
-                                   ((properties.getStrategy() instanceof BestGuessStrategy)
-                                           || (properties.getTaxonomy().getMapping() != null && properties.getTaxonomy()
-                                                                                                          .getMapping()
-                                                                                                          .isEnabled()))
-                                           ? properties.getTaxonomy().getMapping().getLabelProperty()
-                                           : properties.getTaxonomy().getLabelProperty();
                            String expectedLabel;
                            try {
                                Field field = qa.getClass().getDeclaredField(propertyLabel);
@@ -426,6 +487,8 @@ public class ClassificationPipeline {
             log.info("Micro F1 Score: {}", String.format("%.2f", microF1 * 100));
             double macroF1 = evaluator.macroF1();
             log.info("Macro F1 Score: {}", String.format("%.2f", macroF1 * 100));
+            double evasionMacroF1 = evasionMacroF1(results);
+            log.info("Evasion Macro F1 Score: {}", String.format("%.2f", evasionMacroF1 * 100));
 
             ClassificationProperties.Evaluation evaluation = ClassificationProperties.Evaluation.builder()
                                                                                                 .accuracy(accuracy)
@@ -433,6 +496,8 @@ public class ClassificationPipeline {
                                                                                                 .recall(recall)
                                                                                                 .microF1(microF1)
                                                                                                 .macroF1(macroF1)
+                                                                                                .evasionMacroF1(
+                                                                                                        evasionMacroF1)
                                                                                                 .macroF1Rounded(
                                                                                                         Math.round(
                                                                                                                 macroF1
@@ -457,6 +522,13 @@ public class ClassificationPipeline {
             log.error("Error while evaluating classification run {}", properties.getVersion(), e);
         }
 
+    }
+
+    record EvaluationResult(double accuracy,
+                            double precision,
+                            double recall,
+                            double microF1,
+                            double macroF1) {
     }
 
     // -------------------------------- Helper Methods --------------------------------
