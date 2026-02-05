@@ -32,7 +32,7 @@ class SpacyCleaner:
         "basically", "literally", "actually", "honestly", "frankly",
         "seriously", "clearly", "obviously", "definitely", "certainly",
         "apparently", "presumably", "supposedly", "arguably",
-        "well", "okay", "ok", "right", "yeah", "yep",
+        "well,", "okay", "ok", "right", "yeah", "yep",
         "alright", "anyway", "anyways", "whatever", "please",
         "listen", "look", "folks", "essentially", "technically",
         "practically", "virtually", "just", "maybe", "perhaps",
