@@ -200,81 +200,39 @@ def save_json(data, path):
 
 
 def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=False):
-    """Return a reduced and cleaned representation of dataset records.
-
-    Each returned item contains:
-    - question_clean: cleaned question text
-    - context_clean: cleaned interview question + answer
-    - question: original question text
-    - context: original interview question + answer
-    - clarity_label: included when `include_label` is True
-
-    Parameters
-    ----------
-    data : Sequence[Mapping]
-        Raw dataset records expected to include keys 'question',
-        'interview_question', 'interview_answer', 'president' and optionally
-        'clarity_label'.
-    include_label : bool, optional
-        Whether to include the original 'clarity_label' in the output
-        (default: True).
-    clean_fillers: bool, optional
-        (default: True).
-    clean_names: bool, optional
-        (default: True).
-
-    Returns
-    -------
-    list of dict
-        List with cleaned/reduced records suitable for saving or downstream use.
-    """
+    """Return a reduced and cleaned representation of dataset records using SpaCy cleaner."""
+    
+    # Create the cleaner
+    cleaner = create_cleaner(preserve_negation=True)
+    
     result = []
-
     for item in data:
         question = item["question"]
         context = item["interview_question"] + "\n" + item["interview_answer"]
-        president = item["president"]
-
-        # Determine which cleaning to apply
-        if clean_fillers and clean_names:
-            # Use full cleaning function
-            question_clean = clean_single_text(question, president)
-            context_clean = clean_single_text(context, president)
-        elif clean_fillers or clean_names:
-            # Partial cleaning
-            question_clean = _normalize(question)
-            context_clean = _normalize(context)
-
-            if clean_names:
-                name = [president] if president else []
-                question_clean = remove_names(question_clean, name, aggressive_lastname=False)
-                context_clean = remove_names(context_clean, name, aggressive_lastname=False)
-
-            if clean_fillers:
-                question_clean = remove_brackets(question_clean)
-                question_clean = remove_fillers(question_clean)
-                context_clean = remove_brackets(context_clean)
-                context_clean = remove_fillers(context_clean)
-
-            question_clean = _normalize(question_clean)
-            context_clean = _normalize(context_clean)
+        president = item.get("president")
+        
+        # Determine what cleaning to apply
+        if clean_fillers or clean_names:
+            president_name = president if clean_names else None
+            question_clean = cleaner.clean_text(question, remove_stopwords=False, president_name=president_name)
+            context_clean = cleaner.clean_text(context, remove_stopwords=False, president_name=president_name)
         else:
-            # No cleaning
-            question_clean = question
-            context_clean = context
-
+            # No cleaning, just normalize punctuation
+            question_clean = cleaner._clean_punctuation(question)
+            context_clean = cleaner._clean_punctuation(context)
+        
         entry = {
             "question_clean": question_clean,
             "context_clean": context_clean,
             "question": question,
             "context": context,
         }
-
+        
         if include_label:
             entry["clarity_label"] = item["clarity_label"]
-
+        
         result.append(entry)
-
+    
     return result
 
 
