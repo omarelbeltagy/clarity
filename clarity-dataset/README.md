@@ -170,7 +170,9 @@ For native execution, from inside the `clarity-dataset/` directory:
 python3 -m venv venv # Create virtual environment
 source venv/bin/activate # Activate virtual environment
 pip install -r requirements.txt # Install dependencies
+python -m spacy download en_core_web_sm #download spacy manually
 python app.py # Start the data processing
+
 ```
 
 ---
@@ -216,7 +218,6 @@ clarity_label are exported.
 | `--clean-fillers` | Remove filler words and phrases (um, uh, you know, etc.)                         |
 | `--clean-names`   | Remove president names and titles (Mr. President, Biden, etc.)                   |
 | `--clean-all`     | Apply both filler and name cleaning                                              |
-| `--use-bert`      | Generate BERT-based summary embeddings for each QA pair using default BERT model |
 
 **Supported BERT Model:**
 
