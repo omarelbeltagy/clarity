@@ -236,6 +236,22 @@ def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=Fal
     return result
 
 
+def display_sample(records, title, sample_size=5):
+    """Display random samples from the dataset."""
+    print("\n" + "=" * 80)
+    print(f"{title}")
+    print("=" * 80)
+    
+    samples = random.sample(records, sample_size)
+    
+    for i, record in enumerate(samples, 1):
+        print(f"\n--- Sample {i} ---")
+        print(f"Question (original): {record.get('question', 'N/A')[:150]}...")
+        if 'question_clean' in record:
+            print(f"Question (cleaned):  {record.get('question_clean', 'N/A')[:150]}...")
+        print()
+
+
 def main():
     """Load, process and save QEvasion datasets.
 
