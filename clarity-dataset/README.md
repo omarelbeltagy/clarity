@@ -35,7 +35,6 @@ Project structure (relevant files):
 ├── logging.yaml                  # Logging configuration
 ├── requirements.txt              # Python dependencies
 ├── spacy_cleaner.py              # SpaCy-based text cleaner
-├── summary.py                    # BERT-based summary generation
 └── README.md                     # This file
 ```
 
@@ -50,7 +49,6 @@ Project structure (relevant files):
     - Raw JSONs under [`full/`](data/full)
     - Cleaned JSONs under [`cleaned/`](data/cleaned)
     - Together-compatible JSONL under [`together/`](data/together) (used for Together API ingestion)
-    - Bert-based summary embeddings under [`sample/`](data/sample/bert.json)
 
 ---
 
@@ -66,7 +64,6 @@ Project structure (relevant files):
   Simplifies and preprocesses the dataset for model consumption with configurable options:
     - Filler word removal (um, uh, you know, etc.)
     - President name removal (direct address, titles, full names)
-    - BERT-based summary generation (dense vector embeddings)
 
 - **Flexible Processing**  
   Control which preprocessing steps to apply via command-line flags.
@@ -117,26 +114,6 @@ docker compose run --rm dataset python app.py --clean-all
 ```
 
 ```bash
-# Generate BERT summaries (without cleaning)
-docker compose run --rm dataset python app.py --use-bert
-```
-
-```bash
-# Generate BART summaries (without cleaning)
-docker compose run --rm dataset python app.py --use-bart
-```
-
-```bash
-# Full processing(a): clean everything + BERT summaries 
-docker compose run --rm dataset python app.py --clean-all --use-bert
-```
-
-```bash
-# Full processing(b): clean everything + BART summaries 
-docker compose run --rm dataset python app.py --clean-all --use-bart
-```
-
-```bash
 # Rebuild from scratch if needed
 docker compose build --no-cache
 ```
@@ -158,7 +135,6 @@ The script generates two sets of outputs:
         - `question_clean`: Cleaned question (if cleaning enabled)
         - `context_clean`: Cleaned context (if cleaning enabled)
         - `clarity_label`: Classification label
-        - `summary_bert`: BERT embedding vector (if --use-bert enabled)
 
 ---
 
@@ -219,26 +195,17 @@ clarity_label are exported.
 | `--clean-names`   | Remove president names and titles (Mr. President, Biden, etc.)                   |
 | `--clean-all`     | Apply both filler and name cleaning                                              |
 
-**Supported BERT Model:**
 
-- `bert-base-uncased` (default) - 768 dimensions
-
----
-
-## Examples
+## Example
 
 ### Generate multiple variants
 
 ```bash
-# Variant 1: Original data with BERT
-docker compose run --rm dataset python app.py --use-bert
+# Variant 1: Clean names only
+docker compose run --rm dataset python app.py --clean-names
 
 # Variant 2: Clean fillers only
 docker compose run --rm dataset python app.py --clean-fillers
-
-# Variant 3: Full cleaning with BERT
-docker compose run --rm dataset python app.py --clean-all --use-bert
-```
 
 ### Custom workflow
 
@@ -247,7 +214,7 @@ docker compose run --rm dataset python app.py --clean-all --use-bert
 docker compose build
 
 # 2. Run with specific configuration
-docker compose run --rm dataset python app.py --clean-all --use-bert
+docker compose run --rm dataset python app.py --clean-all
 
 # 3. Check the output
 ls -lh ../data/cleaned/
@@ -265,7 +232,3 @@ filler words and president names from the interview transcripts.
 - Allows selective stopword preservation
 
 ---
-
-## Notes
-
-- The BERT summary generation can take around 2 hours, depending on hardware
