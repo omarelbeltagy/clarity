@@ -143,31 +143,30 @@ class SpacyCleaner:
         last_name = name_parts[-1]
         full_name = " ".join(name_parts)
         
-        # Pattern 1: "President [Full Name]"
-        full_escaped = re.escape(full_name).replace(r'\ ', r'\s+')
+        # Pattern 1: "President [Full Name]" - ONLY if it matches THIS president
         patterns.append(re.compile(
-            r"(?i)\bpresident\s+" + full_escaped + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+            r"(?i)\bpresident\s+" + full_name + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
         ))
         
-        # Pattern 2: "President [Last Name]"
+        # Pattern 2: "President [Last Name]" - ONLY if it matches THIS president's last name
+        # AND is followed by possessive or punctuation (to avoid "President Trump" when Biden is president)
         patterns.append(re.compile(
-            r"(?i)\bpresident\s+" + re.escape(last_name) + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+            r"(?i)\bpresident\s+" + re.escape(last_name) + r"(?:'?s|[.,;:!?—–-])\s*"
         ))
         
-        # Pattern 3: "[Full Name]" standalone
+        # Pattern 3: "[Full Name]" standalone - matches this specific president's full name
         patterns.append(re.compile(
-            r"(?i)\b" + full_escaped + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
+            r"(?i)\b" + full_name + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
         ))
         
-        # Pattern 4: "Mr./Mrs. [Last Name]"
+        # Pattern 4: "Mr./Mrs. [Last Name]" - ONLY this president's last name
         patterns.append(re.compile(
             r"(?i)\b(?:mr|mister|ms|mrs)\.?\s+" + re.escape(last_name) + r"(?:\s*'?s)?\s*[.,;:!?—–-]?\s*"
         ))
         
-        # Pattern 5: Just "[Last Name]" (more aggressive, use carefully)
-        # Only at word boundaries and followed by punctuation or end
+        # Pattern 5: Just possessive "[Last Name]'s" - only when possessive
         patterns.append(re.compile(
-            r"(?i)\b" + re.escape(last_name) + r"(?:\s*'?s)?\s*(?=[.,;:!?—–-]|\s|$)"
+            r"(?i)\b" + re.escape(last_name) + r"'s\b"
         ))
         
         return patterns
