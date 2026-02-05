@@ -13,6 +13,8 @@ import sys
 
 import yaml
 from datasets import load_dataset
+from spacy_cleaner import SpacyCleaner, create_cleaner
+
 
 from clean import (
     clean_single_text,
