@@ -329,9 +329,6 @@ def main():
     sample_indices = random.sample(range(len(train_data)), 10)
     sample_records_before = [train_data[i] for i in sample_indices]
 
-    logger.info("\nDisplaying samples BEFORE preprocessing...")
-    display_sample(sample_records_before, "BEFORE PREPROCESSING", 10)
-
     # Cleaned sample
     sample_records_after = clean_dataset(
         sample_records_before, 
@@ -339,7 +336,7 @@ def main():
         clean_names=args.clean_names
     )
     logger.info("\nDisplaying samples AFTER preprocessing...")
-    display_sample(sample_records_after, "AFTER PREPROCESSING", 10)
+    display_sample(sample_records_after, "BEFORE/AFTER PREPROCESSING", 10)
 
     train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
