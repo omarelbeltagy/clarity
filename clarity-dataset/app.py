@@ -235,7 +235,7 @@ def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=Fal
     return result
 
 
-def display_sample(records, title, sample_size=5):
+def display_sample(records, title, sample_size):
     """Display random samples from the dataset."""
     print("\n" + "=" * 80)
     print(f"{title}")
@@ -245,9 +245,9 @@ def display_sample(records, title, sample_size=5):
     
     for i, record in enumerate(samples, 1):
         print(f"\n--- Sample {i} ---")
-        print(f"Question (original): {record.get('question', 'N/A')[:150]}...")
+        print(f"Question (original): {record.get('question', 'N/A')}")
         if 'question_clean' in record:
-            print(f"Question (cleaned):  {record.get('question_clean', 'N/A')[:150]}...")
+            print(f"Question (cleaned):  {record.get('question_clean', 'N/A')}")
         print()
 
 
@@ -322,6 +322,24 @@ def main():
     logger.info("Saving raw datasets...")
     for name, data in {"train": train_data, "valid": valid_data, "test": test_data}.items():
         save_json(data, os.path.join(full_dir, f"{name}.json"))
+
+
+    # Sample data
+    random.seed(90)
+    sample_indices = random.sample(range(len(train_data)), 10)
+    sample_records_before = [train_data[i] for i in sample_indices]
+
+    logger.info("\nDisplaying samples BEFORE preprocessing...")
+    display_sample(sample_records_before, "BEFORE PREPROCESSING", 10)
+
+    # Cleaned sample
+    sample_records_after = clean_dataset(
+        sample_records_before, 
+        clean_fillers=args.clean_fillers,
+        clean_names=args.clean_names
+    )
+    logger.info("\nDisplaying samples AFTER preprocessing...")
+    display_sample(sample_records_after, "AFTER PREPROCESSING", 10)
 
     train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
