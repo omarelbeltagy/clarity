@@ -117,26 +117,6 @@ docker compose run --rm dataset python app.py --clean-all
 ```
 
 ```bash
-# Generate BERT summaries (without cleaning)
-docker compose run --rm dataset python app.py --use-bert
-```
-
-```bash
-# Generate BART summaries (without cleaning)
-docker compose run --rm dataset python app.py --use-bart
-```
-
-```bash
-# Full processing(a): clean everything + BERT summaries 
-docker compose run --rm dataset python app.py --clean-all --use-bert
-```
-
-```bash
-# Full processing(b): clean everything + BART summaries 
-docker compose run --rm dataset python app.py --clean-all --use-bart
-```
-
-```bash
 # Rebuild from scratch if needed
 docker compose build --no-cache
 ```
@@ -170,7 +150,9 @@ For native execution, from inside the `clarity-dataset/` directory:
 python3 -m venv venv # Create virtual environment
 source venv/bin/activate # Activate virtual environment
 pip install -r requirements.txt # Install dependencies
+python -m spacy download en_core_web_sm #download spacy manually
 python app.py # Start the data processing
+
 ```
 
 ---
@@ -216,7 +198,6 @@ clarity_label are exported.
 | `--clean-fillers` | Remove filler words and phrases (um, uh, you know, etc.)                         |
 | `--clean-names`   | Remove president names and titles (Mr. President, Biden, etc.)                   |
 | `--clean-all`     | Apply both filler and name cleaning                                              |
-| `--use-bert`      | Generate BERT-based summary embeddings for each QA pair using default BERT model |
 
 **Supported BERT Model:**
 
