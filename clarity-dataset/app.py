@@ -13,6 +13,8 @@ import sys
 
 import yaml
 from datasets import load_dataset
+from spacy_cleaner import SpacyCleaner, create_cleaner
+
 
 from clean import (
     clean_single_text,
@@ -21,7 +23,6 @@ from clean import (
     remove_fillers,
     remove_names
 )
-from summarize import generate_bert_summary, generate_bart_summary
 #from utils.logger import logger
 from loguru import logger
 
@@ -198,82 +199,56 @@ def save_json(data, path):
 
 
 def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=False):
-    """Return a reduced and cleaned representation of dataset records.
-
-    Each returned item contains:
-    - question_clean: cleaned question text
-    - context_clean: cleaned interview question + answer
-    - question: original question text
-    - context: original interview question + answer
-    - clarity_label: included when `include_label` is True
-
-    Parameters
-    ----------
-    data : Sequence[Mapping]
-        Raw dataset records expected to include keys 'question',
-        'interview_question', 'interview_answer', 'president' and optionally
-        'clarity_label'.
-    include_label : bool, optional
-        Whether to include the original 'clarity_label' in the output
-        (default: True).
-    clean_fillers: bool, optional
-        (default: True).
-    clean_names: bool, optional
-        (default: True).
-
-    Returns
-    -------
-    list of dict
-        List with cleaned/reduced records suitable for saving or downstream use.
-    """
+    """Return a reduced and cleaned representation of dataset records using SpaCy cleaner."""
+    
+    # Create the cleaner
+    cleaner = create_cleaner(preserve_negation=True)
+    
     result = []
-
     for item in data:
         question = item["question"]
         context = item["interview_question"] + "\n" + item["interview_answer"]
-        president = item["president"]
-
-        # Determine which cleaning to apply
-        if clean_fillers and clean_names:
-            # Use full cleaning function
-            question_clean = clean_single_text(question, president)
-            context_clean = clean_single_text(context, president)
-        elif clean_fillers or clean_names:
-            # Partial cleaning
-            question_clean = _normalize(question)
-            context_clean = _normalize(context)
-
-            if clean_names:
-                name = [president] if president else []
-                question_clean = remove_names(question_clean, name, aggressive_lastname=False)
-                context_clean = remove_names(context_clean, name, aggressive_lastname=False)
-
-            if clean_fillers:
-                question_clean = remove_brackets(question_clean)
-                question_clean = remove_fillers(question_clean)
-                context_clean = remove_brackets(context_clean)
-                context_clean = remove_fillers(context_clean)
-
-            question_clean = _normalize(question_clean)
-            context_clean = _normalize(context_clean)
+        president = item.get("president")
+        
+        # Determine what cleaning to apply
+        if clean_fillers or clean_names:
+            president_name = president if clean_names else None
+            question_clean = cleaner.clean_text(question, remove_stopwords=False, president_name=president_name)
+            context_clean = cleaner.clean_text(context, remove_stopwords=False, president_name=president_name)
         else:
-            # No cleaning
-            question_clean = question
-            context_clean = context
-
+            # No cleaning, just normalize punctuation
+            question_clean = cleaner._clean_punctuation(question)
+            context_clean = cleaner._clean_punctuation(context)
+        
         entry = {
             "question_clean": question_clean,
             "context_clean": context_clean,
             "question": question,
             "context": context,
         }
-
+        
         if include_label:
             entry["clarity_label"] = item["clarity_label"]
-
+        
         result.append(entry)
-
+    
     return result
+
+
+def display_sample(records, title, sample_size):
+    """Display random samples from the dataset."""
+    print("\n" + "=" * 80)
+    print(f"{title}")
+    print("=" * 80)
+    
+    samples = random.sample(records, sample_size)
+    
+    for i, record in enumerate(samples, 1):
+        print(f"\n--- Sample {i} ---")
+        print(f"Question (original): {record.get('question', 'N/A')}")
+        if 'question_clean' in record:
+            print(f"Question (cleaned):  {record.get('question_clean', 'N/A')}")
+        print()
 
 
 def main():
@@ -303,10 +278,7 @@ def main():
                         help="Remove president names from text")
     parser.add_argument("--clean-all", action="store_true",
                         help="Apply all cleaning (fillers + names)")
-    parser.add_argument("--use-bert", action="store_true",
-                        help="Generate BERT-based summaries")
-    parser.add_argument("--use-bart", action="store_true",
-                        help="Generate BART-based summaries")
+
 
     args = parser.parse_args()
 
@@ -326,8 +298,6 @@ def main():
     logger.info("Configuration:")
     logger.info(f"  - Clean fillers: {args.clean_fillers}")
     logger.info(f"  - Clean names: {args.clean_names}")
-    logger.info(f"  - Use BERT: {args.use_bert}")
-    logger.info(f"  - Use BART: {args.use_bart}")
 
     logger.info("Loading QEvasion datasets...")
     ds_train = load_dataset("ailsntua/QEvasion", split="train")
@@ -353,36 +323,27 @@ def main():
     for name, data in {"train": train_data, "valid": valid_data, "test": test_data}.items():
         save_json(data, os.path.join(full_dir, f"{name}.json"))
 
+
+    # Sample data
+    random.seed(90)
+    sample_indices = random.sample(range(len(train_data)), 10)
+    sample_records_before = [train_data[i] for i in sample_indices]
+
+    # Cleaned sample
+    sample_records_after = clean_dataset(
+        sample_records_before, 
+        clean_fillers=args.clean_fillers,
+        clean_names=args.clean_names
+    )
+    logger.info("\nDisplaying samples AFTER preprocessing...")
+    display_sample(sample_records_after, "BEFORE/AFTER PREPROCESSING", 10)
+
     train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
     valid_cleaned = clean_dataset(valid_data, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
     test_cleaned = clean_dataset(test_data, clean_fillers=args.clean_fillers,
                                   clean_names=args.clean_names)
-
-    # Apply BERT summaries if requested (after cleaning)
-    if args.use_bert:
-        logger.info("Saving processed datasets...")
-        logger.info("Generating BERT summaries for train set...")
-        train_cleaned = generate_bert_summary(train_cleaned)
-
-        logger.info("Generating BERT summaries for validation set...")
-        valid_cleaned = generate_bert_summary(valid_cleaned)
-
-        logger.info("Generating BERT summaries for test set...")
-        test_cleaned = generate_bert_summary(test_cleaned)
-
-        # Apply BART summaries if requested (after cleaning)
-    if args.use_bart:
-        logger.info("Saving processed datasets with BART summaries...")
-        logger.info("Generating BART summaries for train set...")
-        train_cleaned = generate_bart_summary(train_cleaned)
-
-        logger.info("Generating BART summaries for validation set...")
-        valid_cleaned = generate_bart_summary(valid_cleaned)
-
-        logger.info("Generating BART summaries for test set...")
-        test_cleaned = generate_bart_summary(test_cleaned)
 
     logger.info("Saving cleaned datasets...")
     for name, data in {"train": train_cleaned, "valid": valid_cleaned, "test": test_cleaned}.items():

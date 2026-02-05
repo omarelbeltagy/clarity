@@ -7,6 +7,8 @@ spacy>=3.7.0,<4.0.0
 transformers>=4.30.0
 torch>=2.0.0
 tokenizers>=0.13.0
+nltk
+wordninja
 
 # Utilities
 loguru==0.7.3
