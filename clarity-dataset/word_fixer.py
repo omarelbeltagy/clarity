@@ -83,7 +83,7 @@ def strip_possessive(token: str):
 
 
 def is_valid(word: str) -> bool:
-    return zipf_frequency(word, "en") > 2.5
+    return zipf_frequency(word, "en") > 3.0
 
 
 def safe_split(token: str):
@@ -114,7 +114,7 @@ def correct_spelling(token: str):
     candidates = process.extract(
         token,
         ENGLISH_WORDS,
-        score_cutoff=75,  # Slightly lower to catch more options
+        score_cutoff=75,
         limit=15
     )
 
@@ -124,7 +124,7 @@ def correct_spelling(token: str):
     best_candidate = None
     best_score = 0
     
-    for candidate, fuzzy_score, _ in candidates:
+    for candidate, _, _ in candidates:
         #Only accept if candidate is longer
         letters_added = len(candidate) - len(token)
         
