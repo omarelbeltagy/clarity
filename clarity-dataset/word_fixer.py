@@ -31,7 +31,7 @@ from nltk.corpus import words as nltk_words
 
 ENGLISH_WORDS = (
     set(w.lower() for w in nltk_words.words())
-    | set(top_n_list("en", 500_000))
+    | set(top_n_list("en", 250_000))
 )
 
 # ------------------------------------------------------------------
