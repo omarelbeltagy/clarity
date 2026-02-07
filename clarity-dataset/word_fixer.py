@@ -106,38 +106,91 @@ def safe_split(token: str):
 
 
 def correct_spelling(token: str):
-    """Try to fix spelling. Returns None if no good correction found."""
-    
-    max_edits = min(3, len(token) // 3)
+    """
+    Fix spelling by ADDING missing letters only (no removals).
+    Prioritizes middle insertions over suffix changes.
+    """
     
     candidates = process.extract(
         token,
         ENGLISH_WORDS,
-        score_cutoff=80,
-        limit=5
+        score_cutoff=75,  # Slightly lower to catch more options
+        limit=15
     )
 
     if not candidates:
         return None
 
     best_candidate = None
-    best_freq = 0
+    best_score = 0
     
-    for candidate, score, _ in candidates:        
-        if abs(len(token) - len(candidate)) > max_edits:
-            continue  # Too many letters added/removed
+    for candidate, fuzzy_score, _ in candidates:
+        #Only accept if candidate is longer
+        letters_added = len(candidate) - len(token)
         
+        if letters_added < 0:
+            continue
+        
+        if letters_added > 3:  # Too many letters added - REJECT
+            continue
+        
+        # Get word frequency
         freq = zipf_frequency(candidate, "en")
         
-        # Only accept if it's a valid common word
-        if freq > 2.0 and freq > best_freq:
+        # Only accept common words
+        if freq <= 3.0:
+            continue
+        
+        # Middle Insertion Score
+        prefix_match = 0
+        for i in range(min(len(token), len(candidate))):
+            if token[i] == candidate[i]:
+                prefix_match += 1
+            else:
+                break
+        
+        suffix_match = 0
+        for i in range(1, min(len(token), len(candidate)) + 1):
+            if token[-i] == candidate[-i]:
+                suffix_match += 1
+            else:
+                break
+        
+        # Calculate edge preservation ratio
+        edge_match = prefix_match + suffix_match
+        edge_ratio = edge_match / len(token) if len(token) > 0 else 0
+        
+        # Score calculation:
+        # - Base: word frequency
+        # - Bonus: edge preservation (middle insertions score higher)
+        # - Penalty: suffix mismatches
+        
+        score = freq
+        
+        # Strong bonus for preserving edges (middle insertion)
+        if edge_ratio > 0.7:
+            score += 3.0
+        elif edge_ratio > 0.5:
+            score += 1.5
+        
+        # Extra bonus for preserving suffix (important for word endings)
+        suffix_ratio = suffix_match / min(1, len(token))  # Check last char
+        if suffix_ratio > 0.75:
+            score += 2.0
+        elif suffix_ratio > 0.5:
+            score += 1.0
+        else:
+            score -= 1.0  # Penalty for changing suffix
+        
+        # Prefer fewer insertions when scores are close
+        if letters_added > 0:
+            score -= (letters_added * 0.2)
+        
+        if score > best_score and freq > zipf_frequency(token, "en"):
+            best_score = score
             best_candidate = candidate
-            best_freq = freq
     
-    if best_candidate and best_freq > zipf_frequency(token, "en"):
-        return best_candidate
-    
-    return None
+    return best_candidate
 
 
 def fix_token(token: str):
