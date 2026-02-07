@@ -288,12 +288,11 @@ def main():
     ds_test = load_dataset("ailsntua/QEvasion", split="test")
 
     # Scan datasets
-    train_counts, train_examples = flag_invalid_words(ds_train, "train")
-    test_counts, test_examples = flag_invalid_words(ds_test, "test")
+    train_counts, _ = flag_invalid_words(ds_train, "train")
+    test_counts, _ = flag_invalid_words(ds_test, "test")
 
     # Merge results
     all_counts = train_counts + test_counts
-    all_examples = {**train_examples, **test_examples}
 
     # ------------------------------------------------------------------
     # Reporting
