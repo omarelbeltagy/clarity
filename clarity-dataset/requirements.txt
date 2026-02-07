@@ -9,6 +9,8 @@ torch>=2.0.0
 tokenizers>=0.13.0
 nltk
 wordninja
+wordfreq
+rapidfuzz
 
 # Utilities
 loguru==0.7.3

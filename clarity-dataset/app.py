@@ -10,10 +10,14 @@ import json
 import os
 import random
 import sys
+import re
+
 
 import yaml
 from datasets import load_dataset
 from spacy_cleaner import SpacyCleaner, create_cleaner
+from word_fixer import fix_token, ENGLISH_WORDS
+
 
 
 from clean import (
@@ -198,17 +202,56 @@ def save_json(data, path):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=False):
+def apply_word_fixes(text: str) -> str:
+    """Apply spelling and word-spacing fixes in that order."""
+    if not text or not text.strip():
+        return ""
+    
+    tokens = text.split()
+    fixed_tokens = []
+    
+    for token in tokens:
+        original = token
+        # Extract word without punctuation
+        clean_token = re.sub(r'[^\w\']', '', token)
+        
+        # Skip very short tokens
+        if not clean_token or len(clean_token) <= 3:
+            fixed_tokens.append(token)
+            continue
+        
+        # Skip if already valid
+        if clean_token.lower() in ENGLISH_WORDS:
+            fixed_tokens.append(token)
+            continue
+        
+        # Fix the token
+        fixed, _ = fix_token(clean_token)
+        
+        # Preserve punctuation
+        if fixed != clean_token:
+            punctuation = re.findall(r'[^\w\']+$', original)
+            result = fixed + (punctuation[0] if punctuation else '')
+            fixed_tokens.append(result)
+        else:
+            fixed_tokens.append(original)
+    
+    return ' '.join(fixed_tokens)
+
+
+def clean_dataset(data, cleaner=None, include_label=True, clean_fillers=False, clean_names=False):
     """Return a reduced and cleaned representation of dataset records using SpaCy cleaner."""
-    
-    # Create the cleaner
-    cleaner = create_cleaner(preserve_negation=True)
-    
+    if cleaner is None:
+        cleaner = create_cleaner(preserve_negation=True)
+
     result = []
     for item in data:
         question = item["question"]
         context = item["interview_question"] + "\n" + item["interview_answer"]
         president = item.get("president")
+
+        question = apply_word_fixes(question)
+        context = apply_word_fixes(context)
         
         # Determine what cleaning to apply
         if clean_fillers or clean_names:
@@ -233,23 +276,6 @@ def clean_dataset(data, include_label=True, clean_fillers=False, clean_names=Fal
         result.append(entry)
     
     return result
-
-
-def display_sample(records, title, sample_size):
-    """Display random samples from the dataset."""
-    print("\n" + "=" * 80)
-    print(f"{title}")
-    print("=" * 80)
-    
-    samples = random.sample(records, sample_size)
-    
-    for i, record in enumerate(samples, 1):
-        print(f"\n--- Sample {i} ---")
-        print(f"Question (original): {record.get('question', 'N/A')}")
-        if 'question_clean' in record:
-            print(f"Question (cleaned):  {record.get('question_clean', 'N/A')}")
-        print()
-
 
 def main():
     """Load, process and save QEvasion datasets.
@@ -281,6 +307,7 @@ def main():
 
 
     args = parser.parse_args()
+    cleaner = create_cleaner(preserve_negation=True)
 
     # Handle --clean-all flag
     if args.clean_all:
@@ -323,26 +350,11 @@ def main():
     for name, data in {"train": train_data, "valid": valid_data, "test": test_data}.items():
         save_json(data, os.path.join(full_dir, f"{name}.json"))
 
-
-    # Sample data
-    random.seed(90)
-    sample_indices = random.sample(range(len(train_data)), 10)
-    sample_records_before = [train_data[i] for i in sample_indices]
-
-    # Cleaned sample
-    sample_records_after = clean_dataset(
-        sample_records_before, 
-        clean_fillers=args.clean_fillers,
-        clean_names=args.clean_names
-    )
-    logger.info("\nDisplaying samples AFTER preprocessing...")
-    display_sample(sample_records_after, "BEFORE/AFTER PREPROCESSING", 10)
-
-    train_cleaned = clean_dataset(train_data, clean_fillers=args.clean_fillers,
+    train_cleaned = clean_dataset(train_data, cleaner=cleaner, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
-    valid_cleaned = clean_dataset(valid_data, clean_fillers=args.clean_fillers,
+    valid_cleaned = clean_dataset(valid_data, cleaner=cleaner, clean_fillers=args.clean_fillers,
                                    clean_names=args.clean_names)
-    test_cleaned = clean_dataset(test_data, clean_fillers=args.clean_fillers,
+    test_cleaned = clean_dataset(test_data, cleaner=cleaner, clean_fillers=args.clean_fillers,
                                   clean_names=args.clean_names)
 
     logger.info("Saving cleaned datasets...")
