@@ -87,10 +87,22 @@ def is_valid(word: str) -> bool:
 
 
 def safe_split(token: str):
+    """Split only if ALL parts are valid English words."""
     parts = wordninja.split(token)
-    if len(parts) > 1 and all(is_valid(p) for p in parts):
-        return " ".join(parts)
-    return None
+    
+    # Must split into 2+ parts
+    if len(parts) <= 1:
+        return None
+    
+    # ALL parts must be valid
+    if not all(is_valid(p) for p in parts):
+        return None
+    
+    # Reject if any part is too short (likely bad split)
+    if any(len(p) <= 2 for p in parts):
+        return None
+    
+    return " ".join(parts)
 
 
 def correct_spelling(token: str):
@@ -129,20 +141,21 @@ def correct_spelling(token: str):
 
 
 def fix_token(token: str):
+    """Fix token: try spelling first, then splitting."""
     original = token
     token = token.lower()
 
     base, suffix = strip_possessive(token)
 
-    # Try split first
-    split_result = safe_split(base)
-    if split_result:
-        return split_result + suffix, "split"
-
-    # Try spelling correction
+    # 1. Try spelling correction first
     spell_result = correct_spelling(base)
     if spell_result:
         return spell_result + suffix, "spell"
+
+    # 2. Try split only if spelling failed
+    split_result = safe_split(base)
+    if split_result:
+        return split_result + suffix, "split"
 
     return original, "unchanged"
 
