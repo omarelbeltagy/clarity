@@ -94,20 +94,37 @@ def safe_split(token: str):
 
 
 def correct_spelling(token: str):
+    """Try to fix spelling. Returns None if no good correction found."""
+    
+    max_edits = min(3, len(token) // 3)
+    
     candidates = process.extract(
         token,
         ENGLISH_WORDS,
-        score_cutoff=85,
-        limit=1
+        score_cutoff=80,
+        limit=5
     )
 
     if not candidates:
         return None
 
-    best, _, _ = candidates[0]
-    if zipf_frequency(best, "en") > zipf_frequency(token, "en"):
-        return best
-
+    best_candidate = None
+    best_freq = 0
+    
+    for candidate, score, _ in candidates:        
+        if abs(len(token) - len(candidate)) > max_edits:
+            continue  # Too many letters added/removed
+        
+        freq = zipf_frequency(candidate, "en")
+        
+        # Only accept if it's a valid common word
+        if freq > 2.0 and freq > best_freq:
+            best_candidate = candidate
+            best_freq = freq
+    
+    if best_candidate and best_freq > zipf_frequency(token, "en"):
+        return best_candidate
+    
     return None
 
 
