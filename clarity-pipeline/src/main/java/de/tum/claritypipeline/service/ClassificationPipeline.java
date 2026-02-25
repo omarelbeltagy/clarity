@@ -437,16 +437,28 @@ public class ClassificationPipeline {
                                predictedLabel = result.getName();
                            }
                            String expectedLabel;
-                           try {
-                               Field field = qa.getClass().getDeclaredField(propertyLabel);
-                               field.setAccessible(true);
-                               Object value = field.get(qa);
-                               if (value == null) {
-                                   return null;
+                           if(propertyLabel.equals("evasionLabel")) {
+                               if(result.getName().equals(qa.getAnnotator1())) {
+                                   expectedLabel = qa.getAnnotator1();
+                               } else if(result.getName().equals(qa.getAnnotator2())) {
+                                   expectedLabel = qa.getAnnotator2();
+                               } else if(result.getName().equals(qa.getAnnotator3())) {
+                                   expectedLabel = qa.getAnnotator3();
+                               } else {
+                                   expectedLabel = qa.getAnnotator1();
                                }
-                               expectedLabel = value.toString();
-                           } catch (NoSuchFieldException | IllegalAccessException e) {
-                               throw new RuntimeException(e);
+                           } else {
+                               try {
+                                   Field field = qa.getClass().getDeclaredField(propertyLabel);
+                                   field.setAccessible(true);
+                                   Object value = field.get(qa);
+                                   if (value == null) {
+                                       return null;
+                                   }
+                                   expectedLabel = value.toString();
+                               } catch (NoSuchFieldException | IllegalAccessException e) {
+                                   throw new RuntimeException(e);
+                               }
                            }
                            if (predictedLabel != null && expectedLabel != null) {
                                return new String[]{predictedLabel, expectedLabel};

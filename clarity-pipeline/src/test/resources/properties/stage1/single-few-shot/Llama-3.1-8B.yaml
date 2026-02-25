@@ -1,6 +1,6 @@
-name: "Llama 3.3 70B"
-version: "evasion-based:single:few-shot:v2"
-taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
+name: "Llama 3.1 8B"
+version: "single:few-shot:v1"
+taxonomy: "../assets/taxonomy/clarity-categories.yaml"
 worker-threads: 50
 query: |
   MATCH (n:QA)
@@ -10,5 +10,5 @@ strategy:
   type: "single"
   model:
     provider: "together"
-    name: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    name: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
     prompt: "../assets/prompts/few-shot.yaml"

@@ -48,7 +48,7 @@ interviews and is separated into training and test sets.
 A coarse classification into clear reply / ambiguous / clear non‐reply.
 
 - **Given**: a question / answer pair.
-- **Output**: one of {Clear Reply, Ambiguous, Clear Non­Reply}.
+- **Output**: one of {Clear Reply, Ambiguous, Clear Non-Reply}.
 
 #### Task 2 – Evasion‐level Classification
 

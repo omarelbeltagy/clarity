@@ -1,5 +1,5 @@
 name: "GPT 5.2"
-version: "single:few-shot:enhanced-prompt-iteration-8:v3"
+version: "single:few-shot:enhanced-prompt-iteration-8:cleaned-data:v2"
 taxonomy: "../assets/taxonomy/evasion-techniques.yaml"
 worker-threads: 50
 query: |
@@ -11,4 +11,4 @@ strategy:
   model:
     provider: "openai"
     name: "gpt-5.2"
-    prompt: "../assets/prompts/prompt-enhancement/gpt-5.2-v3-output_iteration_8.yaml"
+    prompt: "../assets/prompts/prompt-enhancement/gpt-5.2-v3-output_iteration_8-cleaned-dataset.yaml"

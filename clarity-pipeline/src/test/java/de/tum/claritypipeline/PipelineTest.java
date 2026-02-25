@@ -71,7 +71,8 @@ public class PipelineTest {
         final DatasetReader datasetReaderCleaned = new DatasetReader("../clarity-dataset/data/cleaned/");
 
         data.addAll(datasetReaderCleaned.readDataset("test.json", DatasetType.TEST));
-        data.addAll(datasetReaderCleaned.readDataset("train.json"));
+        //data.addAll(datasetReaderCleaned.readDataset("train.json", DatasetType.TRAIN));
+        //data.addAll(datasetReaderCleaned.readDataset("valid.json", DatasetType.VALID));
 
         cleanedDataImporter.importCleanedData(data);
     }
@@ -126,8 +127,7 @@ public class PipelineTest {
      */
     @Test
     public void testClassifyFromFile() throws IOException {
-        String file = "src/test/resources/properties/stage1/single-few-shot-evasion-based-rag-reasoning-high/gpt-5.2"
-                + ".yaml";
+        String file = "src/test/resources/properties/stage2/enhanced-prompt/gpt-5.2/iteration-8-cleaned-data.yaml";
         ClassificationPipeline classificationPipeline = new ClassificationPipeline(file);
         classificationPipeline.classify();
     }

@@ -1,6 +1,7 @@
 package de.tum.claritypipeline.model.core;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.opencsv.bean.CsvBindByName;
@@ -20,6 +21,7 @@ import lombok.*;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class QA extends Neo4jNode {
 
     /**
@@ -45,6 +47,7 @@ public class QA extends Neo4jNode {
     @JsonProperty("interview_question_clean")
     @CsvBindByName(column = "interview_question_clean")
     @JsonPropertyDescription("Normalized/cleaned version of the interview question.")
+    @Deprecated
     private String interviewQuestionClean;
 
     /**
@@ -61,8 +64,8 @@ public class QA extends Neo4jNode {
     @JsonProperty("interview_answer_clean")
     @CsvBindByName(column = "interview_answer_clean")
     @JsonPropertyDescription("Normalized/cleaned version of the interview answer.")
+    @Deprecated
     private String interviewAnswerClean;
-
 
     /**
      * The processed question used for classification.
@@ -71,6 +74,16 @@ public class QA extends Neo4jNode {
     @CsvBindByName(column = "question")
     @JsonPropertyDescription("Processed question string used for prompting the classifier.")
     private String question;
+
+    @JsonProperty("context_clean")
+    @CsvBindByName(column = "context_clean")
+    @JsonPropertyDescription("Cleaned version of the context used for prompting,")
+    private String contextClean;
+
+    @JsonProperty("question_clean")
+    @CsvBindByName(column = "question_clean")
+    @JsonPropertyDescription("Cleaned version of the question used for prompting, if different from 'question'.")
+    private String questionClean;
 
     /**
      * The processed answer or title field.

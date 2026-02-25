@@ -53,19 +53,7 @@ public class EvaluationExporterTest {
     @Test
     public void testGenerateCustomEvaluation() throws IOException {
         evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage1/single-few-shot-evasion-based-rag-reasoning-high/gpt-5.1.yaml"
-        );
-        evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/judgement/gpt-5.1-reasoning-high.yaml"
-        );
-        evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/judgement/gpt-5.2-reasoning-high.yaml"
-        );
-        evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-high.yaml"
-        );
-        evaluationExporter.generateCustomEvaluation(
-                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-cleaned-reasoning-auto.yaml"
+                "src/test/resources/properties/stage2/evasion-based/gpt-5.2-reasoning-auto.yaml"
         );
     }
 }

@@ -119,16 +119,87 @@ public class CleanedDataImporter {
         dataset.parallelStream().forEach(qa -> {
             try {
                 Map<String, Object> properties = Map.of(
-                        "index", qa.getIndex(),
-                        "test", qa.isTest()
+                        "question", qa.getQuestion(),
+                        "test", qa.isTest(),
+                        "valid", qa.isValid(),
+                        "train", qa.isTrain()
                 );
-                QA existingNode = client.findNode(properties, QA.class);
+                List<QA> existingNodes = client.findNodes(properties, QA.class);
+                if(existingNodes.isEmpty()) {
+                    properties = Map.of(
+                            "question", qa.getQuestion() + " ",
+                            "test", qa.isTest(),
+                            "valid", qa.isValid(),
+                            "train", qa.isTrain()
+                    );
+                    existingNodes = client.findNodes(properties, QA.class);
+                    if(existingNodes.isEmpty()) {
+                        properties = Map.of(
+                                "question", " " + qa.getQuestion(),
+                                "test", qa.isTest(),
+                                "valid", qa.isValid(),
+                                "train", qa.isTrain()
+                        );
+                        existingNodes = client.findNodes(properties, QA.class);
+                        if(existingNodes.isEmpty()) {
+                            properties = Map.of(
+                                    "question", qa.getQuestion().substring(qa.getQuestion().length() / 4, qa.getQuestion().length() - qa.getQuestion().length() / 4),
+                                    "test", qa.isTest(),
+                                    "valid", qa.isValid(),
+                                    "train", qa.isTrain()
+                            );
+                            String query = """
+                                    MATCH(n:QA)
+                                    WHERE n.question CONTAINS $question AND n.test = $test AND n.valid = $valid AND n.train = $train
+                                    RETURN n
+                                    """;
+                            existingNodes = client.executeQuery(query, properties, QA.class);
+                            if(existingNodes.isEmpty()) {
+                                properties = Map.of(
+                                        "question", qa.getQuestion().substring(0, qa.getQuestion().length() / 4),
+                                        "test", qa.isTest(),
+                                        "valid", qa.isValid(),
+                                        "train", qa.isTrain()
+                                );
+                                query = """
+                                    MATCH(n:QA)
+                                    WHERE n.question CONTAINS $question AND n.test = $test AND n.valid = $valid AND n.train = $train
+                                    RETURN n
+                                    """;
+                                existingNodes = client.executeQuery(query, properties, QA.class);
+                                if(existingNodes.isEmpty()) {
+                                    properties = Map.of(
+                                            "question", qa.getQuestion().substring(0, qa.getQuestion().length() / 12),
+                                            "test", qa.isTest(),
+                                            "valid", qa.isValid(),
+                                            "train", qa.isTrain()
+                                    );
+                                    query = """
+                                    MATCH(n:QA)
+                                    WHERE n.question CONTAINS $question AND n.test = $test AND n.valid = $valid AND n.train = $train
+                                    RETURN n
+                                    """;
+                                    existingNodes = client.executeQuery(query, properties, QA.class);
+                                }
+                            }
+                        }
+                    }
+                }
+                if(existingNodes.size() > 1) {
+                    log.warn("Found multiple nodes for question {} and test flag {}, expected only one. Skipping update.", qa.getQuestion(), qa.isTest());
+                    return;
+                }
+                QA existingNode = existingNodes.isEmpty() ? null : existingNodes.getFirst();
                 if (existingNode != null) {
-                    existingNode.setInterviewQuestionClean(qa.getInterviewQuestionClean());
-                    existingNode.setInterviewAnswerClean(qa.getInterviewAnswerClean());
+                    if(qa.getQuestionClean() == null || qa.getContextClean() == null) {
+                        log.warn("Cleaned question or context is null for QA index {}, skipping update.", qa.getIndex());
+                        return;
+                    }
+                    existingNode.setQuestionClean(qa.getQuestionClean());
+                    existingNode.setContextClean(qa.getContextClean());
                     client.updateNode(existingNode);
                 } else {
-                    log.warn("Did not find node {}", qa.getIndex());
+                    log.warn("Did not find node {}", qa.getQuestion());
                 }
             } catch (Exception e) {
                 log.error("Error importing QA pair {} to Neo4j: {}", qa.getIndex(), e.getMessage());
