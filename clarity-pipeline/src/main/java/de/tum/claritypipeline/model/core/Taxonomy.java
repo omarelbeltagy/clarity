@@ -41,7 +41,7 @@ public class Taxonomy extends Neo4jNode implements Serializable {
     @Neo4jIgnore
     @JsonProperty("categories")
     @JsonPropertyDescription("List of categories in the taxonomy")
-    List<Category> categories;
+    public List<Category> categories;
     /**
      * The name of the taxonomy.
      */

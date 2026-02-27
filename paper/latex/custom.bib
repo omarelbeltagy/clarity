@@ -1,0 +1,233 @@
+% Use this file for citations not found in the ACL Anthology (contained in "anthology.bib").
+
+% @book{Aho:72,
+    author  = {Alfred V. Aho and Jeffrey D. Ullman},
+    title   = {The Theory of Parsing, Translation and Compiling},
+    year    = "1972",
+    volume  = "1",
+    publisher = {Prentice-Hall},
+    address = {Englewood Cliffs, NJ}
+}
+
+
+@misc{meta2024llama,
+  title={Introducing {Llama} 3.1: Our most capable models to date},
+  author={{Meta}},
+  year={2024},
+  url={https://ai.meta.com/blog/meta-llama-3-1/}
+}
+
+@misc{openai2025gpt52,
+  title={Introducing {GPT}-5.2},
+  author={{OpenAI}},
+  year={2025},
+  url={https://openai.com/index/introducing-gpt-5-2/}
+}
+
+@misc{openai2025gpt51,
+  title={Introducing {GPT}-5.1 for Developers},
+  author={{OpenAI}},
+  year={2025},
+  url={https://openai.com/index/gpt-5-1-for-developers/}
+}
+
+@misc{openai2025gpt5,
+  title={Introducing {GPT}-5},
+  author={{OpenAI}},
+  year={2025},
+  url={https://openai.com/index/introducing-gpt-5//}
+}
+@misc{openai2025gpt41,
+  title={Introducing {GPT}‑4.1 in the API},
+  author={{OpenAI}},
+  year={2025},
+  url={https://openai.com/index/gpt-4-1/}
+}
+
+@misc{anthropic2025claude45,
+  title={Introducing {Claude} Sonnet 4.5},
+  author={{Anthropic}},
+  year={2025},
+  url={https://www.anthropic.com/news/claude-sonnet-4-5}
+}
+
+@misc{meta2024llama3,
+  title={Introducing Meta {Llama} 3: The most capable openly available LLM to date},
+  author={{Meta}},
+  year={2024},
+  url={https://ai.meta.com/blog/meta-llama-3/}
+}
+
+@misc{moonshot2025kimi,
+  title={Introducing {Kimi-K2} Thinking},
+  author={{Moonshot}},
+  year={2025},
+  url={https://moonshotai.github.io/Kimi-K2/thinking.html/}
+}
+
+@misc(openai2025gptoss,
+  title={Introducing {GPT}-OSS},
+  author={{OpenAI}},
+  year={2025},
+  url={https://openai.com/index/introducing-gpt-oss/}
+)
+
+@misc{qevasion2024,
+  title={{QEvasion} Dataset},
+  author={{ailsntua}},
+  year={2024},
+  url={https://huggingface.co/datasets/ailsntua/QEvasion}
+}
+
+@misc{rapidfuzz,
+  title={{RapidFuzz}: Rapid fuzzy string matching in Python},
+  url={https://github.com/rapidfuzz/RapidFuzz}
+}
+
+@misc{wordfreq,
+  title={{wordfreq}: Access a database of word frequencies},
+  url={https://github.com/rspeer/wordfreq}
+}
+
+@misc{wordninja,
+  title={{WordNinja}: Probabilistic word segmentation tool},
+  url={https://github.com/keredson/wordninja}
+}
+@misc{spacy,
+  title={{spaCy}: Industrial-strength Natural Language Processing in Python},
+  url={https://github.com/explosion/spaCy},
+}
+
+@inproceedings{thomas2024isaidthatdataset,
+    title = "``{I} Never Said That'': A dataset, taxonomy and baselines on response clarity classification",
+    author = "Thomas, Konstantinos  and
+      Filandrianos, Giorgos  and
+      Lymperaiou, Maria  and
+      Zerva, Chrysoula  and
+      Stamou, Giorgos",
+    editor = "Al-Onaizan, Yaser  and
+      Bansal, Mohit  and
+      Chen, Yun-Nung",
+    booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2024",
+    month = nov,
+    year = "2024",
+    address = "Miami, Florida, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.findings-emnlp.300/",
+    doi = "10.18653/v1/2024.findings-emnlp.300",
+    pages = "5204--5233",
+    abstract = "Equivocation and ambiguity in public speech are well-studied discourse phenomena, especially in political science and analysis of political interviews. Inspired by the well-grounded theory on equivocation, we aim to resolve the closely related problem of response clarity in questions extracted from political interviews, leveraging the capabilities of Large Language Models (LLMs) and human expertise. To this end, we introduce a novel taxonomy that frames the task of detecting and classifying response clarity and a corresponding clarity classification dataset which consists of question-answer (QA) pairs drawn from political interviews and annotated accordingly. Our proposed two-level taxonomy addresses the clarity of a response in terms of the information provided for a given question (high-level) and also provides a fine-grained taxonomy of evasion techniques that relate to unclear, ambiguous responses (lower-level). We combine ChatGPT and human annotators to collect, validate and annotate discrete QA pairs from political interviews, to be used for our newly introduced response clarity task. We provide a detailed analysis and conduct several experiments with different model architectures, sizes and adaptation methods to gain insights and establish new baselines over the proposed dataset and task."
+}
+
+@inproceedings{yadav2024pag,
+author = {Yadav, Vikas and Tang, Zheng and Srinivasan, Vijay},
+title = {PAG-LLM: Paraphrase and Aggregate with Large Language Models for Minimizing Intent Classification Errors},
+year = {2024},
+isbn = {9798400704314},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3626772.3657959},
+doi = {10.1145/3626772.3657959},
+abstract = {Large language models (LLM) have achieved remarkable success in natural language generation but lesser focus has been given to their applicability in key tasks such as intent-classification. We show that LLMs like LLaMa can achieve high performance on intent classification tasks with large number of classes but still make classification errors and worse, generate out-of-vocabulary intent labels. To address these critical issues, we introduce Paraphrase and AGgregate (PAG)-LLM approach wherein an LLM generates multiple paraphrases of the input query (parallel queries), performs intent classification for the original query and each paraphrase, and at the end aggregate all the predicted intent labels based on their confidence scores. We evaluate PAG-LLM on two large intent classification datasets: CLINC, and Banking and show 22.7\% and 15.1\% error reduction. We show that PAG-LLM is especially effective for hard examples where LLM is uncertain, and reduces the critical misclassification and hallucinated label generation errors.},
+booktitle = {Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {2569–2573},
+numpages = {5},
+keywords = {aggregation, generation confidence, intent classification, large langauge model, paraphrasing},
+location = {Washington DC, USA},
+series = {SIGIR '24}
+}
+
+@inproceedings{sun2023textclassification,
+    title = "Text Classification via Large Language Models",
+    author = "Sun, Xiaofei  and
+      Li, Xiaoya  and
+      Li, Jiwei  and
+      Wu, Fei  and
+      Guo, Shangwei  and
+      Zhang, Tianwei  and
+      Wang, Guoyin",
+    editor = "Bouamor, Houda  and
+      Pino, Juan  and
+      Bali, Kalika",
+    booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2023",
+    month = dec,
+    year = "2023",
+    address = "Singapore",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.findings-emnlp.603/",
+    doi = "10.18653/v1/2023.findings-emnlp.603",
+    pages = "8990--9005",
+    abstract = "Despite the remarkable success of large-scale Language Models (LLMs) such as GPT-3, their performances still significantly underperform fine-tuned models in the task of text classification.This is due to (1) the lack of reasoning ability in addressing complex linguistic phenomena (e.g., intensification, contrast, irony etc); (2) limited number of tokens allowed in in-context learning. In this paper, we introduce \textbf{C}lue \textbf{A}nd \textbf{R}easoning \textbf{P}rompting (CARP). CARP adopts a progressive reasoning strategy tailored to addressing the complex linguistic phenomena involved in text classification: CARP first prompts LLMs to find superficial clues (e.g., keywords, tones, semantic relations, references, etc), based on which a diagnostic reasoning process is induced for final decisions. To further address the limited-token issue, CARP uses a fine-tuned model on the supervised dataset for $k$NN demonstration search in the in-context learning, allowing the model to take the advantage of both LLM{'}s generalization ability and the task-specific evidence provided by the full labeled dataset. Remarkably, CARP yields new SOTA performances on 4 out of 5 widely-used text-classification benchmarks, 97.39 (+1.24) on SST-2, 96.40 (+0.72) on AGNews, 98.78 (+0.25) on R8 and 96.95 (+0.6) on R52, and a performance comparable to SOTA on MR (92.39 v.s. 93.3). More importantly, we find that CARP delivers impressive abilities on low-resource and domain-adaptation setups. Specifically, using 16 examples per class, CARP achieves comparable performances to supervised models with 1,024 examples per class."
+}
+
+@inproceedings{wei2022chain,
+author = {Wei, Jason and Wang, Xuezhi and Schuurmans, Dale and Bosma, Maarten and Ichter, Brian and Xia, Fei and Chi, Ed H. and Le, Quoc V. and Zhou, Denny},
+title = {Chain-of-thought prompting elicits reasoning in large language models},
+year = {2022},
+isbn = {9781713871088},
+publisher = {Curran Associates Inc.},
+address = {Red Hook, NY, USA},
+abstract = {We explore how generating a chain of thought—a series of intermediate reasoning steps—significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain-of-thought prompting, where a few chain of thought demonstrations are provided as exemplars in prompting.Experiments on three large language models show that chain-of-thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a PaLM 540B with just eight chain-of-thought exemplars achieves state-of-the-art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.},
+booktitle = {Proceedings of the 36th International Conference on Neural Information Processing Systems},
+articleno = {1800},
+numpages = {14},
+location = {New Orleans, LA, USA},
+series = {NIPS '22}
+}
+
+@inproceedings{brown2020language,
+author = {Brown, Tom B. and Mann, Benjamin and Ryder, Nick and Subbiah, Melanie and Kaplan, Jared and Dhariwal, Prafulla and Neelakantan, Arvind and Shyam, Pranav and Sastry, Girish and Askell, Amanda and Agarwal, Sandhini and Herbert-Voss, Ariel and Krueger, Gretchen and Henighan, Tom and Child, Rewon and Ramesh, Aditya and Ziegler, Daniel M. and Wu, Jeffrey and Winter, Clemens and Hesse, Christopher and Chen, Mark and Sigler, Eric and Litwin, Mateusz and Gray, Scott and Chess, Benjamin and Clark, Jack and Berner, Christopher and McCandlish, Sam and Radford, Alec and Sutskever, Ilya and Amodei, Dario},
+title = {Language models are few-shot learners},
+year = {2020},
+isbn = {9781713829546},
+publisher = {Curran Associates Inc.},
+address = {Red Hook, NY, USA},
+abstract = {We demonstrate that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even becoming competitive with prior state-of-the-art fine-tuning approaches. Specifically, we train GPT-3, an autoregressive language model with 175 billion parameters, 10x more than any previous non-sparse language model, and test its performance in the few-shot setting. For all tasks, GPT-3 is applied without any gradient updates or fine-tuning, with tasks and few-shot demonstrations specified purely via text interaction with the model. GPT-3 achieves strong performance on many NLP datasets, including translation, question-answering, and cloze tasks. We also identify some datasets where GPT-3's few-shot learning still struggles, as well as some datasets where GPT-3 faces methodological issues related to training on large web corpora.},
+booktitle = {Proceedings of the 34th International Conference on Neural Information Processing Systems},
+articleno = {159},
+numpages = {25},
+location = {Vancouver, BC, Canada},
+series = {NIPS '20}
+}
+
+@inproceedings{pryzant2023protegi,
+    title = "Automatic Prompt Optimization with ``Gradient Descent'' and Beam Search",
+    author = "Pryzant, Reid  and
+      Iter, Dan  and
+      Li, Jerry  and
+      Lee, Yin  and
+      Zhu, Chenguang  and
+      Zeng, Michael",
+    editor = "Bouamor, Houda  and
+      Pino, Juan  and
+      Bali, Kalika",
+    booktitle = "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing",
+    month = dec,
+    year = "2023",
+    address = "Singapore",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.emnlp-main.494/",
+    doi = "10.18653/v1/2023.emnlp-main.494",
+    pages = "7957--7968",
+    abstract = "Large Language Models (LLMs) have shown impressive performance as general purpose agents, but their abilities remain highly dependent on prompts which are hand written with onerous trial-and-error effort. We propose a simple and nonparametric solution to this problem, Prompt Optimization with Textual Gradients (ProTeGi), which is inspired by numerical gradient descent to automatically improve prompts, assuming access to training data and an LLM API. The algorithm uses minibatches of data to form natural language ``gradients'' that criticize the current prompt, much like how numerical gradients point in the direction of error ascent. The natural language gradients are then ``propagated'' into the prompt by editing the prompt in the opposite semantic direction of the gradient. These gradient descent steps are guided by a beam search and bandit selection procedure which significantly improves algorithmic efficiency. Preliminary results across three benchmark NLP tasks and the novel problem of LLM jailbreak detection suggest that Automatic Prompt Optimization can outperform prior prompt editing techniques and improve an initial prompt{'}s performance by up to 31{\%}, by using data to rewrite vague task descriptions into more precise annotation instructions."
+}
+
+@article{honnibal2020spacy,
+  added-at = {2023-05-22T04:49:27.000+0200},
+  author = {Honnibal, Matthew and Montani, Ines and Van Landeghem, Sofie and Boyd, Adriane},
+  biburl = {https://www.bibsonomy.org/bibtex/2616669ca18ac051794c0459373696942/rerry},
+  doi = {10.5281/zenodo.1212303},
+  interhash = {2d1b3a0bb97e51df1b88d8852cd5ac01},
+  intrahash = {616669ca18ac051794c0459373696942},
+  keywords = {nlp},
+  timestamp = {2023-05-22T04:49:27.000+0200},
+  title = {{spaCy: Industrial-strength Natural Language Processing in Python}},
+  year = 2020
+}
+
+@article{yang2023opro,
+  title={Large language models as optimizers},
+  author={Yang, Chengrun and Wang, Xuezhi and Lu, Yifeng and Liu, Hanxiao and Le, Quoc V and Zhou, Denny and Chen, Xinyun},
+  journal={arXiv preprint arXiv:2309.03409},
+  year={2023}
+}

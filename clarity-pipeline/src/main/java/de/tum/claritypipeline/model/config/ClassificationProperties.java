@@ -124,7 +124,7 @@ public class ClassificationProperties extends Neo4jNode implements Serializable 
     @JsonPropertyDescription("The taxonomy used for classification.")
     @Setter(AccessLevel.NONE)
     @Neo4jIgnore
-    private Taxonomy taxonomy;
+    public Taxonomy taxonomy;
 
     @JsonIgnore
     private String firstStartedAt = String.valueOf(OffsetDateTime.now(ZoneOffset.UTC));

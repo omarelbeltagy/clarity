@@ -1,16 +1,16 @@
 # Dataset and data processing
 datasets==4.2.0
-huggingface-hub>=0.16.0
-spacy>=3.7.0,<4.0.0
+huggingface-hub==1.5.0
+spacy==3.8.11
 
 # NLP and transformers for BERT summaries
-transformers>=4.30.0
-torch>=2.0.0
-tokenizers>=0.13.0
-nltk
-wordninja
-wordfreq
-rapidfuzz
+transformers==5.2.0
+torch==2.10.0
+tokenizers==0.22.2
+nltk==3.9.3
+wordfreq==3.1.1
+wordninja==2.0.0
+rapidfuzz==3.14.3
 
 # Utilities
 loguru==0.7.3
