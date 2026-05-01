@@ -72,11 +72,7 @@
  \textbf{Nils Knittel\footnotemark[1]},
  \textbf{Leonie Süß\footnotemark[1]},
  \textbf{Umut Yıldırır\footnotemark[1]},
- \textbf{Qiyan Zhai\footnotemark[1]},
-\\
- \textbf{Shaghayegh Kolli},
- \textbf{Jana Diesner}
-\\
+ \textbf{Qiyan Zhai\footnotemark[1]}
 \\
  Technical University of Munich
 \\
@@ -318,6 +314,7 @@ We use \texttt{max\_tokens=4096} with structured JSON output.
 GPT-5 family models do not support user-configurable temperature.
 We apply 3 retry attempts with exponential backoff.
 For prompt enhancement, we run 12 iterations with 20 randomly sampled training examples per iteration using GPT-5.2 for classification, diagnosis, and patching.
+The iteration with the best performance is selected post-hoc based on the metrics of the test dataset; no stopping criterion was applied during the run.
 
 %% ===
 %% 5 RESULTS
@@ -385,6 +382,7 @@ Llama 3.1 8B & .688 & .475 & .312 & .182 \\
 \paragraph{Prompt Repair Convergence.}
 Figure~\ref{fig:convergence} shows F1 progression across 12 prompt repair iterations using a sample of 20 training examples per iteration.
 Evasion~F1 improves substantially (+13.7pp overall) with a clear upward trend, while clarity~F1 remains relatively stable with non-monotone fluctuations.
+We attribute the non-monotone behavior primarily to the small sample size per iteration: Since only 20 randomly selected training examples are used, the number of observed failures varies across iterations, introducing noise in the diagnostic signal that causes individual patches to occasionally degrade performance in cases that were previously handled well.
 
 \begin{figure}[htb]
 \centering
@@ -425,7 +423,7 @@ Evasion~F1 improves substantially (+13.7pp overall) with a clear upward trend, w
 RAG with embedding-based example retrieval yields inconsistent results.
 PAG \citep{yadav2024pag} (paraphrasing questions, classifying each one and aggregating results through a majority vote) shows a similar performance to single-shot classification (GPT-5.1: 0.812~Acc~/~0.789~F1).
 Setting reasoning effort to ``high'' had no clear effect. Some models performed better, others worse than without it.
-Applying the enhanced prompt to cleaned data degrades performance (0.831/0.797~$\rightarrow$~0.812/0.716 clarity Acc/F1), suggesting that aggressive preprocessing removes relevant signals such as fillers and hedging markers.
+Applying the enhanced prompt to cleaned data degrades performance (0.831/0.797~$\rightarrow$~0.812/0.716 clarity Acc/F1), suggesting that aggressive preprocessing removes relevant signals such as fillers and hedging markers. Identifying which specific steps are responsible requires further investigation.
 
 %% ===
 %% 6 CONCLUSION
@@ -438,15 +436,17 @@ Our system achieves 0.831 accuracy / 0.797 macro~F1 on clarity classification an
 
 \paragraph{Limitations.}
 (1)~Our system relies on API-based models, introducing cost, latency, and reproducibility constraints.
-(2)~Prompt repair convergence is non-monotone, requiring best-of-$N$ selection without a principled stopping criterion.
+(2)~Prompt repair convergence is non-monotone, and the best-performing iteration is selected post-hoc without a principled stopping criterion.
+A validation-set-based early stopping strategy would reduce overfitting risk and cost, but requires further development.
 (3)~Local baselines are limited; no full fine-tuning was evaluated.
-(4)~Preprocessing the data did not translate into clear and consistent metric improvements in the setup.
+(4)~Preprocessing the data did not translate into clear and consistent metric improvements; which specific cleaning steps remove diagnostically relevant signals remains an open question.
 
 \paragraph{Future Work.}
 
 First, we aim to broaden the set of reproducible local baselines. This includes incorporating fine-tuned encoder-based models as well as stronger open-source LLM baselines. In addition, we plan to conduct systematic ablation studies to more clearly isolate and quantify the contribution of individual components of the system.
 Second, we intend to treat preprocessing as a tunable policy. By systematically exploring different combinations of cleaning and normalization steps, we seek to identify configurations that improve robustness and generalization across datasets and domains.
-Third, we plan to develop a best-iteration selection mechanism for the prompt enhancement pipeline.
+Third, we plan to develop a principled stopping criterion for the prompt enhancement pipeline.
+Specifically, evaluating each iteration on a held-out validation split instead of post-hoc on the test set would allow for unbiased iteration selection. This would also enable early stopping once performance gains plateau, which would reduce cost and the risk of overfitting to the sampled failure cases.
 
 %% ===
 %% BIBLIOGRAPHY
